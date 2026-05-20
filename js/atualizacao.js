@@ -95,9 +95,10 @@ function(){
 /* ========================= */
 
 window.verificarAtualizacao =
-async function () {
 
-    try {
+async function(){
+
+    try{
 
         alert(
 
@@ -110,7 +111,7 @@ async function () {
             await window.api
             .checkUpdate();
 
-        if (
+        if(
 
             !resultado.ok
 
@@ -128,7 +129,7 @@ async function () {
 
         }
 
-        if (
+        if(
 
             !resultado.update
 
@@ -148,26 +149,60 @@ async function () {
 
             confirm(
 
-                `Nova versão disponível: v${resultado.versao}
+`Nova versão disponível:
 
-Deseja instalar agora?`
+v${resultado.versao}
+
+Deseja baixar e instalar agora?`
 
             );
 
-        if (
+        if(
 
             !confirmar
 
-        ) return;
+        ){
 
-        await window.api
+            return;
+
+        }
+
+        alert(
+
+            'Baixando atualização...\n\nO sistema será fechado automaticamente.'
+
+        );
+
+        const instalar =
+
+            await window.api
             .installUpdate();
+
+        if(
+
+            !instalar.ok
+
+        ){
+
+            alert(
+
+                'Erro na instalação:\n' +
+
+                instalar.erro
+
+            );
+
+        }
 
     }
 
     catch(err){
 
-        console.error(err);
+        console.error(
+
+            err
+
+        );
 
         alert(
 
@@ -179,39 +214,6 @@ Deseja instalar agora?`
 
 };
 
-/* ========================= */
-/* INSTALAR UPDATE */
-/* ========================= */
-
-window.instalarAtualizacao =
-async function(){
-
-    try{
-
-        alert(
-
-            'O sistema será fechado para aplicar a atualização.'
-
-        );
-
-        await window.api
-        .installUpdate();
-
-    }
-
-    catch(err){
-
-        console.error(err);
-
-        alert(
-
-            'Erro ao instalar atualização.'
-
-        );
-
-    }
-
-};
 
 /* ========================= */
 /* REGISTRAR */

@@ -34,7 +34,7 @@ window.renderSobre = function () {
         ">
 
             <img
-                src="logo.png"
+                src="dominus.png"
                 style="
                     width:160px;
                     object-fit:contain;
