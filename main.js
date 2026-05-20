@@ -481,67 +481,57 @@ ipcMain.handle(
         try{
 
             console.log(
-                'INSTALL UPDATE'
+                'INSTALL UPDATE INICIADO'
             );
 
-            return new Promise(
+            autoUpdater.on(
 
-                async(resolve)=>{
+                'download-progress',
 
-                    autoUpdater.once(
+                progress=>{
 
-                        'download-progress',
+                    console.log(
 
-                        progress=>{
+                        'DOWNLOAD:',
 
-                            console.log(
-
-                                'DOWNLOAD:',
-
-                                Math.round(
-                                    progress.percent
-                                ) + '%'
-
-                            );
-
-                        }
+                        Math.round(
+                            progress.percent
+                        ) + '%'
 
                     );
-
-                    autoUpdater.once(
-
-                        'update-downloaded',
-
-                        ()=>{
-
-                            console.log(
-                                'UPDATE BAIXADO'
-                            );
-
-                            resolve({
-
-                                ok:true
-
-                            });
-
-                            autoUpdater
-                                .quitAndInstall(
-
-                                    false,
-                                    true
-
-                                );
-
-                        }
-
-                    );
-
-                    await autoUpdater
-                        .downloadUpdate();
 
                 }
 
             );
+
+            autoUpdater.on(
+
+                'update-downloaded',
+
+                ()=>{
+
+                    console.log(
+                        'UPDATE BAIXADO'
+                    );
+
+                    autoUpdater
+                        .quitAndInstall(
+                            false,
+                            true
+                        );
+
+                }
+
+            );
+
+            await autoUpdater
+                .downloadUpdate();
+
+            return {
+
+                ok:true
+
+            };
 
         }
 
@@ -549,7 +539,7 @@ ipcMain.handle(
 
             console.error(
 
-                'Erro instalar:',
+                'ERRO UPDATE:',
 
                 err
 
@@ -560,7 +550,6 @@ ipcMain.handle(
                 ok:false,
 
                 erro:
-
                     err.message
 
             };
