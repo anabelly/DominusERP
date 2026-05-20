@@ -395,7 +395,6 @@ ipcMain.handle(
     }
 
 );
-
 /* ========================= */
 /* AUTO UPDATE */
 /* ========================= */
@@ -408,10 +407,24 @@ ipcMain.handle(
 
         try{
 
+            console.log(
+                'Verificando update...'
+            );
+
             const resultado =
 
                 await autoUpdater
                 .checkForUpdates();
+
+            console.log(
+
+                'Resultado:',
+
+                resultado
+                ?.updateInfo
+                ?.version
+
+            );
 
             return {
 
@@ -468,15 +481,32 @@ ipcMain.handle(
         try{
 
             console.log(
-                'Baixando atualização...'
+                'INSTALL UPDATE'
             );
-
-            await autoUpdater
-                .downloadUpdate();
 
             return new Promise(
 
-                resolve=>{
+                async(resolve)=>{
+
+                    autoUpdater.once(
+
+                        'download-progress',
+
+                        progress=>{
+
+                            console.log(
+
+                                'DOWNLOAD:',
+
+                                Math.round(
+                                    progress.percent
+                                ) + '%'
+
+                            );
+
+                        }
+
+                    );
 
                     autoUpdater.once(
 
@@ -485,7 +515,7 @@ ipcMain.handle(
                         ()=>{
 
                             console.log(
-                                'Update baixado.'
+                                'UPDATE BAIXADO'
                             );
 
                             resolve({
@@ -505,6 +535,9 @@ ipcMain.handle(
                         }
 
                     );
+
+                    await autoUpdater
+                        .downloadUpdate();
 
                 }
 

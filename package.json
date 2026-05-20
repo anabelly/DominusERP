@@ -1,6 +1,6 @@
 {
   "name": "sistema",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "ERP Sistema",
   "main": "main.js",
   "scripts": {
