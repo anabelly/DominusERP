@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Dominus ERP | WN Comunicação Visual
+    </title>
+
+    <!-- ========================= -->
+    <!-- CSS -->
+    <!-- ========================= -->
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- ========================= -->
+    <!-- LIBS -->
+    <!-- ========================= -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+</head>
+
+<body>
+   
+
+<script>
+
+/* ========================= */
+/* PROTEÇÃO LOGIN */
+/* ========================= */
+
+if(
+
+    sessionStorage.getItem(
+        'dominus_logado'
+    )
+
+    !==
+
+    'true'
+
+){
+
+    window.location.href =
+        'login.html';
+}
+
+</script>
+
+    <!-- ========================= -->
+    <!-- SIDEBAR -->
+    <!-- ========================= -->
+
+    <nav class="sidebar">
+
+        <div class="logo">
+
+            <img
+                src="logo.png"
+                style="
+                    width:140px;
+                    filter:
+                        contrast(1.4)
+                        saturate(1.2)
+                        drop-shadow(0 3px 6px rgba(0,0,0,0.25));
+                ">
+
+        </div>
+
+        <!-- DASH -->
+
+        <div
+            class="nav-item active"
+            onclick="navigate('dash')">
+
+            🏠 Dashboard
+
+        </div>
+
+        <!-- OPERAÇÕES -->
+
+        <div class="nav-group">
+            Operações
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('estoque')">
+
+            📦 Estoque
+
+        </div>
+
+        <!-- ADMINISTRATIVO -->
+
+        <div class="nav-group">
+            Administrativo
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('clientes')">
+
+            👤 Clientes
+
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('fornecedores')">
+
+            🏭 Fornecedores
+
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('funcionarios')">
+
+            👷 Funcionários
+
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('orcamentos')">
+
+            📄 Orçamentos
+
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('recibos')">
+
+            🧾 Recibos / Comprovantes
+
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('financeiro')">
+
+            💰 Fluxo Financeiro
+
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('relatorios')">
+
+            📊 Relatórios
+
+        </div>
+
+        <!-- SISTEMA -->
+
+        <div class="nav-group">
+            Sistema
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('backup')">
+
+            💾 Backup / Restauração
+
+        </div>
+
+        <div
+    class="nav-item"
+    onclick="navigate('atualizacao')">
+
+    🔄 Atualização
+
+</div>
+
+<div
+    class="nav-item"
+    onclick="navigate('sobre')">
+
+    ℹ️ Sobre
+
+</div>
+
+    </nav>
+
+    <!-- ========================= -->
+    <!-- CONTEÚDO -->
+    <!-- ========================= -->
+
+    <main id="view-port"></main>
+
+    <!-- ========================= -->
+    <!-- MODAL GLOBAL -->
+    <!-- ========================= -->
+
+    <div
+        id="modal-global"
+        class="modal hidden">
+
+        <div
+            class="content-card"
+            style="
+                width:100%;
+                max-width:700px;
+                max-height:90vh;
+                overflow-y:auto;
+            ">
+
+            <h2
+                id="modal-title"
+                style="
+                    color:var(--primary);
+                    margin-bottom:20px;
+                ">
+            </h2>
+
+            <div id="modal-body"></div>
+
+            <div style="
+                display:flex;
+                gap:5px;
+                justify-content:flex-end;
+                align-items:center;
+                flex-wrap:nowrap;
+            ">
+
+                <button
+                    type="button"
+                    class="btn-action"
+                    style="
+                        background:#222;
+                        flex:1;
+                    "
+                    onclick="closeModal()">
+
+                    Cancelar
+
+                </button>
+
+                <button
+                    type="button"
+                    id="modal-confirm"
+                    class="btn-action"
+                    style="flex:2;">
+
+                    Confirmar Registro
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================= -->
+<!-- JS MODULAR -->
+<!-- ========================= -->
+
+<!-- CORE -->
+
+<script src="js/db.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/modal.js"></script>
+
+<!-- APP PRIMEIRO -->
+
+<script src="js/app.js"></script>
+
+<!-- PÁGINAS -->
+
+<script src="js/dashboard.js"></script>
+
+<script src="js/clientes.js"></script>
+
+<script src="js/fornecedores.js"></script>
+
+<script src="js/funcionarios.js"></script>
+
+<script src="js/ponto.js"></script>
+
+<script src="js/financeiro.js"></script>
+
+<script src="js/estoque.js"></script>
+
+<script src="js/orcamentos.js"></script>
+
+<script src="js/recibos.js"></script>
+
+<script src="js/relatorios.js"></script>
+
+<script src="js/backup.js"></script>
+
+<script src="js/atualizacao.js"></script>
+
+<script src="js/sobre.js"></script>
+
+<!-- PDF -->
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        Login | Dominus ERP
+    </title>
+
+    <style>
+
+        body {
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #f4f4f4,
+                    #ffffff
+                );
+
+            display:flex;
+
+            align-items:center;
+
+            justify-content:center;
+
+            height:100vh;
+
+            margin:0;
+
+            font-family:
+                'Segoe UI',
+                sans-serif;
+        }
+
+        .box {
+
+            background:#ffffff;
+
+            padding:45px 40px;
+
+            border-radius:20px;
+
+            border:1px solid #eee;
+
+            text-align:center;
+
+            width:320px;
+
+            box-shadow:
+
+                0 20px 60px
+                rgba(0,0,0,.08),
+
+                0 0 0 2px
+                rgba(255,31,45,.05);
+
+            position:relative;
+
+            overflow:hidden;
+        }
+
+        .box::before {
+
+            content:"";
+
+            position:absolute;
+
+            top:0;
+            left:0;
+
+            width:100%;
+            height:5px;
+
+            background:
+
+                linear-gradient(
+                    90deg,
+                    #ff1f2d,
+                    #c51620
+                );
+        }
+
+        .logo{
+
+            margin-bottom:20px;
+        }
+
+        h2{
+
+            color:#ff1f2d;
+
+            margin-bottom:20px;
+
+            font-weight:800;
+
+            letter-spacing:1px;
+        }
+
+        input{
+
+            width:100%;
+
+            padding:12px;
+
+            margin:10px 0;
+
+            background:#fff;
+
+            border:1px solid #ddd;
+
+            color:#111;
+
+            border-radius:8px;
+
+            transition:.2s;
+
+            box-sizing:border-box;
+        }
+
+        input:focus{
+
+            border-color:#ff1f2d;
+
+            box-shadow:
+
+                0 0 0 3px
+                rgba(255,31,45,.10);
+
+            outline:none;
+        }
+
+        button{
+
+            width:100%;
+
+            padding:12px;
+
+            background:#ff1f2d;
+
+            color:#fff;
+
+            border:none;
+
+            border-radius:8px;
+
+            cursor:pointer;
+
+            font-weight:bold;
+
+            transition:.2s;
+        }
+
+        button:hover{
+
+            background:#c51620;
+
+            transform:
+                translateY(-1px);
+
+            box-shadow:
+
+                0 5px 15px
+                rgba(255,31,45,.30);
+        }
+
+        .erro{
+
+            color:#dc2626;
+
+            font-size:13px;
+
+            margin-top:12px;
+
+            display:none;
+        }
+
+        .footer{
+
+            margin-top:20px;
+
+            font-size:10px;
+
+            color:#999;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="box">
+
+        <div class="logo">
+
+            <img
+                src="dominus.png"
+                alt="Logo"
+                style="width:200px;"
+            >
+
+        </div>
+
+        <form
+            onsubmit="
+                logar();
+                return false;
+            "
+        >
+
+            <input
+                type="text"
+                id="user"
+                placeholder="Usuário"
+                autocomplete="username"
+            >
+
+            <input
+                type="password"
+                id="pass"
+                placeholder="Senha"
+                autocomplete="current-password"
+            >
+
+            <button
+                type="submit"
+            >
+
+                Entrar
+
+            </button>
+
+        </form>
+
+        <div
+            id="erroLogin"
+            class="erro"
+        >
+
+            Usuário ou senha inválidos.
+
+        </div>
+
+        <div class="footer">
+
+            © 2026 Dominus ERP
+
+        </div>
+
+    </div>
+
+    <script>
+
+        /* ========================= */
+        /* SE JA ESTIVER LOGADO */
+        /* ========================= */
+
+        if(
+
+            sessionStorage.getItem(
+                'dominus_logado'
+            )
+
+            ===
+
+            'true'
+
+        ){
+
+            window.location.href =
+                'index.html';
+        }
+
+        /* ========================= */
+        /* LOGIN */
+        /* ========================= */
+
+        function logar(){
+
+            const usuario =
+
+                document
+                .getElementById('user')
+                .value
+                .trim();
+
+            const senha =
+
+                document
+                .getElementById('pass')
+                .value
+                .trim();
+
+            const erro =
+
+                document.getElementById(
+                    'erroLogin'
+                );
+
+            erro.style.display =
+                'none';
+
+            /* ========================= */
+            /* CREDENCIAIS */
+            /* ========================= */
+
+            if(
+
+                usuario === 'admin'
+
+                &&
+
+                senha === 'admin'
+
+            ){
+
+                sessionStorage.setItem(
+
+                    'dominus_logado',
+
+                    'true'
+
+                );
+
+                window.location.href =
+                    'index.html';
+
+                return;
+            }
+
+            erro.style.display =
+                'block';
+        }
+
+    </script>
+
+</body>
+
+</html>
