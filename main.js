@@ -401,13 +401,17 @@ ipcMain.handle(
 /* ========================= */
 
 ipcMain.handle(
-    'check-update',
-    async () => {
 
-        try {
+    'check-update',
+
+    async()=>{
+
+        try{
 
             const resultado =
-                await autoUpdater.checkForUpdates();
+
+                await autoUpdater
+                .checkForUpdates();
 
             return {
 
@@ -415,15 +419,18 @@ ipcMain.handle(
 
                 update:
 
-    !!resultado,
+                    !!resultado
+                    ?.updateInfo
+                    ?.version,
 
-versao:
+                versao:
 
-    resultado
-    ?.updateInfo
-    ?.version ||
+                    resultado
+                    ?.updateInfo
+                    ?.version ||
 
-    null
+                    null
+
             };
 
         }
@@ -431,8 +438,11 @@ versao:
         catch(e){
 
             console.error(
+
                 'Erro update:',
+
                 e
+
             );
 
             return {
@@ -440,10 +450,13 @@ versao:
                 ok:false,
 
                 erro:e.message
+
             };
+
         }
 
     }
+
 );
 
 ipcMain.handle(
@@ -454,13 +467,48 @@ ipcMain.handle(
 
         try{
 
+            console.log(
+                'Baixando atualização...'
+            );
+
             await autoUpdater
                 .downloadUpdate();
 
-            autoUpdater
-                .quitAndInstall();
+            return new Promise(
 
-            return true;
+                resolve=>{
+
+                    autoUpdater.once(
+
+                        'update-downloaded',
+
+                        ()=>{
+
+                            console.log(
+                                'Update baixado.'
+                            );
+
+                            resolve({
+
+                                ok:true
+
+                            });
+
+                            autoUpdater
+                                .quitAndInstall(
+
+                                    false,
+                                    true
+
+                                );
+
+                        }
+
+                    );
+
+                }
+
+            );
 
         }
 
@@ -474,14 +522,21 @@ ipcMain.handle(
 
             );
 
-            return false;
+            return {
+
+                ok:false,
+
+                erro:
+
+                    err.message
+
+            };
 
         }
 
     }
 
 );
-
 /* ========================= */
 /* START APP */
 /* ========================= */
