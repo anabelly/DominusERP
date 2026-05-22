@@ -22,79 +22,169 @@ window.registerPage = function (nome, renderFn) {
 /* NAVEGAÇÃO */
 /* ========================= */
 
-window.navigate = function (pagina) {
+window.currentPage = null;
+
+window.navigate = async function (pagina) {
 
     try {
 
-        const viewPort =
-            document.getElementById('view-port');
+        /* ========================= */
+        /* REGISTRA PÁGINA ATUAL */
+        /* ========================= */
 
-        if (!viewPort) {
-            console.error('view-port não encontrado.');
-            return;
-        }
+        window.currentPage =
+            pagina;
 
-        const render =
-            window.pages[pagina];
+        /* ========================= */
+/* SINCRONIZA DB */
+/* ========================= */
 
-        if (!render) {
+try{
 
-            console.error(
-                `Página "${pagina}" não registrada.`
-            );
+    await loadDB();
 
-            viewPort.innerHTML = `
+}
 
-                <div class="content-card">
+catch(err){
 
-                    <h2 style="
-                        color:#dc2626;
-                        margin-bottom:10px;
-                    ">
-                        Página não encontrada
-                    </h2>
+    console.error(
 
-                    <p>
-                        A página
-                        <strong>${pagina}</strong>
-                        não foi registrada.
-                    </p>
+        'Erro sincronizar DB:',
 
-                </div>
-            `;
+        err
 
-            return;
-        }
+    );
 
-        // FECHA MODAL AO TROCAR DE TELA
+}
+
+/* ========================= */
+/* VIEW PORT */
+/* ========================= */
+
+const viewPort =
+    document.getElementById(
+        'view-port'
+    );
+
+if (!viewPort) {
+
+    console.error(
+        'view-port não encontrado.'
+    );
+
+    return;
+
+}
+
+/* ========================= */
+/* RENDER DA PÁGINA */
+/* ========================= */
+
+const render =
+
+    window.pages[
+        pagina
+    ];
+
+if (!render) {
+
+    console.error(
+
+        `Página "${pagina}" não registrada.`
+
+    );
+
+    viewPort.innerHTML = `
+
+        <div class="content-card">
+
+            <h2 style="
+                color:#dc2626;
+                margin-bottom:10px;
+            ">
+
+                Página não encontrada
+
+            </h2>
+
+            <p>
+
+                A página
+                <strong>${pagina}</strong>
+                não foi registrada.
+
+            </p>
+
+        </div>
+
+    `;
+
+    return;
+
+}
+
+        /* ========================= */
+        /* FECHA MODAL */
+        /* ========================= */
+
         closeModal();
 
-        // RENDERIZA PÁGINA
+        /* ========================= */
+        /* RENDERIZA */
+        /* ========================= */
+
         viewPort.innerHTML =
+
             render();
 
-        // MENU ATIVO
+        /* ========================= */
+        /* MENU ATIVO */
+        /* ========================= */
+
         document
-            .querySelectorAll('.nav-item')
-            .forEach(item => {
+        .querySelectorAll(
+            '.nav-item'
+        )
+        .forEach(item=>{
 
-                const onclick =
-                    item.getAttribute('onclick') || '';
+            const onclick =
 
-                item.classList.toggle(
-                    'active',
-                    onclick.includes(`'${pagina}'`)
-                );
-            });
+                item.getAttribute(
+                    'onclick'
+                ) || '';
 
-        // VOLTA TOPO
-        viewPort.scrollTop = 0;
+            item.classList.toggle(
 
-    } catch (err) {
+                'active',
+
+                onclick.includes(
+
+                    `'${pagina}'`
+
+                )
+
+            );
+
+        });
+
+        /* ========================= */
+        /* TOPO */
+        /* ========================= */
+
+        viewPort.scrollTop =
+            0;
+
+    }
+
+    catch(err){
 
         console.error(err);
 
-        document.getElementById('view-port').innerHTML = `
+        document
+        .getElementById(
+            'view-port'
+        )
+        .innerHTML = `
 
             <div class="content-card">
 
@@ -102,7 +192,9 @@ window.navigate = function (pagina) {
                     color:#dc2626;
                     margin-bottom:10px;
                 ">
+
                     Erro ao carregar página
+
                 </h2>
 
                 <pre style="
@@ -110,14 +202,18 @@ window.navigate = function (pagina) {
                     color:#444;
                     margin-top:10px;
                 ">
+
 ${err}
+
                 </pre>
 
             </div>
-        `;
-    }
-};
 
+        `;
+
+    }
+
+};
 /* ========================= */
 /* DELETE GLOBAL */
 /* ========================= */
@@ -224,5 +320,178 @@ window.addEventListener(
         );
 
     }
+
+);
+/* ========================= */
+/* AUTO REFRESH INTELIGENTE */
+/* ========================= */
+
+window.isEditing = false;
+
+document.addEventListener(
+
+    'focusin',
+
+    ()=>{
+
+        const el =
+            document.activeElement;
+
+        if(
+
+            el && (
+
+                el.tagName === 'INPUT' ||
+
+                el.tagName === 'TEXTAREA' ||
+
+                el.tagName === 'SELECT' ||
+
+                el.isContentEditable
+
+            )
+
+        ){
+
+            window.isEditing =
+                true;
+
+        }
+
+    }
+
+);
+
+document.addEventListener(
+
+    'focusout',
+
+    ()=>{
+
+        setTimeout(()=>{
+
+            const el =
+                document.activeElement;
+
+            window.isEditing =
+
+                !!(
+
+                    el && (
+
+                        el.tagName === 'INPUT' ||
+
+                        el.tagName === 'TEXTAREA' ||
+
+                        el.tagName === 'SELECT' ||
+
+                        el.isContentEditable
+
+                    )
+
+                );
+
+        },150);
+
+    }
+
+);
+
+setInterval(
+
+    async()=>{
+
+        try{
+
+            if(
+
+                !window.currentPage
+
+            ){
+
+                return;
+
+            }
+
+            /* NÃO atualizar enquanto edita */
+
+            if(
+
+                window.isEditing
+
+            ){
+
+                return;
+
+            }
+
+            /* NÃO atualizar modal aberto */
+
+            if(
+
+                document.querySelector(
+
+                    '.modal-overlay'
+
+                )
+
+            ){
+
+                return;
+
+            }
+
+            const response =
+
+                await fetch(
+
+                    `${API_URL}/db`
+
+                );
+
+            const novoDB =
+
+                await response.json();
+
+            if(
+
+                JSON.stringify(
+
+                    window.db
+
+                )
+
+                !==
+
+                JSON.stringify(
+
+                    novoDB
+
+                )
+
+            ){
+
+                window.db =
+                    novoDB;
+
+            }
+
+        }
+
+        catch(err){
+
+            console.error(
+
+                'Auto Refresh:',
+
+                err
+
+            );
+
+        }
+
+    },
+
+    5000
 
 );

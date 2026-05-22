@@ -308,8 +308,10 @@ window.abrirRelatorio = function (tipo) {
 /* ========================= */
 
 window.getCabecalhoRelatorio = function (
+
     titulo
-) {
+
+){
 
     return `
 
@@ -320,24 +322,39 @@ window.getCabecalhoRelatorio = function (
         margin-bottom:35px;
     ">
 
+        <img
+            src="logo.png"
+            style="
+                width:110px;
+                height:auto;
+                object-fit:contain;
+                margin-bottom:15px;
+            "
+        >
+
         <div style="
             font-size:34px;
             font-weight:800;
         ">
+
             DOMINUS ERP
+
         </div>
 
         <div style="
             color:#6b7280;
             margin-top:6px;
         ">
+
             ${titulo}
+
         </div>
 
     </div>
-`;
-};
 
+`;
+
+};
 
 /* ========================= */
 /* CARD KPI RELATÓRIOS */
@@ -1797,9 +1814,10 @@ window.logoRelatorio = function(){
         object-fit:contain;
     "
 >
-`;
-};
 
+`;
+
+};
 /* ========================= */
 /* CABEÇALHO PROFISSIONAL */
 /* ========================= */
@@ -1926,40 +1944,35 @@ async function(){
 
     if(!conteudo) return;
 
-    /* ========================= */
-    /* LOGO ABSOLUTA */
-    /* ========================= */
+   /* ========================= */
+/* LOGO ABSOLUTA */
+/* ========================= */
 
-    const logo =
+const logo =
 
-        `file:///${window.location.pathname
+    `file:///${window.location.pathname
+        .replace(
+            /\/[^\/]*$/,
+            '/logo.png'
+        )}`;
 
-            .replace(
+/* ========================= */
+/* CORRIGE CAMINHOS */
+/* ========================= */
 
-                /\/[^\/]*$/,
+const conteudoCorrigido =
 
-                '/logo.png'
+    conteudo
 
-            )
+    .replaceAll(
+        './logo.png',
+        logo
+    )
 
-        }`;
-
-    /* ========================= */
-    /* CORRIGE CAMINHOS */
-    /* ========================= */
-
-    const conteudoCorrigido =
-
-        conteudo
-
-        .replaceAll(
-
-            'logo.png',
-
-            logo
-
-        );
-
+    .replaceAll(
+        'logo.png',
+        logo
+    );
     /* ========================= */
     /* HTML FINAL */
     /* ========================= */

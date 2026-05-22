@@ -1,6 +1,6 @@
 {
   "name": "sistema",
-  "version": "1.0.4",
+  "version": "1.0.1",
   "description": "ERP Sistema",
   "main": "main.js",
   "scripts": {
@@ -39,7 +39,9 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "Dominus-ERP-Setup-${version}.${ext}"
+
     },
     "publish": [
       {

@@ -40,14 +40,47 @@ autoUpdater.autoDownload =
 /* SQLITE */
 /* ========================= */
 
-const dbPath =
+const dataDir = path.join(
 
-    'C:\\DominusServer\\database.db';
+    app.getPath('userData'),
+
+    'database'
+
+);
+
+/* CRIA PASTA SE NÃO EXISTIR */
+
+if(
+
+    !fs.existsSync(dataDir)
+
+){
+
+    fs.mkdirSync(
+
+        dataDir,
+
+        { recursive:true }
+
+    );
+
+}
+
+const dbPath = path.join(
+
+    dataDir,
+
+    'database.db'
+
+);
+
+console.log(
+    'Banco:',
+    dbPath
+);
 
 const db = new sqlite3.Database(
-
     dbPath
-
 );
 const server =
     express();

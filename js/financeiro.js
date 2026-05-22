@@ -15,47 +15,85 @@ window.renderFinanceiro = function () {
 if (window.financeiroSemanaOffsetReceber === undefined) {
     window.financeiroSemanaOffsetReceber = 0;
 }
-function gerarPeriodoSemana(offset) {
+function gerarPeriodoSemana(offset){
 
-    const hoje = new Date();
+    const hoje =
+        new Date();
+
+    hoje.setHours(
+        0,0,0,0
+    );
 
     const diaSemana =
         hoje.getDay();
 
     const diffSegunda =
+
         diaSemana === 0
-            ? -6
-            : 1 - diaSemana;
+
+        ?
+
+        -6
+
+        :
+
+        1 - diaSemana;
 
     const inicioSemana =
         new Date(hoje);
 
     inicioSemana.setDate(
-        hoje.getDate() +
-        diffSegunda +
+
+        hoje.getDate()
+
+        +
+
+        diffSegunda
+
+        +
+
         (offset * 7)
+
     );
 
-    inicioSemana.setHours(0,0,0,0);
+    inicioSemana.setHours(
+        0,0,0,0
+    );
+
+    /* SEGUNDA SEGUINTE */
 
     const fimSemana =
-        new Date(inicioSemana);
+        new Date(
+            inicioSemana
+        );
 
     fimSemana.setDate(
-        inicioSemana.getDate() + 6
+
+        inicioSemana.getDate()
+
+        +
+
+        7
+
+    );
+
+    fimSemana.setHours(
+        0,0,0,0
     );
 
     return {
 
         inicio:
+
             inicioSemana
-                .toISOString()
-                .split('T')[0],
+            .toISOString()
+            .split('T')[0],
 
         fim:
+
             fimSemana
-                .toISOString()
-                .split('T')[0]
+            .toISOString()
+            .split('T')[0]
     };
 }
 
@@ -70,30 +108,92 @@ const periodoReceber =
     );
 
     const contasPagar =
-        db.financeiro.filter(l => {
 
-            if (l.tipo !== 'Pagar') {
-                return false;
-            }
+    db.financeiro
 
-            return (
-    l.vencimento >= periodoPagar.inicio &&
-    l.vencimento <= periodoPagar.fim
-);
-        });
+    .filter(l=>{
+
+        if(
+
+            l.tipo !== 'Pagar'
+
+        ){
+
+            return false;
+
+        }
+
+        return (
+
+            l.vencimento >=
+            periodoPagar.inicio
+
+            &&
+
+            l.vencimento <=
+            periodoPagar.fim
+
+        );
+
+    })
+
+    .sort((a,b)=>
+
+        new Date(
+            a.vencimento
+        )
+
+        -
+
+        new Date(
+            b.vencimento
+        )
+
+    );
 
     const contasReceber =
-        db.financeiro.filter(l => {
 
-            if (l.tipo !== 'Receber') {
-                return false;
-            }
+    db.financeiro
 
-            return (
-    l.vencimento >= periodoReceber.inicio &&
-    l.vencimento <= periodoReceber.fim
-);
-        });
+    .filter(l=>{
+
+        if(
+
+            l.tipo !== 'Receber'
+
+        ){
+
+            return false;
+
+        }
+
+        return (
+
+            l.vencimento >=
+            periodoReceber.inicio
+
+            &&
+
+            l.vencimento <=
+            periodoReceber.fim
+
+        );
+
+    })
+
+    .sort((a,b)=>
+
+        new Date(
+            a.vencimento
+        )
+
+        -
+
+        new Date(
+            b.vencimento
+        )
+
+    );
 
     let html = `
 
@@ -831,59 +931,157 @@ window.excluirLancamento = function (idx) {
 /* EDITAR */
 /* ========================= */
 
-window.editarLancamento = function (idx) {
+window.editarLancamento = function(idx){
 
     const lanc =
+
         db.financeiro[idx];
 
-    if (!lanc) return;
+    if(!lanc) return;
 
-    if (lanc.tipo === 'Pagar') {
+    /* ABRE MODAL */
+
+    if(lanc.tipo === 'Pagar'){
 
         abrirContaPagar(lanc);
 
-    } else {
+    }
+
+    else{
 
         abrirContaReceber(lanc);
+
     }
+
+    /* GARANTE PREENCHIMENTO */
+
+    document.getElementById(
+        'fin-valor'
+    ).value =
+
+        lanc.valor || '';
+
+    document.getElementById(
+        'fin-desc'
+    ).value =
+
+        lanc.descricao || '';
+
+    document.getElementById(
+        'fin-vencimento'
+    ).value =
+
+        lanc.vencimento || '';
+
+    if(lanc.tipo === 'Pagar'){
+
+        const fornecedor =
+
+            document.getElementById(
+                'fin-fornecedor'
+            );
+
+        if(fornecedor){
+
+            fornecedor.value =
+                lanc.nome || '';
+        }
+
+        const tipoConta =
+
+            document.getElementById(
+                'fin-tipo-conta'
+            );
+
+        if(tipoConta){
+
+            tipoConta.value =
+                lanc.tipoConta || '';
+        }
+
+    }
+
+    else{
+
+        const cliente =
+
+            document.getElementById(
+                'fin-cliente'
+            );
+
+        if(cliente){
+
+            cliente.value =
+                lanc.nome || '';
+        }
+
+    }
+
+    /* SALVAR ALTERAÇÃO */
 
     document.getElementById(
         'modal-confirm'
-    ).onclick = function () {
+    ).onclick = function(){
 
         lanc.valor =
+
             Number(
-                document.getElementById('fin-valor').value
+
+                document.getElementById(
+                    'fin-valor'
+                ).value
+
             );
 
         lanc.descricao =
-            document.getElementById('fin-desc').value;
+
+            document.getElementById(
+                'fin-desc'
+            ).value;
 
         lanc.vencimento =
-            document.getElementById('fin-vencimento').value;
 
-        if (lanc.tipo === 'Pagar') {
+            document.getElementById(
+                'fin-vencimento'
+            ).value;
+
+        if(lanc.tipo === 'Pagar'){
 
             lanc.nome =
-                document.getElementById('fin-fornecedor').value;
+
+                document.getElementById(
+                    'fin-fornecedor'
+                ).value;
 
             lanc.tipoConta =
-                document.getElementById('fin-tipo-conta').value;
 
-        } else {
+                document.getElementById(
+                    'fin-tipo-conta'
+                ).value;
+
+        }
+
+        else{
 
             lanc.nome =
-                document.getElementById('fin-cliente').value;
+
+                document.getElementById(
+                    'fin-cliente'
+                ).value;
+
         }
 
         save();
 
         closeModal();
 
-        navigate('financeiro');
-    };
-};
+        navigate(
+            'financeiro'
+        );
 
+    };
+
+};
 /* ========================= */
 /* SALVAR CONTA PAGAR */
 /* ========================= */
@@ -1348,24 +1546,8 @@ window.renderTabelaConsultaFinanceiro = function() {
     document.getElementById('consulta-resultado').innerHTML = html;
 };
 
-/* ========================= */
-/* DAR BAIXA NA CONSULTA (SEM FECHAR MODAL) */
-/* ========================= */
-window.darBaixaFinanceiroConsulta = function(idx) {
-    const lanc = window.dadosConsultaFinanceiro[idx];
-    if (!lanc) return;
 
-    const hojeStr = new Date().toISOString().split('T')[0];
-    const dataBaixa = prompt(`Informe a data de ${lanc.tipo === 'Pagar' ? 'pagamento' : 'recebimento'}:`, hojeStr);
-    if (!dataBaixa) return;
-
-    lanc.dataPagamento = dataBaixa;
-    lanc.status = lanc.tipo === 'Pagar' ? 'Pago' : 'Recebido';
-
-    save();
-    renderTabelaConsultaFinanceiro(); // Atualiza tabela sem fechar modal
-};
-
+   
 /* ========================= */
 /* EXCLUIR NA CONSULTA (SEM FECHAR MODAL) */
 /* ========================= */
@@ -1380,7 +1562,114 @@ window.excluirLancamentoConsulta = function(idx) {
     save();
     renderTabelaConsultaFinanceiro();
 };
+/* ========================= */
+/* DAR BAIXA CONSULTA */
+/* ========================= */
 
+window.darBaixaFinanceiroConsulta =
+function(idx){
+
+    const lanc =
+
+        window
+        .dadosConsultaFinanceiro[idx];
+
+    if(!lanc)
+        return;
+
+    const hoje =
+
+        new Date()
+        .toISOString()
+        .split('T')[0];
+
+    const html = `
+
+<div style="
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+">
+
+    <label>
+
+        ${
+
+            lanc.tipo === 'Pagar'
+
+            ?
+
+            'Data do Pagamento'
+
+            :
+
+            'Data do Recebimento'
+
+        }
+
+    </label>
+
+    <input
+        type="date"
+        id="consulta-data-baixa"
+        value="${hoje}">
+
+</div>
+
+`;
+
+    configModal({
+
+        title:
+
+            lanc.tipo === 'Pagar'
+
+            ?
+
+            'Pagar Conta'
+
+            :
+
+            'Receber Conta',
+
+        body:html,
+
+        size:'small',
+
+        confirmText:'Confirmar',
+
+        onConfirm(){
+
+            lanc.dataPagamento =
+
+                document
+                .getElementById(
+                    'consulta-data-baixa'
+                )
+                .value;
+
+            lanc.status =
+
+                lanc.tipo === 'Pagar'
+
+                ?
+
+                'Pago'
+
+                :
+
+                'Recebido';
+
+            save();
+
+            closeModal();
+
+            renderTabelaConsultaFinanceiro();
+        }
+
+    });
+
+};
 /* ========================= */
 /* EDITAR NA CONSULTA (SEM FECHAR MODAL) */
 /* ========================= */
