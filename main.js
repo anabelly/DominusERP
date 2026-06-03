@@ -592,6 +592,18 @@ ipcMain.handle(
     }
 
 );
+
+ipcMain.handle(
+
+    'get-version',
+
+    async()=>{
+
+        return app.getVersion();
+
+    }
+
+);
 /* ========================= */
 /* START APP */
 /* ========================= */

@@ -61,11 +61,19 @@ contextBridge.exposeInMainWorld(
 
         installUpdate:()=>
 
-            ipcRenderer.invoke(
+    ipcRenderer.invoke(
 
-                'install-update'
+        'install-update'
 
-            )
+    ),
+
+getVersion:()=>
+
+    ipcRenderer.invoke(
+
+        'get-version'
+
+    )
 
     }
 

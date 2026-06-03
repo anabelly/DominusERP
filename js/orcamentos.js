@@ -8,9 +8,12 @@ window.renderOrcamentos = function () {
         db.orcamentos = [];
     }
 
-    if (!db.ultimoOrcamento) {
-        db.ultimoOrcamento = 3678;
-    }
+  if (
+    db.ultimoOrcamento === undefined ||
+    db.ultimoOrcamento === null
+) {
+    db.ultimoOrcamento = 3687;
+}
 
     let html = `
 
@@ -846,9 +849,12 @@ function () {
         db.clientes = [];
     }
 
-    if (!db.ultimoOrcamento) {
-        db.ultimoOrcamento = 3537;
-    }
+ if (
+    db.ultimoOrcamento === undefined ||
+    db.ultimoOrcamento === null
+) {
+    db.ultimoOrcamento = 3687;
+}
 
     const codigo =
         db.ultimoOrcamento + 1;
@@ -2044,13 +2050,13 @@ background:#fff;
 
 <tr style="
 background:#8b8b8b;
-color:#fff;
 font-size:14px;
 ">
 
 <th style="
 padding:10px;
 border:3px solid #8b8b8b;
+color:#fff;
 ">
 Item
 </th>
@@ -2058,6 +2064,7 @@ Item
 <th style="
 padding:10px;
 border:3px solid #8b8b8b;
+color:#fff;
 ">
 Un.
 </th>
@@ -2065,6 +2072,7 @@ Un.
 <th style="
 padding:10px;
 border:3px solid #8b8b8b;
+color:#fff;
 ">
 Descrição
 </th>
@@ -2072,6 +2080,7 @@ Descrição
 <th style="
 padding:10px;
 border:3px solid #8b8b8b;
+color:#fff;
 ">
 Qntd.
 </th>
@@ -2079,6 +2088,7 @@ Qntd.
 <th style="
 padding:10px;
 border:3px solid #8b8b8b;
+color:#fff;
 ">
 R$ Unitário
 </th>
@@ -2086,6 +2096,7 @@ R$ Unitário
 <th style="
 padding:10px;
 border:3px solid #8b8b8b;
+color:#fff;
 ">
 R$ Total
 </th>
@@ -2223,7 +2234,7 @@ border-radius:4px;
 line-height:1.4;
 ">
 
-PRÉ-CONTRATO DE PRESTAÇÃO DE SERVIÇOS
+PROPOSTA DE PRODUTOS E SERVIÇOS
 
 </div>
 
@@ -2254,7 +2265,7 @@ CNPJ:
 
 <strong>
 
-${clienteCompleto.cnpj || '-'}
+${clienteCompleto.documento || '-'}
 
 </strong>,
 
@@ -2314,7 +2325,7 @@ ${o.prazoEntrega || '-'}
 
 Forma de pagamento:
 
-<br><br>
+<br>
 
 ${(o.prazo || '-')
 .replace(/\n/g,'<br>')}
@@ -3077,84 +3088,69 @@ function(index){
 
     db.orcamentos[index] = {
 
-        ...db.orcamentos[index],
+    codigo:
+        db.orcamentos[index]?.codigo
+        || o.codigo,
 
-        cliente:
-            document
-            .getElementById(
-                'orc-cliente'
-            )
-            .value,
+    data:
+        db.orcamentos[index]?.data,
 
-        ac:
-            document
-            .getElementById(
-                'orc-ac'
-            )
-            .value,
+    cliente:
+        document.getElementById(
+            'orc-cliente'
+        ).value,
 
-        telefone:
-            document
-            .getElementById(
-                'orc-telefone'
-            )
-            .value,
+    ac:
+        document.getElementById(
+            'orc-ac'
+        ).value,
 
-        email:
-            document
-            .getElementById(
-                'orc-email'
-            )
-            .value,
+    telefone:
+        document.getElementById(
+            'orc-telefone'
+        ).value,
 
-        validade:
-            document
-            .getElementById(
-                'orc-validade'
-            )
-            .value,
+    email:
+        document.getElementById(
+            'orc-email'
+        ).value,
 
-        prazo:
-            document
-            .getElementById(
-                'orc-prazo'
-            )
-            .value,
+    validade:
+        document.getElementById(
+            'orc-validade'
+        ).value,
 
-        prazoEntrega:
-            document
-            .getElementById(
-                'orc-entrega'
-            )
-            .value,
+    prazo:
+        document.getElementById(
+            'orc-prazo'
+        ).value,
 
-        temNota,
+    prazoEntrega:
+        document.getElementById(
+            'orc-entrega'
+        ).value,
 
-        status:
-            document
-            .getElementById(
-                'orc-status'
-            )
-            .value,
-            preContrato:
-    document
-    .getElementById(
-        'orc-precontrato'
-    )
-    .value,
+    temNota,
 
-        observacoes:
-            document
-            .getElementById(
-                'orc-obs'
-            )
-            .value,
+    status:
+        document.getElementById(
+            'orc-status'
+        ).value,
 
-        itens,
+    preContrato:
+        document.getElementById(
+            'orc-precontrato'
+        ).value,
 
-        total
+    observacoes:
+        document.getElementById(
+            'orc-obs'
+        ).value,
 
-    };
+    itens,
+
+    total
+};
 
     save();
 

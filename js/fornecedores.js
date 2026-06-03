@@ -85,18 +85,19 @@ window.renderFornecedores = function () {
             border-collapse:collapse;
         ">
 
-            <thead>
+           <thead>
 
-                <tr>
+    <tr>
 
-                    <th>Nome/Razão</th>
-                    <th>Documento</th>
-                    <th>Contato</th>
-                    <th>Ações</th>
+        
+        <th>Nome Fantasia</th>
+        <th>Documento</th>
+        <th>Contato</th>
+        <th>Ações</th>
 
-                </tr>
+    </tr>
 
-            </thead>
+</thead>
 
             <tbody>
 `;
@@ -129,8 +130,10 @@ window.renderFornecedores = function () {
 
 <tr>
 
+   
+
     <td>
-        ${fornecedor.nome || '-'}
+        ${fornecedor.fantasia || '-'}
     </td>
 
     <td>
@@ -138,7 +141,12 @@ window.renderFornecedores = function () {
     </td>
 
     <td>
-        ${fornecedor.telefone || fornecedor.email || '-'}
+        ${
+            fornecedor.telefone ||
+            fornecedor.email ||
+            fornecedor.contato ||
+            '-'
+        }
     </td>
 
     <td>

@@ -137,6 +137,56 @@ if (!render) {
 
             render();
 
+            /* ========================= */
+/* VERSÃO SISTEMA */
+/* ========================= */
+
+if(
+
+    pagina === 'atualizacao'
+
+){
+
+    setTimeout(
+
+        async()=>{
+
+            try{
+
+                const versao =
+
+                    await window.api
+                    .getVersion();
+
+                const el =
+
+                    document.getElementById(
+                        'versao-instalada'
+                    );
+
+                if(el){
+
+                    el.innerText =
+                        'v' + versao;
+
+                }
+
+            }
+
+            catch(err){
+
+                console.error(err);
+
+            }
+
+        },
+
+        50
+
+    );
+
+}
+
         /* ========================= */
         /* MENU ATIVO */
         /* ========================= */
@@ -329,16 +379,13 @@ window.addEventListener(
 window.isEditing = false;
 
 document.addEventListener(
-
     'focusin',
-
     ()=>{
 
         const el =
             document.activeElement;
 
         if(
-
             el && (
 
                 el.tagName === 'INPUT' ||
@@ -350,7 +397,6 @@ document.addEventListener(
                 el.isContentEditable
 
             )
-
         ){
 
             window.isEditing =
@@ -359,13 +405,10 @@ document.addEventListener(
         }
 
     }
-
 );
 
 document.addEventListener(
-
     'focusout',
-
     ()=>{
 
         setTimeout(()=>{
@@ -373,28 +416,25 @@ document.addEventListener(
             const el =
                 document.activeElement;
 
-            window.isEditing =
+            window.isEditing = !!(
 
-                !!(
+                el && (
 
-                    el && (
+                    el.tagName === 'INPUT' ||
 
-                        el.tagName === 'INPUT' ||
+                    el.tagName === 'TEXTAREA' ||
 
-                        el.tagName === 'TEXTAREA' ||
+                    el.tagName === 'SELECT' ||
 
-                        el.tagName === 'SELECT' ||
+                    el.isContentEditable
 
-                        el.isContentEditable
+                )
 
-                    )
-
-                );
+            );
 
         },150);
 
     }
-
 );
 
 setInterval(
@@ -404,35 +444,32 @@ setInterval(
         try{
 
             if(
-
                 !window.currentPage
-
             ){
-
                 return;
-
             }
 
-            /* NÃO atualizar enquanto edita */
+            /* NÃO atualizar digitando */
 
             if(
-
                 window.isEditing
-
             ){
-
                 return;
-
             }
 
             /* NÃO atualizar modal aberto */
 
+            const modal =
+                document.getElementById(
+                    'modal-global'
+                );
+
             if(
 
-                document.querySelector(
+                modal &&
 
-                    '.modal-overlay'
-
+                !modal.classList.contains(
+                    'hidden'
                 )
 
             ){
@@ -442,31 +479,23 @@ setInterval(
             }
 
             const response =
-
                 await fetch(
-
                     `${API_URL}/db`
-
                 );
 
             const novoDB =
-
                 await response.json();
 
             if(
 
                 JSON.stringify(
-
                     window.db
-
                 )
 
                 !==
 
                 JSON.stringify(
-
                     novoDB
-
                 )
 
             ){
@@ -481,11 +510,8 @@ setInterval(
         catch(err){
 
             console.error(
-
                 'Auto Refresh:',
-
                 err
-
             );
 
         }

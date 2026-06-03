@@ -107,6 +107,20 @@ window.renderRelatorios = function () {
             'dre'
         )}
 
+            ${cardRelatorio(
+    '📄',
+    'Orçamentos',
+    'Consulta por período, cliente e status',
+    'orcamentos'
+)}
+
+${cardRelatorio(
+    '🏷️',
+    'Tipo de Produto',
+    'Consulta por fornecedor e categoria',
+    'tipoProduto'
+)}
+
     </div>
 
 </div>
@@ -163,9 +177,196 @@ window.cardRelatorio = function (
 /* ABRIR RELATÓRIO */
 /* ========================= */
 
-window.abrirRelatorio = function (tipo) {
+window.abrirRelatorio = function(tipo){
 
     let extraCampo = '';
+
+    if(tipo === 'orcamentos'){
+
+    const clientes = [
+
+        ...new Set(
+
+            (db.clientes || [])
+
+            .map(c=>c.nome)
+
+            .filter(Boolean)
+
+        )
+
+    ];
+
+    const status = [
+
+        'Aberto',
+
+        'Aprovado',
+
+        'Reprovado',
+
+        'Cancelado'
+
+    ];
+
+    extraCampo = `
+
+<div>
+
+<label>
+
+Cliente
+
+</label>
+
+<select id="relatorio-cliente">
+
+<option value="">
+
+Todos
+
+</option>
+
+${clientes.map(c=>`
+
+<option value="${c}">
+
+${c}
+
+</option>
+
+`).join('')}
+
+</select>
+
+</div>
+
+<div>
+
+<label>
+
+Status
+
+</label>
+
+<select id="relatorio-status">
+
+<option value="">
+
+Todos
+
+</option>
+
+${status.map(s=>`
+
+<option value="${s}">
+
+${s}
+
+</option>
+
+`).join('')}
+
+</select>
+
+</div>
+
+`;
+}
+if(tipo === 'tipoProduto'){
+
+    const fornecedores = [
+
+        ...new Set(
+
+            (db.produtos || [])
+
+            .map(p=>p.fornecedor)
+
+            .filter(Boolean)
+
+        )
+
+    ];
+
+    const tipos = [
+
+        ...new Set(
+
+            (db.produtos || [])
+
+            .map(p=>p.tipo)
+
+            .filter(Boolean)
+
+        )
+
+    ];
+
+    extraCampo = `
+
+<div>
+
+<label>
+
+Fornecedor
+
+</label>
+
+<select id="relatorio-fornecedor">
+
+<option value="">
+
+Todos
+
+</option>
+
+${fornecedores.map(f=>`
+
+<option value="${f}">
+
+${f}
+
+</option>
+
+`).join('')}
+
+</select>
+
+</div>
+
+<div>
+
+<label>
+
+Tipo Produto
+
+</label>
+
+<select id="relatorio-tipo-produto">
+
+<option value="">
+
+Todos
+
+</option>
+
+${tipos.map(t=>`
+
+<option value="${t}">
+
+${t}
+
+</option>
+
+`).join('')}
+
+</select>
+
+</div>
+
+`;
+}
 
     if (tipo === 'tipo') {
 
@@ -301,6 +502,325 @@ window.abrirRelatorio = function (tipo) {
 
     });
 
+};
+
+window.gerarRelatorioOrcamentos = function(){
+
+    let dados =
+        filtrarPeriodoRelatorio(
+            db.orcamentos,
+            'data'
+        );
+
+    const cliente =
+        document.getElementById(
+            'relatorio-cliente'
+        )?.value || '';
+
+    const status =
+        document.getElementById(
+            'relatorio-status'
+        )?.value || '';
+
+    if(cliente){
+
+        dados =
+            dados.filter(o=>
+
+                o.cliente === cliente
+
+            );
+
+    }
+
+    if(status){
+
+        dados =
+            dados.filter(o=>
+
+                o.status === status
+
+            );
+
+    }
+
+    let total = 0;
+
+    dados.forEach(o=>{
+
+        total +=
+            Number(
+                o.total || 0
+            );
+
+    });
+
+    let linhas='';
+
+    dados.forEach(o=>{
+
+        linhas += `
+
+<tr>
+
+<td>
+
+${formatarData(
+    o.data
+)}
+
+</td>
+
+<td>
+
+${o.cliente||'-'}
+
+</td>
+
+<td>
+
+${o.status||'-'}
+
+</td>
+
+<td>
+
+${formatarMoeda(
+    o.total||0
+)}
+
+</td>
+
+</tr>
+
+`;
+
+    });
+
+    let html =
+        getCabecalhoRelatorio(
+            'ORÇAMENTOS'
+        );
+
+    html += `
+
+<div style="
+display:grid;
+grid-template-columns:
+repeat(auto-fit,minmax(240px,1fr));
+gap:20px;
+margin-bottom:30px;
+">
+
+${cardIndicadorRelatorio(
+
+'ORÇAMENTOS',
+
+dados.length,
+
+'#111827'
+
+)}
+
+${cardIndicadorRelatorio(
+
+'TOTAL',
+
+formatarMoeda(total),
+
+'#2563eb'
+
+)}
+
+</div>
+
+`;
+
+    html +=
+        tabelaProfissionalRelatorio(
+
+            [
+
+                'Data',
+
+                'Cliente',
+
+                'Status',
+
+                'Total'
+
+            ],
+
+            linhas
+
+        );
+
+    document.getElementById(
+        'resultado-relatorio'
+    ).innerHTML = html;
+};
+
+window.gerarRelatorioTipoProduto =
+function(){
+
+    let dados =
+        filtrarPeriodoRelatorio(
+            db.produtos,
+            'dataCadastro'
+        );
+
+    const fornecedor =
+        document.getElementById(
+            'relatorio-fornecedor'
+        )?.value || '';
+
+    const tipo =
+        document.getElementById(
+            'relatorio-tipo-produto'
+        )?.value || '';
+
+    if(fornecedor){
+
+        dados =
+            dados.filter(p=>
+
+                p.fornecedor === fornecedor
+
+            );
+
+    }
+
+    if(tipo){
+
+        dados =
+            dados.filter(p=>
+
+                p.tipo === tipo
+
+            );
+
+    }
+
+    let total=0;
+
+    dados.forEach(p=>{
+
+        total +=
+            Number(
+                p.valor||0
+            );
+
+    });
+
+    let linhas='';
+
+    dados.forEach(p=>{
+
+        linhas += `
+
+<tr>
+
+<td>
+
+${p.codigo||'-'}
+
+</td>
+
+<td>
+
+${p.descricao||'-'}
+
+</td>
+
+<td>
+
+${p.tipo||'-'}
+
+</td>
+
+<td>
+
+${p.fornecedor||'-'}
+
+</td>
+
+<td>
+
+${formatarMoeda(
+    p.valor||0
+)}
+
+</td>
+
+</tr>
+
+`;
+
+    });
+
+    let html =
+        getCabecalhoRelatorio(
+            'TIPO DE PRODUTO'
+        );
+
+    html += `
+
+<div style="
+display:grid;
+grid-template-columns:
+repeat(auto-fit,minmax(240px,1fr));
+gap:20px;
+margin-bottom:30px;
+">
+
+${cardIndicadorRelatorio(
+
+'PRODUTOS',
+
+dados.length,
+
+'#111827'
+
+)}
+
+${cardIndicadorRelatorio(
+
+'TOTAL',
+
+formatarMoeda(total),
+
+'#2563eb'
+
+)}
+
+</div>
+
+`;
+
+    html +=
+        tabelaProfissionalRelatorio(
+
+            [
+
+                'Código',
+
+                'Produto',
+
+                'Tipo',
+
+                'Fornecedor',
+
+                'Valor'
+
+            ],
+
+            linhas
+
+        );
+
+    document.getElementById(
+        'resultado-relatorio'
+    ).innerHTML = html;
 };
 
 /* ========================= */
@@ -487,6 +1007,14 @@ window.gerarRelatorio = function(tipo){
         case 'dre':
             gerarDRE();
             break;
+
+        case 'orcamentos':
+            gerarRelatorioOrcamentos();
+            break;
+
+        case 'tipoProduto':
+        gerarRelatorioTipoProduto();
+        break;
     }
 };
 
@@ -784,12 +1312,29 @@ window.gerarContasReceber = function(){
 /* ========================= */
 
 window.renderTabelaRelatorioFinanceiro =
-function(
+function (
 
     titulo,
     dados
 
 ){
+
+    /* ========================= */
+    /* ORDENAR POR DATA */
+    /* MAIS ATUAL → MAIS LONGE */
+    /* ========================= */
+
+    dados.sort((a,b)=>{
+
+        const dataA =
+            a.vencimento || '';
+
+        const dataB =
+            b.vencimento || '';
+
+        return dataA.localeCompare(dataB);
+
+    });
 
     let total = 0;
 
@@ -879,26 +1424,26 @@ ${formatarData(
 
 <td>
 
-${l.descricao||'-'}
+${l.descricao || '-'}
 
 </td>
 
 <td>
 
-${l.nome||'-'}
+${l.nome || '-'}
 
 </td>
 
 <td>
 
-${l.status||'-'}
+${l.status || '-'}
 
 </td>
 
 <td>
 
 ${formatarMoeda(
-    l.valor||0
+    l.valor || 0
 )}
 
 </td>

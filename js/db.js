@@ -12,7 +12,8 @@ window.db = {
     financeiro:[],
     orcamentos:[],
     recibos:[],
-    tiposProduto:[]
+    tiposProduto:[],
+    ultimoRecibo:0
 };
 
 /* ========================= */
@@ -74,7 +75,10 @@ window.loadDB = async function(){
                     saved.recibos || [],
 
                 tiposProduto:
-                    saved.tiposProduto || []
+                    saved.tiposProduto || [],
+
+                ultimoRecibo:
+                    saved.ultimoRecibo || 0
 
             };
 

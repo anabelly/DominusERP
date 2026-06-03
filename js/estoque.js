@@ -1187,8 +1187,8 @@ window.processarXML = function (xml) {
         db.financeiro = [];
     }
 
-    /* ========================= */
-/* FORNECEDOR XML */
+   /* ========================= */
+/* FORNECEDOR + DATA XML */
 /* ========================= */
 
 const emit =
@@ -1235,28 +1235,180 @@ const uf =
         ?.getElementsByTagName('UF')[0]
         ?.textContent || '';
 
+/* ========================= */
+/* VENCIMENTO DAS DUPLICATAS */
+/* ========================= */
+
+const duplicatas =
+    xml.getElementsByTagName('dup');
+    /* ========================= */
+/* LISTA DE DUPLICATAS */
+/* ========================= */
+
+const listaDuplicatas = [];
+
+for (
+
+    let i = 0;
+
+    i < duplicatas.length;
+
+    i++
+
+){
+
+    const dup =
+        duplicatas[i];
+
+    const numero =
+        dup
+            ?.getElementsByTagName('nDup')[0]
+            ?.textContent || '';
+
+    const vencimento =
+        dup
+            ?.getElementsByTagName('dVenc')[0]
+            ?.textContent || '';
+
+    const valor =
+        parseFloat(
+
+            dup
+                ?.getElementsByTagName('vDup')[0]
+                ?.textContent || 0
+
+        );
+
+    listaDuplicatas.push({
+
+        numero,
+
+        vencimento,
+
+        valor
+
+    });
+
+}
+
+let vencimentoXML = '';
+
+/* pega última duplicata */
+
+if (duplicatas.length > 0) {
+
+    const ultimaDup =
+        duplicatas[duplicatas.length - 1];
+
+    vencimentoXML =
+        ultimaDup
+            ?.getElementsByTagName('dVenc')[0]
+            ?.textContent || '';
+}
+
+/* fallback → data emissão */
+
+if (!vencimentoXML) {
+
+    const ide =
+        xml.getElementsByTagName('ide')[0];
+
+    const dataEmissao =
+
+        ide
+            ?.getElementsByTagName('dhEmi')[0]
+            ?.textContent ||
+
+        ide
+            ?.getElementsByTagName('dEmi')[0]
+            ?.textContent ||
+
+        '';
+
+    vencimentoXML =
+        dataEmissao
+            ? new Date(dataEmissao)
+                  .toISOString()
+                  .split('T')[0]
+            : new Date()
+                  .toISOString()
+                  .split('T')[0];
+}
+/* ========================= */
+/* NORMALIZAR DOCUMENTO */
+/* ========================= */
+
+const documentoLimpo =
+    (documento || '')
+        .replace(/\D/g,'');
+
+/* ========================= */
+/* FORMATA DOCUMENTO */
+/* ========================= */
+
+function formatarDocumento(doc){
+
+    doc =
+        (doc || '')
+        .replace(/\D/g,'');
+
+    if(doc.length === 14){
+
+        return doc.replace(
+            /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+            '$1.$2.$3/$4-$5'
+        );
+    }
+
+    if(doc.length === 11){
+
+        return doc.replace(
+            /^(\d{3})(\d{3})(\d{3})(\d{2})$/,
+            '$1.$2.$3-$4'
+        );
+    }
+
+    return doc;
+}
+
+/* ========================= */
+/* VERIFICA FORNECEDOR */
+/* ========================= */
+
 let fornecedorExiste =
-    db.fornecedores.find(f =>
+    db.fornecedores.find(f => {
 
-        (f.nome || '')
-            .trim()
-            .toLowerCase() ===
+        const docFornecedor =
+            (f.documento || '')
+                .replace(/\D/g,'');
 
-        fornecedorNome
-            .trim()
-            .toLowerCase()
-    );
+        return (
+            docFornecedor ===
+            documentoLimpo
+        );
 
-if (
-    fornecedorNome &&
+    });
+
+/* ========================= */
+/* CADASTRA SOMENTE SE NÃO EXISTIR */
+/* ========================= */
+
+if(
+
+    documentoLimpo &&
+
     !fornecedorExiste
-) {
+
+){
 
     db.fornecedores.push({
 
         nome: fornecedorNome,
 
-        documento,
+        documento:
+            formatarDocumento(
+                documentoLimpo
+            ),
 
         razaoSocial:
             fornecedorNome,
@@ -1270,13 +1422,16 @@ if (
         contato:'',
 
         personalidade:
-            documento.length > 11
+            documentoLimpo.length > 11
                 ? 'PJ'
                 : 'PF',
 
         dataCadastro:
             new Date().toISOString()
+
     });
+
+
 }
 
     /* ========================= */
@@ -1398,30 +1553,94 @@ if (
             indiceAtual >=
             produtosImportados.length
         ) {
+            console.log(
+        'FINANCEIRO XML',
+        fornecedorNome,
+        totalNota,
+        vencimentoXML
+    );
 
-            db.financeiro.push({
+           /* ========================= */
+/* FINANCEIRO XML */
+/* ========================= */
 
-                tipo: 'Pagar',
+if(
 
-                descricao:
-                    `Compra XML - ${fornecedorNome}`,
+    listaDuplicatas.length > 0
 
-                fornecedor:
-                    fornecedorNome,
+){
 
-                valor:
-                    totalNota,
+    listaDuplicatas.forEach(dup => {
 
-                vencimento:
-                    new Date()
-                        .toISOString()
-                        .split('T')[0],
+        db.financeiro.push({
 
-                status: 'Pendente',
+            tipo:'Pagar',
 
-                dataCadastro:
-                    new Date().toISOString()
-            });
+            nome:
+                fornecedorNome,
+
+            descricao:
+                `Compra XML - ${fornecedorNome} - ${dup.numero}`,
+
+            valor:
+                Number(dup.valor),
+
+            vencimento:
+                dup.vencimento,
+
+            status:
+                'Pendente',
+
+            dataPagamento:
+                null,
+
+            tipoConta:
+                'Matéria Prima/Estoque',
+
+            dataCadastro:
+                new Date().toISOString()
+
+        });
+
+    });
+
+}
+
+/* fallback XML sem duplicata */
+
+else{
+
+    db.financeiro.push({
+
+        tipo:'Pagar',
+
+        nome:
+            fornecedorNome,
+
+        descricao:
+            `Compra XML - ${fornecedorNome}`,
+
+        valor:
+            Number(totalNota),
+
+        vencimento:
+            vencimentoXML,
+
+        status:
+            'Pendente',
+
+        dataPagamento:
+            null,
+
+        tipoConta:
+            'Matéria Prima/Estoque',
+
+        dataCadastro:
+            new Date().toISOString()
+
+    });
+
+}
 
             save();
 
@@ -1514,11 +1733,117 @@ if (
         };
     }
 
-    /* ========================= */
-    /* INICIAR */
-    /* ========================= */
+  /* ========================= */
+/* FINALIZAÇÃO IMPORTAÇÃO */
+/* ========================= */
 
-    abrirProximoProduto();
+if(produtosImportados.length === 0){
+     console.log(
+        'FINANCEIRO XML',
+        fornecedorNome,
+        totalNota,
+        vencimentoXML
+    );
+
+    /* ========================= */
+/* FINANCEIRO XML */
+/* ========================= */
+
+if(
+
+    listaDuplicatas.length > 0
+
+){
+
+    listaDuplicatas.forEach(dup => {
+
+        db.financeiro.push({
+
+            tipo:'Pagar',
+
+            nome:
+                fornecedorNome,
+
+            descricao:
+                `Compra XML - ${fornecedorNome} - ${dup.numero}`,
+
+            valor:
+                Number(dup.valor),
+
+            vencimento:
+                dup.vencimento,
+
+            status:
+                'Pendente',
+
+            dataPagamento:
+                null,
+
+            tipoConta:
+                'Matéria Prima/Estoque',
+
+            dataCadastro:
+                new Date().toISOString()
+
+        });
+
+    });
+
+}
+
+/* fallback XML sem duplicata */
+
+else{
+
+    db.financeiro.push({
+
+        tipo:'Pagar',
+
+        nome:
+            fornecedorNome,
+
+        descricao:
+            `Compra XML - ${fornecedorNome}`,
+
+        valor:
+            Number(totalNota),
+
+        vencimento:
+            vencimentoXML,
+
+        status:
+            'Pendente',
+
+        dataPagamento:
+            null,
+
+        tipoConta:
+            'Matéria Prima/Estoque',
+
+        dataCadastro:
+            new Date().toISOString()
+
+    });
+
+}
+
+    save();
+
+    navigate('estoque');
+
+    alert(
+        'XML importado com sucesso!'
+    );
+
+    return;
+}
+
+/* ========================= */
+/* INICIAR CONFERÊNCIA */
+/* ========================= */
+
+abrirProximoProduto();
+   
 };
 
 /* ========================= */

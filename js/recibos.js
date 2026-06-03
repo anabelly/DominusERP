@@ -702,6 +702,35 @@ document
 html;
 
 };
+/* ========================= */
+/* PRÓXIMO NÚMERO RECIBO */
+/* ========================= */
+
+window.proximoNumeroRecibo = function(){
+
+    if(!db.recibos || !db.recibos.length){
+
+        return 'REC-0001';
+
+    }
+
+    const numeros = db.recibos.map(r => {
+
+        const numero = String(
+            r.numero || ''
+        ).replace('REC-','');
+
+        return Number(numero) || 0;
+
+    });
+
+    const maior = Math.max(...numeros);
+
+    return 'REC-' +
+
+        String(maior + 1)
+        .padStart(4,'0');
+};
 
 /* ========================= */
 /* NOVO RECIBO */
@@ -716,23 +745,8 @@ function(){
 
     }
 
-    if(!db.ultimoRecibo){
-
-        db.ultimoRecibo = 0;
-
-    }
-
     const numero =
-
-        'REC-' +
-
-        String(
-            db.ultimoRecibo + 1
-        )
-        .padStart(
-            4,
-            '0'
-        );
+    proximoNumeroRecibo();
 
 const html = `
 
@@ -1200,16 +1214,7 @@ item.total,
 const novoRecibo = {
 
 numero:
-
-'REC-' +
-
-String(
-db.ultimoRecibo + 1
-)
-.padStart(
-4,
-'0'
-),
+    proximoNumeroRecibo(),
 
 data:
 
@@ -1278,7 +1283,7 @@ db.recibos.push(
 novoRecibo
 );
 
-db.ultimoRecibo++;
+
 
 save();
 
@@ -1448,6 +1453,7 @@ const aprovados =
 const o =
 
 aprovados[idx];
+console.log(o);
 
 if(!o)
 return;
@@ -1511,16 +1517,7 @@ item.total || 0
 const novoRecibo = {
 
 numero:
-
-'REC-' +
-
-String(
-db.ultimoRecibo + 1
-)
-.padStart(
-4,
-'0'
-),
+    proximoNumeroRecibo(),
 
 data:
 
@@ -1594,7 +1591,10 @@ origem:
 'orcamento',
 
 orcamentoCodigo:
-o.codigo
+o.codigo ||
+o.numero ||
+o.id ||
+'-'
 
 };
 
@@ -1602,7 +1602,7 @@ db.recibos.push(
 novoRecibo
 );
 
-db.ultimoRecibo++;
+
 
 save();
 
@@ -1761,7 +1761,11 @@ opacity:.85;
 font-size:12px;
 ">
 
-Documento Nº 1
+${
+r.orcamentoCodigo
+? `Referente ao orçamento: ${r.orcamentoCodigo}`
+: `Recibo Manual`
+}
 
 </div>
 
@@ -1865,16 +1869,20 @@ font-size:12px;
 
 <tr style="
 background:#0f172a;
-color:#fff;
 ">
 
-<th style="padding:10px;width:55px;">
+<th style="
+padding:10px;
+width:55px;
+color:#fff;
+">
 ITEM
 </th>
 
 <th style="
 padding:10px;
 text-align:left;
+color:#fff;
 ">
 DESCRIÇÃO
 </th>
@@ -1882,6 +1890,7 @@ DESCRIÇÃO
 <th style="
 padding:10px;
 width:80px;
+color:#fff;
 ">
 QTD
 </th>
@@ -1889,6 +1898,7 @@ QTD
 <th style="
 padding:10px;
 width:120px;
+color:#fff;
 ">
 VALOR UNIT.
 </th>
@@ -1896,6 +1906,7 @@ VALOR UNIT.
 <th style="
 padding:10px;
 width:120px;
+color:#fff;
 ">
 TOTAL
 </th>
@@ -1990,34 +2001,54 @@ ${r.observacoes ? '\n' + r.observacoes : ''}
 
 </div>
 
-<!-- ASSINATURA -->
+<!-- ASSINATURAS -->
 
 <div
 id="assinaturas"
 style="
 display:flex;
-justify-content:center;
+justify-content:space-between;
+gap:60px;
 margin-top:150px;
 ">
 
-<div style="
-width:380px;
-text-align:center;
-font-size:13px;
-">
+    <!-- CLIENTE -->
 
-<div style="
-border-top:1px solid #94a3b8;
-padding-top:10px;
-">
+    <div style="
+    flex:1;
+    text-align:center;
+    font-size:13px;
+    ">
 
-Assinatura do Cliente
+        <div style="
+        border-top:1px solid #94a3b8;
+        padding-top:10px;
+        ">
 
-</div>
+            Assinatura do Cliente
 
-</div>
+        </div>
 
-</div>
+    </div>
+
+    <!-- WN -->
+
+    <div style="
+    flex:1;
+    text-align:center;
+    font-size:13px;
+    ">
+
+        <div style="
+        border-top:1px solid #94a3b8;
+        padding-top:10px;
+        ">
+
+            WN Comunicação Visual
+
+        </div>
+
+    </div>
 
 </div>
 

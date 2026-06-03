@@ -36,15 +36,19 @@ function(){
             Versão instalada
         </h3>
 
-        <div style="
-            font-size:18px;
-            font-weight:700;
-            margin-top:10px;
-        ">
+       <div style="
+    font-size:18px;
+    font-weight:700;
+    margin-top:10px;
+">
 
-            v1.0.0
+    <span id="versao-instalada">
 
-        </div>
+        Carregando...
+
+    </span>
+
+</div>
 
     </div>
 
