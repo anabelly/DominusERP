@@ -68,13 +68,11 @@ contextBridge.exposeInMainWorld(
     ),
 
 getVersion:()=>
-
     ipcRenderer.invoke(
-
         'get-version'
+    ),
 
+getLogoPath:()=>
+    ipcRenderer.invoke(
+        'get-logo-path'
     )
-
-    }
-
-);

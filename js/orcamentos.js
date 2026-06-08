@@ -834,6 +834,30 @@ Nenhum orçamento encontrado
             html;
 };
 
+window.obterProximoCodigoOrcamento = function () {
+
+    const inicio = 3688;
+
+    const usados =
+        (db.orcamentos || [])
+        .map(o => Number(o.codigo))
+        .filter(n => !isNaN(n))
+        .sort((a,b)=>a-b);
+
+    let esperado = inicio;
+
+    for (const numero of usados) {
+
+        if (numero !== esperado) {
+            return esperado;
+        }
+
+        esperado++;
+    }
+
+    return esperado;
+};
+
 /* ========================= */
 /* NOVO ORÇAMENTO */
 /* ========================= */
@@ -853,11 +877,11 @@ function () {
     db.ultimoOrcamento === undefined ||
     db.ultimoOrcamento === null
 ) {
-    db.ultimoOrcamento = 3687;
+    db.ultimoOrcamento = 3688;
 }
 
     const codigo =
-        db.ultimoOrcamento + 1;
+    obterProximoCodigoOrcamento();
 
     let optionsClientes = `
 
@@ -1335,7 +1359,7 @@ function () {
     const novoOrcamento = {
 
         codigo:
-            db.ultimoOrcamento + 1,
+    obterProximoCodigoOrcamento(),
 
         data:
             new Date()
@@ -1716,10 +1740,12 @@ function (subtotal,totalFinal) {
 /* VISUALIZAR ORÇAMENTO */
 /* ========================= */
 
-window.visualizarOrcamento = function(index){
+window.visualizarOrcamento = async function(index){
 
     const o =
         db.orcamentos[index];
+        const logoPath =
+    await window.api.getLogoPath();
 
 /* ========================= */
 /* CLIENTE COMPLETO */
@@ -1836,12 +1862,7 @@ align-items:center;
 <div>
 
 <img
-src="${
-window.location.href.replace(
-/[^/]*$/,
-''
-)
-}logo.png"
+src="${logoPath}"
 
 style="
 max-width:220px;

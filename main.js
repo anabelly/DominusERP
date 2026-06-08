@@ -604,6 +604,25 @@ ipcMain.handle(
     }
 
 );
+
+ipcMain.handle(
+
+    'get-logo-path',
+
+    async()=>{
+
+        return path.join(
+
+            __dirname,
+
+            'logo.png'
+
+        );
+
+    }
+
+);
+
 /* ========================= */
 /* START APP */
 /* ========================= */
@@ -677,3 +696,4 @@ app.on(
     }
 
 );
+
