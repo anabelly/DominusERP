@@ -76,3 +76,6 @@ getLogoPath:()=>
     ipcRenderer.invoke(
         'get-logo-path'
     )
+    }
+
+);
