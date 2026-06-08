@@ -611,13 +611,21 @@ ipcMain.handle(
 
     async()=>{
 
-        return path.join(
+        const logo = fs.readFileSync(
 
-            __dirname,
+            path.join(
 
-            'logo.png'
+                __dirname,
+
+                'logo.png'
+
+            )
 
         );
+
+        return `data:image/png;base64,${
+            logo.toString('base64')
+        }`;
 
     }
 
