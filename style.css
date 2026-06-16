@@ -417,3 +417,94 @@ td {
     background: #e5e7eb;
     color: #374151;
 }
+
+.os-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.os-card {
+    text-align: left;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.os-card:hover {
+    transform: translateY(-2px);
+    border-color: #4f46e5;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.os-card h3 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.os-card p {
+    margin: 5px 0 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.os-cancel {
+    margin-top: 5px;
+    padding: 10px;
+    border-radius: 10px;
+    background: #111827;
+    color: white;
+}
+
+.btn-os-view,
+.btn-os-edit,
+.btn-os-print,
+.btn-os-delete{
+
+    width:38px;
+    height:38px;
+
+    border:none;
+    border-radius:10px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    transition:.2s;
+}
+
+.btn-os-view{
+    background:#eff6ff;
+    color:#2563eb;
+}
+
+.btn-os-edit{
+    background:#fef3c7;
+    color:#b45309;
+}
+
+.btn-os-print{
+    background:#dcfce7;
+    color:#15803d;
+}
+
+.btn-os-delete{
+    background:#fee2e2;
+    color:#dc2626;
+}
+
+.btn-os-view:hover,
+.btn-os-edit:hover,
+.btn-os-print:hover,
+.btn-os-delete:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 4px 10px rgba(0,0,0,.12);
+}

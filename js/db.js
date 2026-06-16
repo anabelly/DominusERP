@@ -11,10 +11,12 @@ window.db = {
     produtos:[],
     financeiro:[],
     orcamentos:[],
+    ordensServico:[],
     recibos:[],
     tiposProduto:[],
     ultimoRecibo:0,
-    ultimoOrcamento:3687
+    ultimoOrcamento:3687,
+    ultimaOS:0
 };
 
 /* ========================= */
@@ -23,7 +25,7 @@ window.db = {
 
 window.API_URL =
 
-    'http://10.1.1.16:3000';
+    'http://10.1.1.11:3000';
 
 /* ========================= */
 /* LOAD */
@@ -49,42 +51,48 @@ window.loadDB = async function(){
 
         if(saved){
 
-            window.db = {
+         window.db = {
 
-                funcionarios:
-                    saved.funcionarios || [],
+    funcionarios:
+        saved.funcionarios || [],
 
-                clientes:
-                    saved.clientes || [],
+    clientes:
+        saved.clientes || [],
 
-                fornecedores:
-                    saved.fornecedores || [],
+    fornecedores:
+        saved.fornecedores || [],
 
-                contatos:
-                    saved.contatos || [],
+    contatos:
+        saved.contatos || [],
 
-                produtos:
-                    saved.produtos || [],
+    produtos:
+        saved.produtos || [],
 
-                financeiro:
-                    saved.financeiro || [],
+    financeiro:
+        saved.financeiro || [],
 
-                orcamentos:
-                    saved.orcamentos || [],
+    orcamentos:
+        saved.orcamentos || [],
 
-                recibos:
-                    saved.recibos || [],
+    ordensServico:
+        saved.ordensServico || [],
 
-                tiposProduto:
-                    saved.tiposProduto || [],
+    recibos:
+        saved.recibos || [],
 
-                ultimoRecibo:
-                    saved.ultimoRecibo || 0,
+    tiposProduto:
+        saved.tiposProduto || [],
 
-                ultimoOrcamento:
-                    saved.ultimoOrcamento || 3687    
+    ultimoRecibo:
+        saved.ultimoRecibo || 0,
 
-            };
+    ultimoOrcamento:
+        saved.ultimoOrcamento || 3687,
+
+    ultimaOS:
+        saved.ultimaOS || 0
+
+};
 
         }
 
