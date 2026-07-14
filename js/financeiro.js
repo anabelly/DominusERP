@@ -460,34 +460,41 @@ window.renderTabelaFinanceiro = function (
         ">
 
             ${
-                status === 'Pendente' ||
-                status === 'Vencido'
-                ? `
-                    <button
-                        class="btn-action"
-                        style="
-                            background:#16a34a;
-                            padding:6px 10px;
-                            font-size:12px;
-                            white-space:nowrap;
-                        "
-                        onclick="darBaixaFinanceiro(${indexReal})">
+    status === 'Pendente' ||
+    status === 'Vencido'
+    ? `
+        <button
+            class="btn-action"
+            style="
+                background:#16a34a;
+                padding:6px 10px;
+                font-size:12px;
+                white-space:nowrap;
+                width:85px;
+                height:32px;
+            "
+            onclick="darBaixaFinanceiro(${indexReal})">
 
-                        ✔ ${tipo}
+            ✔ ${tipo}
 
-                    </button>
-                `
-                : `
-                    <div style="
-                        color:#16a34a;
-                        font-size:13px;
-                        font-weight:600;
-                        white-space:nowrap;
-                    ">
-                        ✔ ${status}
-                    </div>
-                `
-            }
+        </button>
+    `
+    : `
+        <div style="
+            color:#16a34a;
+            font-size:12px;
+            font-weight:600;
+            white-space:nowrap;
+            width:85px;
+            height:32px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        ">
+            ✔ ${status}
+        </div>
+    `
+}
 
             <button
                 class="btn-del"
@@ -498,7 +505,7 @@ window.renderTabelaFinanceiro = function (
                 "
                 onclick="excluirLancamento(${indexReal})">
 
-                X
+                Excluir
 
             </button>
 
@@ -809,7 +816,7 @@ window.abrirContaPagar = function (
 /* DAR BAIXA */
 /* ========================= */
 
-window.darBaixaFinanceiro = function (idx) {
+window.darBaixaFinanceiro = async function(idx){
 
     const lanc =
         db.financeiro[idx];
@@ -887,7 +894,7 @@ window.darBaixaFinanceiro = function (idx) {
                 ? 'Receber'
                 : 'Pagar',
 
-        onConfirm() {
+            onConfirm: async function(){
 
             lanc.status =
                 lanc.tipo === 'Receber'
@@ -899,11 +906,11 @@ window.darBaixaFinanceiro = function (idx) {
                     'fin-data-baixa'
                 ).value;
 
-            save();
+           await save();
 
-            closeModal();
+closeModal();
 
-            navigate('financeiro');
+navigate('financeiro', false);
         }
     });
 };
@@ -911,7 +918,7 @@ window.darBaixaFinanceiro = function (idx) {
 /* EXCLUIR */
 /* ========================= */
 
-window.excluirLancamento = function (idx) {
+window.excluirLancamento = async function(idx){
 
     const confirmar =
         confirm(
@@ -922,171 +929,201 @@ window.excluirLancamento = function (idx) {
 
     db.financeiro.splice(idx, 1);
 
-    save();
+   await save();
 
-    navigate('financeiro');
+navigate('financeiro', false);
 };
 
 /* ========================= */
-/* EDITAR */
+/* EDITAR LANÇAMENTO */
 /* ========================= */
 
 window.editarLancamento = function(idx){
 
-    const lanc =
-
-        db.financeiro[idx];
+    const lanc = db.financeiro[idx];
 
     if(!lanc) return;
 
-    /* ABRE MODAL */
+
+    let pessoaHTML = '';
 
     if(lanc.tipo === 'Pagar'){
 
-        abrirContaPagar(lanc);
+        pessoaHTML = `
+
+        <label>Fornecedor</label>
+
+        <select id="fin-pessoa">
+
+            <option value="">
+                Selecione
+            </option>
+
+            ${
+            db.fornecedores.map(f=>`
+
+                <option 
+                value="${f.nome}"
+                ${f.nome === lanc.nome ? 'selected':''}>
+                    ${f.nome}
+                </option>
+
+            `).join('')
+            }
+
+        </select>
+
+        `;
 
     }
 
     else{
 
-        abrirContaReceber(lanc);
+        pessoaHTML = `
+
+        <label>Cliente</label>
+
+        <select id="fin-pessoa">
+
+            <option value="">
+                Selecione
+            </option>
+
+            ${
+            db.clientes.map(c=>`
+
+                <option 
+                value="${c.nome}"
+                ${c.nome === lanc.nome ? 'selected':''}>
+                    ${c.nome}
+                </option>
+
+            `).join('')
+            }
+
+        </select>
+
+        `;
 
     }
 
-    /* GARANTE PREENCHIMENTO */
 
-    document.getElementById(
-        'fin-valor'
-    ).value =
+    const html = `
 
-        lanc.valor || '';
 
-    document.getElementById(
-        'fin-desc'
-    ).value =
+<div style="
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:15px;
+">
 
-        lanc.descricao || '';
 
-    document.getElementById(
-        'fin-vencimento'
-    ).value =
+<div>
 
-        lanc.vencimento || '';
+<label>Valor</label>
 
-    if(lanc.tipo === 'Pagar'){
+<input 
+id="fin-valor"
+type="number"
+step="0.01"
+value="${lanc.valor || ''}">
 
-        const fornecedor =
+</div>
 
-            document.getElementById(
-                'fin-fornecedor'
-            );
 
-        if(fornecedor){
+<div>
 
-            fornecedor.value =
-                lanc.nome || '';
-        }
+${pessoaHTML}
 
-        const tipoConta =
+</div>
 
-            document.getElementById(
-                'fin-tipo-conta'
-            );
 
-        if(tipoConta){
+<div>
 
-            tipoConta.value =
-                lanc.tipoConta || '';
-        }
+<label>Descrição</label>
 
-    }
+<input 
+id="fin-desc"
+value="${lanc.descricao || ''}">
 
-    else{
+</div>
 
-        const cliente =
 
-            document.getElementById(
-                'fin-cliente'
-            );
+<div>
 
-        if(cliente){
+<label>Data</label>
 
-            cliente.value =
-                lanc.nome || '';
-        }
+<input 
+type="date"
+id="fin-vencimento"
+value="${lanc.vencimento || ''}">
 
-    }
+</div>
 
-    /* SALVAR ALTERAÇÃO */
 
-    document.getElementById(
-        'modal-confirm'
-    ).onclick = function(){
+</div>
 
-        lanc.valor =
 
-            Number(
+`;
 
-                document.getElementById(
-                    'fin-valor'
-                ).value
 
-            );
 
-        lanc.descricao =
+configModal({
 
-            document.getElementById(
-                'fin-desc'
-            ).value;
+title:'Editar Lançamento',
 
-        lanc.vencimento =
+body:html,
 
-            document.getElementById(
-                'fin-vencimento'
-            ).value;
+size:'medium',
 
-        if(lanc.tipo === 'Pagar'){
+confirmText:'Salvar',
 
-            lanc.nome =
+onConfirm: async function(){
 
-                document.getElementById(
-                    'fin-fornecedor'
-                ).value;
 
-            lanc.tipoConta =
+    lanc.valor =
+    Number(
+        document.getElementById('fin-valor').value
+    );
 
-                document.getElementById(
-                    'fin-tipo-conta'
-                ).value;
 
-        }
+    lanc.nome =
+    document.getElementById('fin-pessoa').value;
 
-        else{
 
-            lanc.nome =
+    lanc.descricao =
+    document.getElementById('fin-desc').value;
 
-                document.getElementById(
-                    'fin-cliente'
-                ).value;
 
-        }
+    lanc.vencimento =
+    document.getElementById('fin-vencimento').value;
 
-        save();
 
-        closeModal();
 
-        navigate(
-            'financeiro'
-        );
+    await save();
 
-    };
+
+    closeModal();
+
+
+    navigate(
+        'financeiro',
+        false
+    );
+
+
+}
+
+
+});
+
 
 };
 /* ========================= */
 /* SALVAR CONTA PAGAR */
 /* ========================= */
 
-window.salvarContaPagar = function () {
+window.salvarContaPagar = async function () {
 
     const valor =
         Number(document.getElementById('fin-valor').value);
@@ -1201,9 +1238,11 @@ window.salvarContaPagar = function () {
         }
     }
 
-    save();
-    closeModal();
-    navigate('financeiro');
+   await save();
+
+closeModal();
+
+navigate('financeiro', false);
 };
 
 /* ========================= */
@@ -1306,7 +1345,7 @@ window.abrirContaReceber = function (
 /* SALVAR CONTA RECEBER */
 /* ========================= */
 
-window.salvarContaReceber = function () {
+window.salvarContaReceber = async function () {
 
     const lancamento = {
 
@@ -1330,16 +1369,27 @@ window.salvarContaReceber = function () {
 
         dataPagamento: null
     };
+    if(
+!lancamento.valor ||
+!lancamento.vencimento
+){
+
+alert(
+'Preencha os campos obrigatórios.'
+);
+
+return;
+
+}
 
     db.financeiro.push(
         lancamento
     );
+await save();
 
-    save();
+closeModal();
 
-    closeModal();
-
-    navigate('financeiro');
+navigate('financeiro', false);
 };
 
 /* ========================= */
@@ -1549,152 +1599,193 @@ window.renderTabelaConsultaFinanceiro = function() {
 
    
 /* ========================= */
-/* EXCLUIR NA CONSULTA (SEM FECHAR MODAL) */
+/* EXCLUIR CONSULTA */
 /* ========================= */
-window.excluirLancamentoConsulta = function(idx) {
-    const confirmar = confirm('Deseja excluir este lançamento?');
-    if (!confirmar) return;
 
-    const lanc = window.dadosConsultaFinanceiro[idx];
-    const indexReal = db.financeiro.indexOf(lanc);
-    if (indexReal >= 0) db.financeiro.splice(indexReal,1);
+window.excluirLancamentoConsulta = async function(idx){
 
-    save();
-    renderTabelaConsultaFinanceiro();
+    const confirmar =
+    confirm(
+        'Deseja excluir este lançamento?'
+    );
+
+
+    if(!confirmar)
+        return;
+
+
+
+    const lanc =
+    window.dadosConsultaFinanceiro[idx];
+
+
+    if(!lanc)
+        return;
+
+
+
+    const indexReal =
+    db.financeiro.indexOf(lanc);
+
+
+
+    if(indexReal >= 0){
+
+        db.financeiro.splice(
+            indexReal,
+            1
+        );
+
+    }
+
+
+
+    await save();
+
+
+    consultarFinanceiro();
+
+
 };
 /* ========================= */
-/* DAR BAIXA CONSULTA */
+/* BAIXA CONSULTA */
 /* ========================= */
 
 window.darBaixaFinanceiroConsulta =
 function(idx){
 
-    const lanc =
 
-        window
-        .dadosConsultaFinanceiro[idx];
+const lanc =
+window.dadosConsultaFinanceiro[idx];
 
-    if(!lanc)
-        return;
 
-    const hoje =
+if(!lanc)
+return;
 
-        new Date()
-        .toISOString()
-        .split('T')[0];
 
-    const html = `
 
-<div style="
-    display:flex;
-    flex-direction:column;
-    gap:15px;
-">
+const hoje =
+new Date()
+.toISOString()
+.split('T')[0];
 
-    <label>
 
-        ${
 
-            lanc.tipo === 'Pagar'
+const html = `
 
-            ?
 
-            'Data do Pagamento'
+<label>
 
-            :
+${
+lanc.tipo === 'Pagar'
+?
+'Data do Pagamento'
+:
+'Data do Recebimento'
+}
 
-            'Data do Recebimento'
+</label>
 
-        }
 
-    </label>
+<input 
+type="date"
+id="consulta-data-baixa"
+value="${hoje}">
 
-    <input
-        type="date"
-        id="consulta-data-baixa"
-        value="${hoje}">
-
-</div>
 
 `;
 
-    configModal({
 
-        title:
 
-            lanc.tipo === 'Pagar'
+configModal({
 
-            ?
+title:
+lanc.tipo === 'Pagar'
+?
+'Pagar Conta'
+:
+'Receber Conta',
 
-            'Pagar Conta'
 
-            :
+body:html,
 
-            'Receber Conta',
 
-        body:html,
+size:'small',
 
-        size:'small',
 
-        confirmText:'Confirmar',
+confirmText:'Confirmar',
 
-        onConfirm(){
 
-            lanc.dataPagamento =
+onConfirm: async function(){
 
-                document
-                .getElementById(
-                    'consulta-data-baixa'
-                )
-                .value;
 
-            lanc.status =
 
-                lanc.tipo === 'Pagar'
+lanc.dataPagamento =
+document.getElementById(
+'consulta-data-baixa'
+).value;
 
-                ?
 
-                'Pago'
 
-                :
+lanc.status =
+lanc.tipo === 'Pagar'
+?
+'Pago'
+:
+'Recebido';
 
-                'Recebido';
 
-            save();
 
-            closeModal();
+await save();
 
-            renderTabelaConsultaFinanceiro();
-        }
 
-    });
+
+closeModal();
+
+
+
+abrirConsultaFinanceiro();
+
+
+
+}
+
+
+});
+
 
 };
 /* ========================= */
-/* EDITAR NA CONSULTA (SEM FECHAR MODAL) */
+/* EDITAR CONSULTA */
 /* ========================= */
-window.editarLancamentoConsulta = function(idx) {
-    const lanc = window.dadosConsultaFinanceiro[idx];
-    if (!lanc) return;
 
-    // Preenche inputs inline na tabela
-    const row = document.querySelectorAll('#consulta-resultado tbody tr')[idx];
-    row.cells[1].innerHTML = `<input type="text" value="${lanc.descricao || ''}" style="width:100%;">`;
-    row.cells[2].innerHTML = `<input type="text" value="${lanc.nome || ''}" style="width:100%;">`;
-    row.cells[3].innerHTML = `<input type="number" step="0.01" value="${lanc.valor || 0}" style="width:100%;">`;
+window.editarLancamentoConsulta =
+function(idx){
 
-    const btns = row.cells[5].querySelectorAll('button');
-    btns[1].textContent = '💾';
-    btns[1].onclick = () => {
-        // Salva alterações inline
-        lanc.descricao = row.cells[1].querySelector('input').value;
-        lanc.nome = row.cells[2].querySelector('input').value;
-        lanc.valor = parseFloat(row.cells[3].querySelector('input').value) || 0;
-        save();
-        renderTabelaConsultaFinanceiro();
-    };
+
+const lanc =
+window.dadosConsultaFinanceiro[idx];
+
+
+if(!lanc)
+return;
+
+
+
+const indexReal =
+db.financeiro.indexOf(lanc);
+
+
+
+if(indexReal < 0)
+return;
+
+
+
+editarLancamento(indexReal);
+
+
 };
-
 /* ========================= */
 /* REGISTRAR PÁGINA */
 /* ========================= */

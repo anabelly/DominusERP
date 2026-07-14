@@ -183,6 +183,7 @@ window.renderEstoque = function () {
                 style="
                     padding:6px 10px;
                     font-size:12px;
+                    background:#2563eb !important;
                 "
                 onclick="visualizarProduto(${idx})">
 
@@ -495,6 +496,34 @@ window.salvarNovoProduto = function () {
 
 window.novoTipoProduto = function () {
 
+
+    const dadosAtuais = {
+
+        descricao:
+            document.getElementById(
+                'produto-descricao'
+            )?.value || '',
+
+        quantidade:
+            document.getElementById(
+                'produto-quantidade'
+            )?.value || 1,
+
+        valor:
+            document.getElementById(
+                'produto-valor'
+            )?.value || '',
+
+        fornecedor:
+            document.getElementById(
+                'produto-fornecedor'
+            )?.value || '',
+
+        importado:true
+
+    };
+
+
     const html = `
 
         <label>
@@ -507,15 +536,20 @@ window.novoTipoProduto = function () {
 
     `;
 
+
     configModal({
 
-        title: 'Novo Tipo de Produto',
+        title:
+            'Novo Tipo de Produto',
 
-        body: html,
+        body:
+            html,
 
-        confirmText: 'Salvar',
+        confirmText:
+            'Salvar',
 
         onConfirm() {
+
 
             const nome =
 
@@ -526,6 +560,7 @@ window.novoTipoProduto = function () {
                     .value
                     .trim();
 
+
             if (!nome) {
 
                 alert(
@@ -535,28 +570,32 @@ window.novoTipoProduto = function () {
                 return;
             }
 
+
             if (
-
-                !db.tiposProduto.includes(
-                    nome
-                )
-
+                !db.tiposProduto.includes(nome)
             ) {
 
-                db.tiposProduto.push(
-                    nome
-                );
+                db.tiposProduto.push(nome);
 
                 save();
+
             }
+
 
             closeModal();
 
+
+            // reabre mantendo todos os dados anteriores
+
             abrirNovoProduto({
 
-                tipo: nome
+                ...dadosAtuais,
+
+                tipo:nome
 
             });
+
+
         }
 
     });
@@ -1070,6 +1109,7 @@ window.filtrarProdutosConsulta = function () {
                 style="
                     padding:5px 8px;
                     font-size:11px;
+                    background:#2563eb !important;
                 "
                 onclick="visualizarProduto(${idx})">
 

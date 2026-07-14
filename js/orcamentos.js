@@ -1,6 +1,7 @@
 /* ========================= */
 /* ORÇAMENTOS */
 /* ========================= */
+window.filtroStatusOrcamentoAtual = '';
 
 window.renderOrcamentos = function () {
 
@@ -73,10 +74,104 @@ window.renderOrcamentos = function () {
                 + Novo Orçamento
 
             </button>
+        <button
+    class="btn-action"
+    style="
+        background:#7c3aed;
+    "
+    onclick="abrirAssistenteOrcamentoIA()">
+
+    🤖 Criar com IA
+
+</button>
+
+        
 
         </div>
 
+
     </div>
+        <div style="
+    width:150px;
+    margin-top:10px;
+         margin-left:auto;
+">
+
+    <label style="
+        font-size:12px;
+        color:#6b7280;
+    ">
+        Status
+    </label>
+
+    <select
+        id="filtro-status-orcamento"
+        onchange="filtrarStatusOrcamento()"
+        style="
+            width:100%;
+            padding:8px;
+            border-radius:8px;
+            border:1px solid #ccc;
+        "
+    >
+
+       <option value=""
+${
+window.filtroStatusOrcamentoAtual === ''
+? 'selected'
+: ''
+}
+>
+    Todos
+</option>
+
+
+<option value="Aguardando"
+${
+window.filtroStatusOrcamentoAtual === 'Aguardando'
+? 'selected'
+: ''
+}
+>
+    Aguardando
+</option>
+
+
+<option value="Aprovado"
+${
+window.filtroStatusOrcamentoAtual === 'Aprovado'
+? 'selected'
+: ''
+}
+>
+    Aprovado
+</option>
+
+
+<option value="Recusado"
+${
+window.filtroStatusOrcamentoAtual === 'Recusado'
+? 'selected'
+: ''
+}
+>
+    Recusado
+</option>
+
+
+<option value="Cancelado"
+${
+window.filtroStatusOrcamentoAtual === 'Cancelado'
+? 'selected'
+: ''
+}
+>
+    Cancelado
+</option>
+
+    </select>
+
+</div>
 
     <!-- TABELA -->
 
@@ -132,9 +227,30 @@ window.renderOrcamentos = function () {
 </tr>
 `;
     }
+    let listaOrcamentos =
+    [...db.orcamentos];
 
-    db.orcamentos.forEach(
-        (orcamento, idx) => {
+
+const filtroStatus =
+    filtroStatusOrcamentoAtual;
+
+
+if(filtroStatus){
+
+    listaOrcamentos =
+        listaOrcamentos.filter(o =>
+
+            o.status === filtroStatus
+
+        );
+
+}
+
+   listaOrcamentos.forEach(
+    (orcamento) => {
+
+    const idx =
+        db.orcamentos.indexOf(orcamento);
 
         let corStatus = '#f59e0b';
 
@@ -246,6 +362,7 @@ window.renderOrcamentos = function () {
                 style="
                     padding:6px 10px;
                     font-size:12px;
+            background:#2563eb !important;
                 "
                 onclick="visualizarOrcamento(${idx})">
 
@@ -265,6 +382,18 @@ window.renderOrcamentos = function () {
                 ✏ Editar
 
             </button>
+            <button
+    class="btn-action"
+    style="
+        background:#7c3aed;
+        padding:6px 10px;
+        font-size:12px;
+    "
+    onclick="duplicarOrcamento(${idx})">
+
+    📄 Duplicar
+
+</button>
 
             <button
                 class="btn-del"
@@ -300,6 +429,26 @@ window.renderOrcamentos = function () {
     return html;
 };
 
+/* ========================= */
+/* FILTRO STATUS ORÇAMENTO */
+/* ========================= */
+window.filtrarStatusOrcamento = function(){
+
+    const select =
+        document.getElementById(
+            'filtro-status-orcamento'
+        );
+
+
+    filtroStatusOrcamentoAtual =
+        select.value;
+
+
+    navigate(
+        'orcamentos'
+    );
+
+};
 
 /* ========================= */
 /* EXCLUIR */
@@ -777,6 +926,7 @@ Nenhum orçamento encontrado
                 style="
                     padding:6px 10px;
                     font-size:12px;
+            background:#2563eb !important;
                 "
                 onclick="visualizarOrcamento(${idx})">
 
@@ -796,6 +946,18 @@ Nenhum orçamento encontrado
                 ✏ Editar
 
             </button>
+            <button
+    class="btn-action"
+    style="
+        background:#7c3aed;
+        padding:6px 10px;
+        font-size:12px;
+    "
+    onclick="duplicarOrcamento(${idx})">
+
+    📄 Duplicar
+
+</button>
 
             <button
                 class="btn-del"
@@ -943,26 +1105,55 @@ function () {
 
         </div>
 
+
         <!-- CLIENTE -->
 
-        <div>
+<div>
+    <label>Cliente</label>
 
-            <label>
-                Cliente
-            </label>
+    <div style="
+        display:grid;
+        grid-template-columns:1fr 40px;
+        gap:8px;
+        align-items:end;
+    ">
 
-            <select
-                id="orc-cliente"
-                onchange="
-                    preencherDadosClienteOrcamento()
-                ">
+        <select
+            id="orc-cliente"
+            onchange="preencherDadosClienteOrcamento()">
 
-                ${optionsClientes}
+            ${optionsClientes}
 
-            </select>
+        </select>
 
-        </div>
+       <button
+    type="button"
+    onclick="abrirCadastroClienteOrcamento()"
+    style="
+        width:40px;
+        height:40px;
+        border:none;
+        border-radius:8px;
+        background:#16a34a;
+        color:#fff;
+        font-size:22px;
+        cursor:pointer;
+        margin:0;
+        padding:0;
 
+        display:flex;
+        align-items:center;
+        justify-content:center;
+    "
+>
+    <span style="
+        position:relative;
+        top:-2px;
+    ">+</span>
+</button>
+
+    </div>
+</div>
         <!-- A/C -->
 
         <div>
@@ -3184,7 +3375,685 @@ function(index){
 };
 
 
+/* ========================= */
+/* ASSISTENTE IA ORÇAMENTO */
+/* ========================= */
 
+
+window.abrirAssistenteOrcamentoIA =
+function(){
+
+    window.chatIAOrcamento = {
+
+        etapa:0,
+
+        dados:{},
+
+        mensagens:[
+
+            {
+                tipo:'ia',
+                texto:
+                'Olá! 🤖 Vou ajudar você a criar um orçamento. Qual o nome do cliente?'
+            }
+
+        ]
+
+    };
+
+
+    renderChatIA();
+
+
+};
+
+
+
+window.renderChatIA =
+function(){
+
+
+let mensagensHTML='';
+
+
+chatIAOrcamento.mensagens
+.forEach(msg=>{
+
+
+mensagensHTML += `
+
+
+<div style="
+display:flex;
+justify-content:
+${msg.tipo==='ia'
+?'flex-start'
+:'flex-end'};
+margin-bottom:12px;
+">
+
+
+<div style="
+
+background:
+${msg.tipo==='ia'
+?'#f3f4f6'
+:'#7c3aed'};
+
+color:
+${msg.tipo==='ia'
+?'#000'
+:'#fff'};
+
+padding:12px 16px;
+
+border-radius:15px;
+
+max-width:75%;
+
+">
+
+
+${msg.texto}
+
+
+</div>
+
+
+</div>
+
+
+`;
+
+
+});
+
+
+
+configModal({
+
+title:
+'🤖 Assistente IA - Orçamento',
+
+
+size:
+'large',
+
+
+confirmText:
+'Fechar',
+
+
+onConfirm(){
+
+closeModal();
+
+},
+
+
+body:`
+
+
+<div id="chat-ia"
+style="
+height:450px;
+overflow:auto;
+padding:15px;
+background:#fff;
+border-radius:10px;
+border:1px solid #ddd;
+">
+
+${mensagensHTML}
+
+
+</div>
+
+
+<div style="
+display:flex;
+gap:10px;
+margin-top:15px;
+">
+
+
+<input
+
+id="entrada-chat-ia"
+
+placeholder="
+Digite sua resposta..."
+
+style="
+flex:1;
+padding:12px;
+"
+
+
+onkeydown="
+if(event.key==='Enter')
+enviarMensagemIA();
+"
+
+
+>
+
+
+<button
+
+class="btn-action"
+
+style="
+background:#7c3aed;
+"
+
+onclick="
+enviarMensagemIA()
+">
+
+Enviar
+
+</button>
+
+
+</div>
+
+
+`
+
+});
+
+
+setTimeout(()=>{
+
+const box=
+document.getElementById(
+'chat-ia'
+);
+
+if(box)
+box.scrollTop=
+box.scrollHeight;
+
+
+},100);
+
+
+};
+
+
+
+
+
+window.enviarMensagemIA =
+function(){
+
+
+const input =
+document.getElementById(
+'entrada-chat-ia'
+);
+
+
+if(!input)
+return;
+
+
+
+const texto =
+input.value.trim();
+
+
+
+if(!texto)
+return;
+
+
+
+chatIAOrcamento.mensagens.push({
+
+tipo:'usuario',
+
+texto
+
+});
+
+
+
+input.value='';
+
+
+
+processarRespostaIA(texto);
+
+
+
+};
+
+
+
+
+
+window.processarRespostaIA =
+function(resposta){
+
+
+const ia =
+chatIAOrcamento;
+
+
+
+switch(
+ia.etapa
+){
+
+
+case 0:
+
+
+ia.dados.cliente =
+resposta;
+
+
+ia.etapa=1;
+
+
+ia.mensagens.push({
+
+tipo:'ia',
+
+texto:
+'Qual serviço será realizado? Exemplo: fachada ACM, letreiro, adesivo, banner...'
+
+});
+
+
+break;
+
+
+
+case 1:
+
+
+ia.dados.servico =
+resposta;
+
+
+ia.etapa=2;
+
+
+ia.mensagens.push({
+
+tipo:'ia',
+
+texto:
+'Qual a medida ou quantidade do serviço?'
+
+});
+
+
+break;
+
+
+
+case 2:
+
+
+ia.dados.medida =
+resposta;
+
+
+ia.etapa=3;
+
+
+ia.mensagens.push({
+
+tipo:'ia',
+
+texto:
+'Quais materiais ou detalhes deseja incluir?'
+
+});
+
+
+break;
+
+
+
+case 3:
+
+
+ia.dados.materiais =
+resposta;
+
+
+ia.etapa=4;
+
+
+ia.mensagens.push({
+
+tipo:'ia',
+
+texto:
+'Alguma observação ou prazo desejado?'
+
+});
+
+
+break;
+
+
+
+case 4:
+
+
+ia.dados.observacao =
+resposta;
+
+
+
+ia.mensagens.push({
+
+tipo:'ia',
+
+texto:
+`Perfeito! Montei uma sugestão:
+
+Cliente:
+${ia.dados.cliente}
+
+
+Serviço:
+${ia.dados.servico}
+
+
+Medidas:
+${ia.dados.medida}
+
+
+Materiais:
+${ia.dados.materiais}
+
+
+Observação:
+${ia.dados.observacao}
+
+
+Deseja criar o orçamento com esses dados?
+Digite SIM para gerar.`
+
+});
+
+
+ia.etapa=5;
+
+
+break;
+
+
+
+case 5:
+
+
+if(
+resposta.toLowerCase()
+==='sim'
+){
+
+
+criarOrcamentoComIA();
+
+
+}
+
+else{
+
+
+ia.mensagens.push({
+
+tipo:'ia',
+
+texto:
+'Tudo bem. Você pode continuar ajustando as informações.'
+
+});
+
+
+}
+
+
+break;
+
+
+
+}
+
+
+renderChatIA();
+
+
+};
+
+
+
+
+
+
+window.criarOrcamentoComIA =
+function(){
+
+
+abrirModalOrcamento();
+
+
+setTimeout(()=>{
+
+
+const campoObs =
+document.getElementById(
+'orc-obs'
+);
+
+
+
+if(campoObs){
+
+campoObs.value =
+`
+Criado pelo Assistente IA
+
+Serviço:
+${chatIAOrcamento.dados.servico}
+
+Medidas:
+${chatIAOrcamento.dados.medida}
+
+Materiais:
+${chatIAOrcamento.dados.materiais}
+
+${chatIAOrcamento.dados.observacao}
+`;
+
+}
+
+
+const cliente =
+document.getElementById(
+'orc-cliente'
+);
+
+
+
+if(cliente){
+
+cliente.value =
+chatIAOrcamento.dados.cliente;
+
+preencherDadosClienteOrcamento();
+
+}
+
+
+
+const produto =
+document.querySelector(
+'.orc-prod'
+);
+
+
+
+if(produto){
+
+produto.value =
+chatIAOrcamento.dados.servico;
+
+
+autoResize(produto);
+
+}
+
+
+},500);
+
+
+
+closeModal();
+
+
+};
+
+/* ========================= */
+/* NOVO CLIENTE PELO ORÇAMENTO */
+/* ========================= */
+
+window.abrirCadastroClienteOrcamento = function(){
+
+    window.voltarParaOrcamento = true;
+
+    abrirNovoCliente();
+
+};
+
+/* ========================= */
+/* DUPLICAR ORÇAMENTO */
+/* ========================= */
+
+window.duplicarOrcamento =
+function(index){
+
+    const original =
+        db.orcamentos[index];
+
+
+    if(!original){
+
+        alert(
+            'Orçamento não encontrado'
+        );
+
+        return;
+
+    }
+
+
+    const novoCodigo =
+        obterProximoCodigoOrcamento();
+
+
+    const novoOrcamento = {
+
+
+        codigo:
+            novoCodigo,
+
+
+        data:
+            new Date()
+            .toISOString()
+            .split('T')[0],
+
+
+        cliente:
+            original.cliente,
+
+
+        ac:
+            original.ac || '',
+
+
+        telefone:
+            original.telefone || '',
+
+
+        email:
+            original.email || '',
+
+
+        validade:
+            original.validade || '',
+
+
+        prazo:
+            original.prazo || '',
+
+
+        prazoEntrega:
+            original.prazoEntrega || '',
+
+
+        temNota:
+            original.temNota || 'sim',
+
+
+        status:
+            'Aguardando',
+
+
+        preContrato:
+            original.preContrato || 'nao',
+
+
+        observacoes:
+            original.observacoes || '',
+
+
+        itens:
+            JSON.parse(
+                JSON.stringify(
+                    original.itens || []
+                )
+            ),
+
+
+        total:
+            original.total || 0
+
+    };
+
+
+    db.orcamentos.push(
+        novoOrcamento
+    );
+
+
+    db.ultimoOrcamento =
+        novoCodigo;
+
+
+    save();
+
+
+    alert(
+        `Orçamento duplicado com sucesso!\nNovo código: ${novoCodigo}`
+    );
+
+
+    navigate(
+        'orcamentos'
+    );
+
+
+};
 
 /* ========================= */
 /* REGISTRAR PÁGINA */

@@ -32,6 +32,14 @@ contextBridge.exposeInMainWorld(
                 'carregar-db'
 
             ),
+             /* ========================= */
+        /* VERSÃO DO SISTEMA */
+        /* ========================= */
+
+        versaoSistema:()=>{
+
+            return require('./package.json').version;
+},
 
         /* ========================= */
         /* IMPRESSÃO */

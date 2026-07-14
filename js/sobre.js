@@ -4,7 +4,8 @@
 
 window.renderSobre = function () {
 
-    return `
+
+    const html = `
 
 <div style="
     display:flex;
@@ -24,6 +25,7 @@ window.renderSobre = function () {
 
     </div>
 
+
     <div class="content-card">
 
         <div style="
@@ -40,6 +42,7 @@ window.renderSobre = function () {
                     object-fit:contain;
                 ">
 
+
             <div>
 
                 <h2>
@@ -47,6 +50,7 @@ window.renderSobre = function () {
                     Dominus ERP
 
                 </h2>
+
 
                 <div style="
                     color:#6b7280;
@@ -65,6 +69,7 @@ window.renderSobre = function () {
 
     </div>
 
+
     <div class="content-card">
 
         <h3>
@@ -73,17 +78,24 @@ window.renderSobre = function () {
 
         </h3>
 
+
         <div style="
             line-height:2;
         ">
+
 
             <strong>
                 Versão:
             </strong>
 
-            v1.0.0
+
+            <span id="versao-sistema">
+                carregando...
+            </span>
+
 
             <br>
+
 
             <strong>
                 Desenvolvedor:
@@ -91,7 +103,9 @@ window.renderSobre = function () {
 
             Luana de Souza Bianchini
 
+
             <br>
+
 
             <strong>
                 Empresa:
@@ -99,14 +113,46 @@ window.renderSobre = function () {
 
             WN Comunicação Visual
 
+
         </div>
 
     </div>
 
+
 </div>
 
 `;
+
+
+    setTimeout(()=>{
+
+
+        const campo =
+            document.getElementById(
+                'versao-sistema'
+            );
+
+
+        if(
+            campo &&
+            window.api?.versaoSistema
+        ){
+
+            campo.innerText =
+                'v' + window.api.versaoSistema();
+
+        }
+
+
+    },100);
+
+
+
+    return html;
+
+
 };
+
 
 /* ========================= */
 /* REGISTRAR */

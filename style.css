@@ -201,7 +201,6 @@ textarea {
     border-radius: 8px;
     width: 100%;
     outline: none;
-    margin-bottom: 10px;
     transition: 0.2s;
 }
 
@@ -460,51 +459,3 @@ td {
     color: white;
 }
 
-.btn-os-view,
-.btn-os-edit,
-.btn-os-print,
-.btn-os-delete{
-
-    width:38px;
-    height:38px;
-
-    border:none;
-    border-radius:10px;
-
-    cursor:pointer;
-
-    font-size:16px;
-
-    transition:.2s;
-}
-
-.btn-os-view{
-    background:#eff6ff;
-    color:#2563eb;
-}
-
-.btn-os-edit{
-    background:#fef3c7;
-    color:#b45309;
-}
-
-.btn-os-print{
-    background:#dcfce7;
-    color:#15803d;
-}
-
-.btn-os-delete{
-    background:#fee2e2;
-    color:#dc2626;
-}
-
-.btn-os-view:hover,
-.btn-os-edit:hover,
-.btn-os-print:hover,
-.btn-os-delete:hover{
-
-    transform:translateY(-2px);
-
-    box-shadow:
-        0 4px 10px rgba(0,0,0,.12);
-}

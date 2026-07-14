@@ -24,7 +24,7 @@ window.registerPage = function (nome, renderFn) {
 
 window.currentPage = null;
 
-window.navigate = async function (pagina) {
+window.navigate = async function (pagina, atualizar = true) {
 
     try {
 
@@ -38,25 +38,22 @@ window.navigate = async function (pagina) {
         /* ========================= */
 /* SINCRONIZA DB */
 /* ========================= */
+if (atualizar) {
 
-try{
+    try {
 
-    await loadDB();
+        await loadDB();
 
-}
+    } catch (err) {
 
-catch(err){
+        console.error(
+            'Erro sincronizar DB:',
+            err
+        );
 
-    console.error(
-
-        'Erro sincronizar DB:',
-
-        err
-
-    );
+    }
 
 }
-
 /* ========================= */
 /* VIEW PORT */
 /* ========================= */
@@ -322,7 +319,10 @@ window.getStatus = function (f) {
 
     if (!f) return '-';
 
-    if (f.status === 'pago') {
+   if (
+    f.status &&
+    f.status.toLowerCase() === 'pago'
+) {
 
         return `
             <span class="status pago">

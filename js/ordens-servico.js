@@ -378,7 +378,7 @@ function renderGridOS() {
                                         font-weight:600;
                                         margin-right:4px;
                                     ">
-                                    👁 Ver
+                                    👁 Visualizar
                                 </button>
 
                                 <button

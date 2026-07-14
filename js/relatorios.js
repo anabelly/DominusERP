@@ -1245,10 +1245,6 @@ onclick="imprimirRelatorio()">
         'resultado-relatorio'
     ).innerHTML = html;
 };
-/* ========================= */
-/* CONTAS A PAGAR */
-/* ========================= */
-
 window.gerarContasPagar = function(){
 
     let dados =
@@ -1265,7 +1261,6 @@ window.gerarContasPagar = function(){
         }
 
         return(
-
             l.status !== 'Pago'
         );
     });
@@ -1902,9 +1897,8 @@ onclick="imprimirRelatorio()">
     document.getElementById(
         'resultado-relatorio'
     ).innerHTML = html;
-};
-/* ========================= */
-/* DRE */
+};/* ========================= */
+/* DRE PROFISSIONAL NOVO */
 /* ========================= */
 
 window.gerarDRE = function(){
@@ -1914,407 +1908,420 @@ window.gerarDRE = function(){
             db.financeiro
         );
 
+
     const receitas =
-        dados.filter(l=>
-            l.tipo==='Receber' &&
-            l.status==='Recebido'
+        dados.filter(l =>
+            l.tipo === 'Receber' &&
+            l.status === 'Recebido'
         );
 
+
     const despesas =
-        dados.filter(l=>
-            l.tipo==='Pagar' &&
-            l.status==='Pago'
+        dados.filter(l =>
+            l.tipo === 'Pagar' &&
+            l.status === 'Pago'
         );
+
 
     const receitaBruta =
         receitas.reduce(
-            (a,b)=>
-                a +
-                Number(b.valor||0),
+            (total,item)=>
+                total + Number(item.valor || 0),
             0
         );
 
+
     const impostos =
         despesas
-        .filter(f=>
-            (f.tipoConta||'')
+        .filter(item =>
+            (item.tipoConta || '')
             .toLowerCase()
             .includes('imposto')
         )
         .reduce(
-            (a,b)=>
-                a +
-                Number(b.valor||0),
+            (total,item)=>
+                total + Number(item.valor || 0),
             0
         );
 
+
     const custos =
         despesas
-        .filter(f=>
-            (f.tipoConta||'')
+        .filter(item =>
+            (item.tipoConta || '')
             .toLowerCase()
             .includes('estoque')
         )
         .reduce(
-            (a,b)=>
-                a +
-                Number(b.valor||0),
+            (total,item)=>
+                total + Number(item.valor || 0),
             0
         );
+
 
     const despesasOperacionais =
         despesas
-        .filter(f=>{
+        .filter(item=>{
 
             const tipo =
-                (f.tipoConta||'')
+                (item.tipoConta || '')
                 .toLowerCase();
 
-            return(
 
-                !tipo.includes('imposto')
-
+            return !tipo.includes('imposto')
                 &&
-
-                !tipo.includes('estoque')
-
-            );
+                   !tipo.includes('estoque');
 
         })
-
         .reduce(
-            (a,b)=>
-                a +
-                Number(b.valor||0),
+            (total,item)=>
+                total + Number(item.valor || 0),
             0
         );
 
+
+
     const receitaLiquida =
-        receitaBruta -
-        impostos;
+        receitaBruta - impostos;
+
 
     const lucroBruto =
-        receitaLiquida -
-        custos;
+        receitaLiquida - custos;
+
 
     const resultadoOperacional =
-        lucroBruto -
-        despesasOperacionais;
+        lucroBruto - despesasOperacionais;
+
 
     const lucroLiquido =
         resultadoOperacional;
 
+
     const margem =
-
         receitaBruta > 0
-
         ?
-
         (
-            (
-                lucroLiquido /
-                receitaBruta
-            ) * 100
+            lucroLiquido /
+            receitaBruta *
+            100
         ).toFixed(1)
-
         :
-
         0;
 
+
+
+    const positivo =
+        lucroLiquido >= 0;
+
+
     const cor =
-        lucroLiquido >= 0
-            ? '#16a34a'
-            : '#dc2626';
+        positivo
+        ?
+        '#16a34a'
+        :
+        '#dc2626';
 
-    const textoAnalise =
 
-        lucroLiquido >= 0
+
+    const analise =
+        positivo
 
         ?
 
-        `Lucro de ${formatarMoeda(lucroLiquido)} no período.`
+        `
+        O período apresentou resultado positivo,
+        com lucro de <strong>
+        ${formatarMoeda(lucroLiquido)}
+        </strong>.
+        A margem obtida foi de
+        <strong>${margem}%</strong>.
+        `
 
         :
 
-        `Prejuízo de ${formatarMoeda(Math.abs(lucroLiquido))} no período.`;
+        `
+        O período apresentou resultado negativo,
+        com prejuízo de
+        <strong>
+        ${formatarMoeda(
+            Math.abs(lucroLiquido)
+        )}
+        </strong>.
+        `;
+
+
+
+    function linha(titulo,valor,classe=''){
+
+        return `
+
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            padding:8px 12px;
+            border-bottom:1px solid #eee;
+            font-size:13px;
+        ">
+
+            <span class="${classe}">
+                ${titulo}
+            </span>
+
+            <strong>
+                ${formatarMoeda(valor)}
+            </strong>
+
+        </div>
+
+        `;
+    }
+
+
+
 
     let html =
         getCabecalhoRelatorio(
-            'DRE PROFISSIONAL'
+            'DRE GERENCIAL'
         );
+
+
 
     html += `
 
+
 <div style="
 display:grid;
-grid-template-columns:1fr 1fr;
-gap:10px;
-margin-bottom:10px;
+grid-template-columns:repeat(3,1fr);
+gap:12px;
+margin-bottom:15px;
 ">
 
-<div class="report-card" style="
-padding:10px 14px;
+
+<div class="report-card"
+style="
+padding:15px;
 ">
 
 <div style="
 font-size:12px;
-margin-bottom:4px;
+color:#666;
 ">
-
 Receita Bruta
-
 </div>
 
 <div style="
-font-size:17px;
+font-size:22px;
 font-weight:800;
-color:#16a34a;
-">
-
-${formatarMoeda(
-    receitaBruta
-)}
-
-</div>
-
-</div>
-
-<div class="report-card" style="
-padding:10px 14px;
-">
-
-<div style="
-font-size:12px;
-margin-bottom:4px;
-">
-
-Lucro Líquido
-
-</div>
-
-<div style="
-font-size:17px;
-font-weight:800;
-color:${cor};
-">
-
-${formatarMoeda(
-    lucroLiquido
-)}
-
-</div>
-
-</div>
-
-</div>
-
-<table style="
-margin-top:4px;
-font-size:13px;
-line-height:1.1;
-">
-
-<thead>
-
-<tr>
-
-<th style="
-padding:7px;
-font-size:12px;
-">
-
-DESCRIÇÃO
-
-</th>
-
-<th style="
-padding:7px;
-font-size:12px;
-">
-
-VALOR
-
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-<tr>
-
-<td style="padding:6px 10px;">
-<strong>Receita Bruta</strong>
-</td>
-
-<td style="
-padding:6px 10px;
 color:#16a34a;
 ">
 ${formatarMoeda(receitaBruta)}
-</td>
+</div>
 
-</tr>
+</div>
 
-<tr>
 
-<td style="padding:6px 10px;">
-(-) Impostos / Deduções
-</td>
 
-<td style="
-padding:6px 10px;
-color:#dc2626;
+<div class="report-card"
+style="
+padding:15px;
 ">
-${formatarMoeda(impostos)}
-</td>
 
-</tr>
-
-<tr>
-
-<td style="padding:6px 10px;">
-<strong>Receita Líquida</strong>
-</td>
-
-<td style="padding:6px 10px;">
-${formatarMoeda(receitaLiquida)}
-</td>
-
-</tr>
-
-<tr>
-
-<td style="padding:6px 10px;">
-(-) Custos (CMV / Estoque)
-</td>
-
-<td style="
-padding:6px 10px;
-color:#dc2626;
+<div style="
+font-size:12px;
+color:#666;
 ">
-${formatarMoeda(custos)}
-</td>
+Lucro Líquido
+</div>
 
-</tr>
-
-<tr>
-
-<td style="padding:6px 10px;">
-<strong>Lucro Bruto</strong>
-</td>
-
-<td style="padding:6px 10px;">
-${formatarMoeda(lucroBruto)}
-</td>
-
-</tr>
-
-<tr>
-
-<td style="padding:6px 10px;">
-(-) Despesas Operacionais
-</td>
-
-<td style="
-padding:6px 10px;
-color:#dc2626;
-">
-${formatarMoeda(despesasOperacionais)}
-</td>
-
-</tr>
-
-<tr>
-
-<td style="padding:6px 10px;">
-<strong>Resultado Operacional</strong>
-</td>
-
-<td style="padding:6px 10px;">
-${formatarMoeda(resultadoOperacional)}
-</td>
-
-</tr>
-
-<tr>
-
-<td style="padding:6px 10px;">
-<strong>Lucro Líquido</strong>
-</td>
-
-<td style="
-padding:6px 10px;
+<div style="
+font-size:22px;
 font-weight:800;
 color:${cor};
 ">
 ${formatarMoeda(lucroLiquido)}
-</td>
-
-</tr>
-
-<tr>
-
-<td style="padding:6px 10px;">
-<strong>Margem de Lucro</strong>
-</td>
-
-<td style="padding:6px 10px;">
-${margem}%
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-<h2 style="
-margin-top:10px;
-margin-bottom:6px;
-font-size:18px;
-">
-
-Resultado Mensal
-
-</h2>
-
-<div style="
-height:10px;
-background:${cor};
-border-radius:999px;
-margin-bottom:10px;
-"></div>
-
-<div class="report-card" style="
-padding:10px 12px;
-page-break-inside:avoid;
-">
-
-<div style="
-font-size:14px;
-font-weight:800;
-margin-bottom:4px;
-">
-
-Análise do Período
+</div>
 
 </div>
+
+
+
+
+<div class="report-card"
+style="
+padding:15px;
+">
 
 <div style="
 font-size:12px;
-line-height:1.25;
+color:#666;
 ">
-
-${textoAnalise}
-
-</div>
-
+Margem
 </div>
 
 <div style="
-margin-top:6px;
+font-size:22px;
+font-weight:800;
+">
+${margem}%
+</div>
+
+</div>
+
+
+</div>
+
+
+
+<div style="
+background:#fff;
+border-radius:10px;
+border:1px solid #ddd;
+overflow:hidden;
+">
+
+
+<h3 style="
+margin:0;
+padding:12px;
+background:#f4f4f4;
+font-size:15px;
+">
+RECEITAS
+</h3>
+
+
+${linha(
+'Receita Bruta',
+receitaBruta
+)}
+
+
+
+<h3 style="
+margin:0;
+padding:12px;
+background:#f4f4f4;
+font-size:15px;
+">
+DEDUÇÕES
+</h3>
+
+
+${linha(
+'(-) Impostos',
+-impostos
+)}
+
+
+${linha(
+'Receita Líquida',
+receitaLiquida
+)}
+
+
+
+<h3 style="
+margin:0;
+padding:12px;
+background:#f4f4f4;
+font-size:15px;
+">
+CUSTOS
+</h3>
+
+
+${linha(
+'(-) Custos / Estoque',
+-custos
+)}
+
+
+${linha(
+'Lucro Bruto',
+lucroBruto
+)}
+
+
+
+
+<h3 style="
+margin:0;
+padding:12px;
+background:#f4f4f4;
+font-size:15px;
+">
+DESPESAS OPERACIONAIS
+</h3>
+
+
+${linha(
+'(-) Despesas Operacionais',
+-despesasOperacionais
+)}
+
+
+
+<div style="
+display:flex;
+justify-content:space-between;
+padding:15px;
+background:${cor};
+color:white;
+font-size:17px;
+font-weight:800;
+">
+
+<span>
+LUCRO LÍQUIDO
+</span>
+
+
+<span>
+${formatarMoeda(lucroLiquido)}
+</span>
+
+
+</div>
+
+
+</div>
+
+
+
+
+<div class="report-card"
+style="
+margin-top:15px;
+padding:15px;
+page-break-inside:avoid;
+">
+
+
+<div style="
+font-size:16px;
+font-weight:800;
+margin-bottom:8px;
+">
+Análise do Período
+</div>
+
+
+<div style="
+font-size:13px;
+line-height:1.5;
+">
+
+${analise}
+
+</div>
+
+
+</div>
+
+
+
+<div style="
+margin-top:15px;
 text-align:right;
 ">
 
@@ -2328,19 +2335,27 @@ onclick="imprimirRelatorio()">
 
 </div>
 
+
+
 <div style="
-margin-top:6px;
+margin-top:10px;
 page-break-inside:avoid;
 ">
 
 ${getRodapeRelatorio()}
 
 </div>
+
+
 `;
 
-    document.getElementById(
-        'resultado-relatorio'
-    ).innerHTML = html;
+
+
+document.getElementById(
+'resultado-relatorio'
+).innerHTML = html;
+
+
 };
 
 /* ========================= */
@@ -2352,7 +2367,7 @@ window.logoRelatorio = function(){
     return `
 
 <img
-    src="logo.png"
+    src="${window.logoBase64 || 'logo.png'}"
     style="
         width:95px;
         height:auto;
@@ -2481,6 +2496,24 @@ function(){
 window.imprimirRelatorio =
 async function(){
 
+
+    try{
+
+        window.logoBase64 =
+            await window.api.getLogoPath();
+
+    }
+
+    catch(e){
+
+        console.error(
+            'Erro carregando logo:',
+            e
+        );
+
+    }
+
+
     const conteudo =
 
         document.getElementById(
@@ -2489,35 +2522,8 @@ async function(){
 
     if(!conteudo) return;
 
-   /* ========================= */
-/* LOGO ABSOLUTA */
-/* ========================= */
-
-const logo =
-
-    `file:///${window.location.pathname
-        .replace(
-            /\/[^\/]*$/,
-            '/logo.png'
-        )}`;
-
-/* ========================= */
-/* CORRIGE CAMINHOS */
-/* ========================= */
-
 const conteudoCorrigido =
-
-    conteudo
-
-    .replaceAll(
-        './logo.png',
-        logo
-    )
-
-    .replaceAll(
-        'logo.png',
-        logo
-    );
+    conteudo;
     /* ========================= */
     /* HTML FINAL */
     /* ========================= */

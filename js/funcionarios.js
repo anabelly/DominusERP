@@ -142,19 +142,6 @@ registerPage('funcionarios', function () {
                                         gap:5px;
                                         flex-wrap:wrap;
                                     ">
-
-                                        <button
-                                            class="btn-action"
-                                            style="
-                                                padding:6px 10px;
-                                                font-size:0.75rem;
-                                            "
-                                            onclick="editarFuncionario(${index})">
-
-                                            ✏ Editar
-
-                                        </button>
-
                                         <button
                                             class="btn-action"
                                             style="
@@ -169,10 +156,26 @@ registerPage('funcionarios', function () {
                                         </button>
 
                                         <button
+                                            class="btn-action"
+                                            style="
+                                                padding:6px 10px;
+                                                font-size:0.75rem;
+                                                background:#f59e0b;
+                                            "
+                                            onclick="editarFuncionario(${index})">
+
+                                            ✏ Editar
+
+                                        </button>
+
+                                        
+
+                                        <button
+                                           
                                             class="btn-del"
                                             onclick="deleteItem('funcionarios', ${index})">
 
-                                            X
+                                            Excluir
 
                                         </button>
 

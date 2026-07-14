@@ -1,4 +1,10 @@
 /* ========================= */
+/* PAGINAÇÃO FORNECEDORES */
+/* ========================= */
+
+window.paginaFornecedores = 1;
+window.limiteFornecedores = 15;
+/* ========================= */
 /* FORNECEDORES */
 /* ========================= */
 
@@ -7,6 +13,21 @@ window.renderFornecedores = function () {
     if (!db.fornecedores) {
         db.fornecedores = [];
     }
+    const inicio =
+    (window.paginaFornecedores - 1) *
+    window.limiteFornecedores;
+
+
+const fim =
+    inicio +
+    window.limiteFornecedores;
+
+
+const fornecedoresTela =
+    db.fornecedores.slice(
+        inicio,
+        fim
+    );
 
     let html = `
 
@@ -124,7 +145,12 @@ window.renderFornecedores = function () {
 `;
     }
 
-    db.fornecedores.forEach((fornecedor, idx) => {
+  fornecedoresTela.forEach((fornecedor, idxTela) => {
+
+    const idx =
+        db.fornecedores.indexOf(
+            fornecedor
+        );
 
         html += `
 
@@ -159,6 +185,19 @@ window.renderFornecedores = function () {
             flex-wrap:nowrap;
             min-width:max-content;
         ">
+            
+            <button
+                class="btn-action"
+                style="
+                    padding:6px 10px;
+                    font-size:12px;
+                    background:#2563eb !important;
+                "
+                onclick="visualizarFornecedor(${idx})">
+
+                👁 Visualizar
+
+            </button>
 
             <button
                 class="btn-action"
@@ -185,18 +224,7 @@ window.renderFornecedores = function () {
 
             </button>
 
-            <button
-                class="btn-action"
-                style="
-                    padding:6px 10px;
-                    font-size:12px;
-                    background:#374151;
-                "
-                onclick="visualizarFornecedor(${idx})">
-
-                👁 Visualizar
-
-            </button>
+            
 
         </div>
 
@@ -213,11 +241,106 @@ window.renderFornecedores = function () {
         </table>
 
     </div>
+<!-- PAGINAÇÃO -->
+
+<div style="
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
+    margin-top:20px;
+">
+
+<button
+    class="btn-action"
+    onclick="paginaAnteriorFornecedores()"
+    ${window.paginaFornecedores <= 1 ? 'disabled' : ''}>
+
+⬅ Voltar
+
+</button>
+
+
+<span style="
+    font-weight:600;
+">
+
+Página ${window.paginaFornecedores}
+
+</span>
+
+
+<button
+    class="btn-action"
+    onclick="proximaPaginaFornecedores()"
+    ${
+        fim >= db.fornecedores.length
+        ? 'disabled'
+        : ''
+    }>
+
+Próxima ➡
+
+</button>
+
+</div>
 
 </div>
 `;
 
     return html;
+};
+/* ========================= */
+/* PAGINAÇÃO FORNECEDORES */
+/* ========================= */
+
+
+window.proximaPaginaFornecedores = function(){
+
+
+    const totalPaginas =
+        Math.ceil(
+            db.fornecedores.length /
+            window.limiteFornecedores
+        );
+
+
+    if(
+        window.paginaFornecedores <
+        totalPaginas
+    ){
+
+        window.paginaFornecedores++;
+
+
+        navigate(
+            'fornecedores',
+            false
+        );
+
+    }
+
+};
+
+
+
+window.paginaAnteriorFornecedores = function(){
+
+
+    if(
+        window.paginaFornecedores > 1
+    ){
+
+        window.paginaFornecedores--;
+
+
+        navigate(
+            'fornecedores',
+            false
+        );
+
+    }
+
 };
 /* ========================= */
 /* NOVO FORNECEDOR */
@@ -1084,6 +1207,7 @@ function () {
             <button
                 class="btn-action"
                 style="
+                    background:#2563eb !important;
                     padding:5px 8px;
                     font-size:11px;
                 "

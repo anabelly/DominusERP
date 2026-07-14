@@ -220,6 +220,7 @@ class="btn-action"
 style="
 padding:6px 10px;
 font-size:12px;
+background:#2563eb !important;
 "
 onclick="visualizarRecibo(${idx})">
 
@@ -651,6 +652,11 @@ justify-content:center;
 
 <button
 class="btn-action"
+style="
+padding:6px 10px;
+font-size:12px;
+background:#2563eb !important;
+"
 onclick="visualizarRecibo(${idx})">
 
 👁 Visualizar

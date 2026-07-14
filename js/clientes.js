@@ -1,4 +1,11 @@
 /* ========================= */
+/* PAGINAÇÃO CLIENTES */
+/* ========================= */
+
+window.paginaClientes = 1;
+window.limiteClientes = 15;
+
+/* ========================= */
 /* CLIENTES */
 /* ========================= */
 
@@ -8,8 +15,19 @@ window.renderClientes = function () {
         db.clientes = [];
     }
 
-    const clientesTela =
-        db.clientes.slice(0, 15);
+  const inicio =
+    (window.paginaClientes - 1) *
+    window.limiteClientes;
+
+const fim =
+    inicio + window.limiteClientes;
+
+
+const clientesTela =
+    db.clientes.slice(
+        inicio,
+        fim
+    );
 
     let html = `
 
@@ -175,6 +193,7 @@ window.renderClientes = function () {
             <button
                 class="btn-action"
                 style="
+                    background:#2563eb !important;
                     padding:6px 10px;
                     font-size:12px;
                 "
@@ -224,11 +243,106 @@ window.renderClientes = function () {
         </table>
 
     </div>
+<!-- PAGINAÇÃO -->
+
+<div style="
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:15px;
+    margin-top:20px;
+">
+
+<button
+    class="btn-action"
+    onclick="paginaAnteriorClientes()"
+    ${window.paginaClientes <= 1 ? 'disabled' : ''}>
+
+⬅ Voltar
+
+</button>
+
+
+<span style="
+    font-weight:600;
+">
+
+Página ${window.paginaClientes}
+
+</span>
+
+
+<button
+    class="btn-action"
+    onclick="proximaPaginaClientes()"
+    ${
+        fim >= db.clientes.length
+        ? 'disabled'
+        : ''
+    }>
+
+Próxima ➡
+
+</button>
+
+</div>
 
 </div>
 `;
 
     return html;
+};
+
+
+/* ========================= */
+/* PAGINAÇÃO CLIENTES */
+/* ========================= */
+
+
+window.proximaPaginaClientes = function(){
+
+    const totalPaginas =
+        Math.ceil(
+            db.clientes.length /
+            window.limiteClientes
+        );
+
+
+    if(
+        window.paginaClientes <
+        totalPaginas
+    ){
+
+        window.paginaClientes++;
+
+        navigate(
+            'clientes',
+            false
+        );
+
+    }
+
+};
+
+
+
+window.paginaAnteriorClientes = function(){
+
+
+    if(
+        window.paginaClientes > 1
+    ){
+
+        window.paginaClientes--;
+
+
+        navigate(
+            'clientes',
+            false
+        );
+
+    }
+
 };
 
 /* ========================= */
@@ -582,14 +696,49 @@ window.salvarNovoCliente = function () {
     };
 
     db.clientes.push(
-        cliente
-    );
+    cliente
+);
 
-    save();
+save();
 
-    closeModal();
+closeModal();
+
+
+if(window.voltarParaOrcamento){
+
+    window.voltarParaOrcamento = false;
+
+
+    // reabre o orçamento
+    abrirModalOrcamento();
+
+
+    setTimeout(()=>{
+
+        const campoCliente =
+            document.getElementById(
+                'orc-cliente'
+            );
+
+
+        if(campoCliente){
+
+            campoCliente.value =
+                cliente.nome;
+
+            preencherDadosClienteOrcamento();
+
+        }
+
+    },300);
+
+
+}
+else{
 
     navigate('clientes');
+
+}
 };
 
 /* ========================= */
@@ -1040,6 +1189,7 @@ clientes.forEach(
             <button
                 class="btn-action"
                 style="
+                    background:#2563eb !important;
                     padding:5px 8px;
                     font-size:11px;
                 "
