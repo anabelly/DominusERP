@@ -36,89 +36,91 @@ window.navigate = async function (pagina, atualizar = true) {
             pagina;
 
         /* ========================= */
-/* SINCRONIZA DB */
-/* ========================= */
-if (atualizar) {
+        /* SINCRONIZA DB */
+        /* ========================= */
 
-    try {
+        if (atualizar) {
 
-        await loadDB();
+            try {
 
-    } catch (err) {
+                await loadDB();
 
-        console.error(
-            'Erro sincronizar DB:',
-            err
-        );
+            } catch (err) {
 
-    }
+                console.error(
+                    'Erro sincronizar DB:',
+                    err
+                );
 
-}
-/* ========================= */
-/* VIEW PORT */
-/* ========================= */
+            }
 
-const viewPort =
-    document.getElementById(
-        'view-port'
-    );
+        }
 
-if (!viewPort) {
+        /* ========================= */
+        /* VIEW PORT */
+        /* ========================= */
 
-    console.error(
-        'view-port não encontrado.'
-    );
+        const viewPort =
+            document.getElementById(
+                'view-port'
+            );
 
-    return;
+        if (!viewPort) {
 
-}
+            console.error(
+                'view-port não encontrado.'
+            );
 
-/* ========================= */
-/* RENDER DA PÁGINA */
-/* ========================= */
+            return;
 
-const render =
+        }
 
-    window.pages[
-        pagina
-    ];
+        /* ========================= */
+        /* RENDER DA PÁGINA */
+        /* ========================= */
 
-if (!render) {
+        const render =
 
-    console.error(
+            window.pages[
+                pagina
+            ];
 
-        `Página "${pagina}" não registrada.`
+        if (!render) {
 
-    );
+            console.error(
 
-    viewPort.innerHTML = `
+                `Página "${pagina}" não registrada.`
 
-        <div class="content-card">
+            );
 
-            <h2 style="
-                color:#dc2626;
-                margin-bottom:10px;
-            ">
+            viewPort.innerHTML = `
 
-                Página não encontrada
+                <div class="content-card">
 
-            </h2>
+                    <h2 style="
+                        color:#dc2626;
+                        margin-bottom:10px;
+                    ">
 
-            <p>
+                        Página não encontrada
 
-                A página
-                <strong>${pagina}</strong>
-                não foi registrada.
+                    </h2>
 
-            </p>
+                    <p>
 
-        </div>
+                        A página
+                        <strong>${pagina}</strong>
+                        não foi registrada.
 
-    `;
+                    </p>
 
-    return;
+                </div>
 
-}
+            `;
+
+            return;
+
+        }
 
         /* ========================= */
         /* FECHA MODAL */
@@ -131,58 +133,57 @@ if (!render) {
         /* ========================= */
 
         viewPort.innerHTML =
-
             render();
 
-            /* ========================= */
-/* VERSÃO SISTEMA */
-/* ========================= */
+        /* ========================= */
+        /* VERSÃO SISTEMA */
+        /* ========================= */
 
-if(
+        if(
 
-    pagina === 'atualizacao'
+            pagina === 'atualizacao'
 
-){
+        ){
 
-    setTimeout(
+            setTimeout(
 
-        async()=>{
+                async()=>{
 
-            try{
+                    try{
 
-                const versao =
+                        const versao =
 
-                    await window.api
-                    .getVersion();
+                            await window.api
+                            .getVersion();
 
-                const el =
+                        const el =
 
-                    document.getElementById(
-                        'versao-instalada'
-                    );
+                            document.getElementById(
+                                'versao-instalada'
+                            );
 
-                if(el){
+                        if(el){
 
-                    el.innerText =
-                        'v' + versao;
+                            el.innerText =
+                                'v' + versao;
 
-                }
+                        }
 
-            }
+                    }
 
-            catch(err){
+                    catch(err){
 
-                console.error(err);
+                        console.error(err);
 
-            }
+                    }
 
-        },
+                },
 
-        50
+                50
 
-    );
+            );
 
-}
+        }
 
         /* ========================= */
         /* MENU ATIVO */
@@ -261,6 +262,7 @@ ${err}
     }
 
 };
+
 /* ========================= */
 /* DELETE GLOBAL */
 /* ========================= */
@@ -319,10 +321,10 @@ window.getStatus = function (f) {
 
     if (!f) return '-';
 
-   if (
-    f.status &&
-    f.status.toLowerCase() === 'pago'
-) {
+    if (
+        f.status &&
+        f.status.toLowerCase() === 'pago'
+    ) {
 
         return `
             <span class="status pago">
@@ -372,6 +374,7 @@ window.addEventListener(
     }
 
 );
+
 /* ========================= */
 /* AUTO REFRESH INTELIGENTE */
 /* ========================= */
@@ -485,6 +488,21 @@ setInterval(
 
             const novoDB =
                 await response.json();
+
+            /* ========================= */
+            /* NORMALIZA CENTRO DE CUSTOS */
+            /* ========================= */
+
+            if (
+                typeof window.normalizarCentroCustos === 'function'
+            ) {
+
+                novoDB.centroCustos =
+                    window.normalizarCentroCustos(
+                        novoDB.centroCustos || {}
+                    );
+
+            }
 
             if(
 

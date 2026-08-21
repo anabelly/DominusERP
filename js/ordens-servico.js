@@ -1,4 +1,3 @@
-
 /* ===================================================== */
 /* ORDENS DE SERVIÇO - ERP EVOLUÍDO                     */
 /* ===================================================== */
@@ -86,10 +85,14 @@ function renderDashboardOS() {
 
     const canceladas =
         listaOS.filter(o => o.status === 'Cancelada').length;
-    
+
     const atrasadas =
-    listaOS.filter(o => o.dataEntrega &&
-        new Date(o.dataEntrega) < new Date() && o.status !== 'Entregue' && o.status !== 'Cancelada').length;
+        listaOS.filter(o =>
+            o.dataEntrega &&
+            new Date(o.dataEntrega) < new Date() &&
+            o.status !== 'Entregue' &&
+            o.status !== 'Cancelada'
+        ).length;
 
     return `
         <div style="
@@ -120,6 +123,7 @@ function renderDashboardOS() {
             <div class="card">
                 🔴 Canceladas: ${canceladas}
             </div>
+
             <div class="card">
                 ⚠️ Atrasadas: ${atrasadas}
             </div>
@@ -127,6 +131,7 @@ function renderDashboardOS() {
         </div>
     `;
 }
+
 /* ===================================================== */
 /* RENDER PRINCIPAL                                     */
 /* ===================================================== */
@@ -138,21 +143,37 @@ function renderOrdensServico() {
     return `
         <div class="content-card">
 
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:15px;
+            ">
+
                 <h2>Ordens de Serviço</h2>
 
-                <button class="btn-action" onclick="abrirNovaOS()">
+                <button
+                    class="btn-action"
+                    onclick="abrirNovaOS()"
+                >
                     + Nova OS
                 </button>
+
             </div>
 
             ${renderDashboardOS()}
 
             ${renderFiltrosOS()}
 
-           <div id="grid-os">
-    ${renderGridOS()}
-</div>
+            <div
+                id="grid-os"
+                style="
+                    width:100%;
+                    overflow-x:auto;
+                "
+            >
+                ${renderGridOS()}
+            </div>
 
         </div>
     `;
@@ -172,50 +193,62 @@ function renderFiltrosOS() {
             flex-wrap:wrap;
         ">
 
-           <input
-    id="busca-os"
-    placeholder="Buscar cliente ou código"
-    oninput="
-        buscaOS = this.value;
-        document.getElementById('grid-os').innerHTML = renderGridOS();
-    "
->
+            <input
+                id="busca-os"
+                placeholder="Buscar cliente ou código"
+                oninput="
+                    buscaOS = this.value;
+                    document.getElementById('grid-os').innerHTML = renderGridOS();
+                "
+            >
 
             <select
-    id="filtro-status-os"
-    onchange="
-        filtroOS = this.value;
-        document.getElementById('grid-os').innerHTML = renderGridOS();
-    "
->
+                id="filtro-status-os"
+                onchange="
+                    filtroOS = this.value;
+                    document.getElementById('grid-os').innerHTML = renderGridOS();
+                "
+            >
 
-                <option value="TODAS"
-                    ${filtroOS === 'TODAS' ? 'selected' : ''}>
+                <option
+                    value="TODAS"
+                    ${filtroOS === 'TODAS' ? 'selected' : ''}
+                >
                     Todas
                 </option>
 
-                <option value="Aberta"
-                    ${filtroOS === 'Aberta' ? 'selected' : ''}>
+                <option
+                    value="Aberta"
+                    ${filtroOS === 'Aberta' ? 'selected' : ''}
+                >
                     Abertas
                 </option>
 
-                <option value="Em Produção"
-                    ${filtroOS === 'Em Produção' ? 'selected' : ''}>
+                <option
+                    value="Em Produção"
+                    ${filtroOS === 'Em Produção' ? 'selected' : ''}
+                >
                     Produção
                 </option>
 
-                <option value="Concluída"
-                    ${filtroOS === 'Concluída' ? 'selected' : ''}>
+                <option
+                    value="Concluída"
+                    ${filtroOS === 'Concluída' ? 'selected' : ''}
+                >
                     Concluídas
                 </option>
 
-                <option value="Entregue"
-                    ${filtroOS === 'Entregue' ? 'selected' : ''}>
+                <option
+                    value="Entregue"
+                    ${filtroOS === 'Entregue' ? 'selected' : ''}
+                >
                     Entregues
                 </option>
 
-                <option value="Cancelada"
-                    ${filtroOS === 'Cancelada' ? 'selected' : ''}>
+                <option
+                    value="Cancelada"
+                    ${filtroOS === 'Cancelada' ? 'selected' : ''}
+                >
                     Canceladas
                 </option>
 
@@ -244,6 +277,7 @@ function atualizarGridOS() {
 /* ===================================================== */
 
 function renderGridOS() {
+
     console.log('Filtro atual:', filtroOS);
 
     let dados = [...listaOS];
@@ -303,19 +337,46 @@ function renderGridOS() {
 
     return `
 
-        <table class="table">
+        <table
+            class="table"
+            style="
+                width:100%;
+                table-layout:auto;
+                white-space:nowrap;
+            "
+        >
 
             <thead>
 
                 <tr>
 
-                    <th>Código</th>
-                    <th>Cliente</th>
-                    <th>Orçamento</th>
-                    <th>Emissão</th>
-                    <th>Entrega</th>
-                    <th>Status</th>
-                    <th>Ações</th>
+                    <th style="white-space:nowrap;">
+                        Código
+                    </th>
+
+                    <th style="white-space:nowrap;">
+                        Cliente
+                    </th>
+
+                    <th style="white-space:nowrap;">
+                        Orçamento
+                    </th>
+
+                    <th style="white-space:nowrap;">
+                        Emissão
+                    </th>
+
+                    <th style="white-space:nowrap;">
+                        Entrega
+                    </th>
+
+                    <th style="white-space:nowrap;">
+                        Status
+                    </th>
+
+                    <th style="white-space:nowrap;">
+                        Ações
+                    </th>
 
                 </tr>
 
@@ -338,92 +399,142 @@ function renderGridOS() {
 
                     return `
 
-                        <tr style="${atrasada ? 'background:#fff1f2;' : ''}">
+                        <tr
+                            style="
+                                ${atrasada ? 'background:#fff1f2;' : ''}
+                            "
+                        >
 
-                            <td>${os.codigo}</td>
+                            <td style="
+                                white-space:nowrap;
+                            ">
+                                ${os.codigo}
+                            </td>
 
-                            <td>${os.cliente}</td>
+                            <td style="
+                                white-space:nowrap;
+                            ">
+                                ${os.cliente}
+                            </td>
 
-                            <td>${os.numeroOrcamento || '-'}</td>
+                            <td style="
+                                white-space:nowrap;
+                            ">
+                                ${os.numeroOrcamento || '-'}
+                            </td>
 
-                            <td>${os.dataEmissao}</td>
+                            <td style="
+                                white-space:nowrap;
+                            ">
+                                ${os.dataEmissao}
+                            </td>
 
-                            <td>${os.dataEntrega || '-'}</td>
+                            <td style="
+                                white-space:nowrap;
+                            ">
+                                ${os.dataEntrega || '-'}
+                            </td>
 
-                            <td>
+                            <td style="
+                                white-space:nowrap;
+                            ">
 
                                 <span style="
+                                    display:inline-block;
                                     padding:3px 8px;
                                     border-radius:8px;
                                     background:${corStatus(os.status)};
                                     color:white;
                                     font-size:12px;
+                                    white-space:nowrap;
                                 ">
                                     ${os.status}
                                 </span>
 
                             </td>
 
-                            <td>
+                            <td style="
+                                white-space:nowrap;
+                                min-width:330px;
+                            ">
 
-                                <button
-                                    onclick="visualizarOS(${indiceReal})"
-                                    style="
-                                        background:#eff6ff;
-                                        color:#2563eb;
-                                        border:none;
-                                        padding:8px 12px;
-                                        border-radius:8px;
-                                        cursor:pointer;
-                                        font-weight:600;
-                                        margin-right:4px;
-                                    ">
-                                    👁 Visualizar
-                                </button>
+                                <div style="
+                                    display:flex;
+                                    align-items:center;
+                                    gap:6px;
+                                    flex-wrap:nowrap;
+                                    white-space:nowrap;
+                                ">
 
-                                <button
-                                    onclick="editarOS(${indiceReal})"
-                                    style="
-                                        background:#fef3c7;
-                                        color:#b45309;
-                                        border:none;
-                                        padding:8px 12px;
-                                        border-radius:8px;
-                                        cursor:pointer;
-                                        font-weight:600;
-                                        margin-right:4px;
-                                    ">
-                                    ✏ Editar
-                                </button>
+                                    <button
+                                        onclick="visualizarOS(${indiceReal})"
+                                        style="
+                                            background:#eff6ff;
+                                            color:#2563eb;
+                                            border:none;
+                                            padding:7px 10px;
+                                            border-radius:8px;
+                                            cursor:pointer;
+                                            font-weight:600;
+                                            white-space:nowrap;
+                                            flex-shrink:0;
+                                        "
+                                    >
+                                        👁 Visualizar
+                                    </button>
 
-                                <button
-                                    onclick="imprimirOS(${indiceReal})"
-                                    style="
-                                        background:#dcfce7;
-                                        color:#15803d;
-                                        border:none;
-                                        padding:8px 12px;
-                                        border-radius:8px;
-                                        cursor:pointer;
-                                        font-weight:600;
-                                    ">
-                                    🖨 Imprimir
-                                </button>
+                                    <button
+                                        onclick="editarOS(${indiceReal})"
+                                        style="
+                                            background:#fef3c7;
+                                            color:#b45309;
+                                            border:none;
+                                            padding:7px 10px;
+                                            border-radius:8px;
+                                            cursor:pointer;
+                                            font-weight:600;
+                                            white-space:nowrap;
+                                            flex-shrink:0;
+                                        "
+                                    >
+                                        ✏ Editar
+                                    </button>
 
-                                <button
-                                    onclick="excluirOS(${indiceReal})"
-                                    style="
-                                        background:#fee2e2;
-                                        color:#dc2626;
-                                        border:none;
-                                        padding:8px 12px;
-                                        border-radius:8px;
-                                        cursor:pointer;
-                                        font-weight:600;
-                                        margin-left:4px;
-                                    ">
-                                    🗑 Excluir
-                                </button>
+                                    <button
+                                        onclick="imprimirOS(${indiceReal})"
+                                        style="
+                                            background:#dcfce7;
+                                            color:#15803d;
+                                            border:none;
+                                            padding:7px 10px;
+                                            border-radius:8px;
+                                            cursor:pointer;
+                                            font-weight:600;
+                                            white-space:nowrap;
+                                            flex-shrink:0;
+                                        "
+                                    >
+                                        🖨 Imprimir
+                                    </button>
+
+                                    <button
+                                        onclick="excluirOS(${indiceReal})"
+                                        style="
+                                            background:#fee2e2;
+                                            color:#dc2626;
+                                            border:none;
+                                            padding:7px 10px;
+                                            border-radius:8px;
+                                            cursor:pointer;
+                                            font-weight:600;
+                                            white-space:nowrap;
+                                            flex-shrink:0;
+                                        "
+                                    >
+                                        🗑 Excluir
+                                    </button>
+
+                                </div>
 
                             </td>
 
@@ -440,8 +551,9 @@ function renderGridOS() {
     `;
 
 }
+
 /* ===================================================== */
-/* NOVA OS                                             */
+/* NOVA OS                                              */
 /* ===================================================== */
 
 function abrirNovaOS() {
@@ -457,7 +569,7 @@ function abrirNovaOS() {
 }
 
 /* ===================================================== */
-/* EDITAR OS                                           */
+/* EDITAR OS                                            */
 /* ===================================================== */
 
 function editarOS(index) {
@@ -475,13 +587,21 @@ function editarOS(index) {
 
     setTimeout(() => {
 
-        document.getElementById('os-cliente').value = os.cliente;
-        document.getElementById('os-data-entrega').value = os.dataEntrega;
-        document.getElementById('os-status').value = os.status;
+        document.getElementById('os-cliente').value =
+            os.cliente;
 
-        document.getElementById('os-itens').innerHTML = '';
+        document.getElementById('os-data-entrega').value =
+            os.dataEntrega;
 
-        os.itens.forEach(i => addItemOS(i));
+        document.getElementById('os-status').value =
+            os.status;
+
+        document.getElementById('os-itens').innerHTML =
+            '';
+
+        os.itens.forEach(i =>
+            addItemOS(i)
+        );
 
     }, 100);
 }
@@ -492,38 +612,49 @@ function editarOS(index) {
 
 function renderFormOS() {
 
-
     return `
-        <div style="
+
+<div style="
     display:flex;
     gap:20px;
     margin-bottom:15px;
 ">
 
     <label>
+
         <input
             type="radio"
             name="tipo-os"
             value="manual"
             checked
-            onchange="alternarTipoOS()">
+            onchange="alternarTipoOS()"
+        >
+
         Manual
+
     </label>
 
     <label>
+
         <input
             type="radio"
             name="tipo-os"
             value="orcamento"
-            onchange="alternarTipoOS()">
+            onchange="alternarTipoOS()"
+        >
+
         A partir do orçamento
+
     </label>
 
 </div>
 
 <div
     id="bloco-orcamento"
-    style="display:none;margin-bottom:15px;"
+    style="
+        display:none;
+        margin-bottom:15px;
+    "
 >
 
     <select
@@ -542,33 +673,66 @@ function renderFormOS() {
         </option>
 
         ${(window.db.orcamentos || [])
-            .map((o)=>`
-    <option value="${o.codigo}">
-        ${o.codigo} - ${o.cliente}
-    </option>
-`)
+            .map((o) => `
+
+                <option value="${o.codigo}">
+                    ${o.codigo} - ${o.cliente}
+                </option>
+
+            `)
             .join('')
         }
 
     </select>
 
 </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
 
-            <select id="os-cliente" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;">
-    <option value="">Selecione o cliente</option>
+<div style="
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+">
 
-    ${(window.db.clientes || []).map(c => `
-        <option value="${c.nome}">${c.nome}</option>
-    `).join('')}
-</select>
+    <select
+        id="os-cliente"
+        style="
+            width:100%;
+            padding:8px;
+            border:1px solid #ddd;
+            border-radius:8px;
+        "
+    >
 
-           <input id="os-data-entrega" type="date"
-style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;">
+        <option value="">
+            Selecione o cliente
+        </option>
 
-        </div>
+        ${(window.db.clientes || []).map(c => `
 
-      <div style="margin-top:10px;">
+            <option value="${c.nome}">
+                ${c.nome}
+            </option>
+
+        `).join('')}
+
+    </select>
+
+    <input
+        id="os-data-entrega"
+        type="date"
+        style="
+            width:100%;
+            padding:8px;
+            border:1px solid #ddd;
+            border-radius:8px;
+        "
+    >
+
+</div>
+
+<div style="
+    margin-top:10px;
+">
 
     <select
         id="os-status"
@@ -579,16 +743,20 @@ style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;">
             border-radius:8px;
         "
     >
+
         <option>Aberta</option>
         <option>Em Produção</option>
         <option>Concluída</option>
         <option>Entregue</option>
         <option>Cancelada</option>
+
     </select>
 
 </div>
 
-<div style="margin-top:10px;">
+<div style="
+    margin-top:10px;
+">
 
     <input
         id="os-numero-orcamento"
@@ -603,27 +771,37 @@ style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;">
 
 </div>
 
-        <hr>
+<hr>
 
-        <h3>Itens</h3>
+<h3>
+    Itens
+</h3>
 
-        <div id="os-itens"></div>
+<div id="os-itens"></div>
 
-        <button onclick="addItemOS()" style="
-    margin-top:10px;
-    background:#3b82f6;
-    color:white;
-    border:none;
-    padding:10px 14px;
-    border-radius:10px;
-    cursor:pointer;
-    font-weight:600;
-">
+<button
+    onclick="addItemOS()"
+    style="
+        margin-top:10px;
+        background:#3b82f6;
+        color:white;
+        border:none;
+        padding:10px 14px;
+        border-radius:10px;
+        cursor:pointer;
+        font-weight:600;
+    "
+>
     + Adicionar Produto
 </button>
-    <div style="margin-top:20px;">
 
-    <h3>Observação Geral da Produção</h3>
+<div style="
+    margin-top:20px;
+">
+
+    <h3>
+        Observação Geral da Produção
+    </h3>
 
     <textarea
         id="os-observacao"
@@ -637,16 +815,18 @@ style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;">
     ></textarea>
 
 </div>
+
     `;
 }
 
 /* ===================================================== */
-/* ITENS                                               */
+/* ITENS                                                */
 /* ===================================================== */
 
 function addItemOS(data = {}) {
 
-    const div = document.createElement('div');
+    const div =
+        document.createElement('div');
 
     div.style = `
         display:grid;
@@ -659,10 +839,14 @@ function addItemOS(data = {}) {
         align-items:center;
     `;
 
-   div.innerHTML = `
+    div.innerHTML = `
 
-<div style="grid-column:1/-1;">
-    <strong>Descrição</strong>
+<div style="
+    grid-column:1/-1;
+">
+    <strong>
+        Descrição
+    </strong>
 </div>
 
 <textarea
@@ -713,11 +897,14 @@ function addItemOS(data = {}) {
         font-weight:600;
     "
 >
-🗑 Excluir
+    🗑 Excluir
 </button>
+
 `;
 
-    document.getElementById('os-itens').appendChild(div);
+    document
+        .getElementById('os-itens')
+        .appendChild(div);
 }
 
 function alternarTipoOS() {
@@ -738,154 +925,245 @@ function alternarTipoOS() {
 function carregarOrcamentoOS() {
 
     const codigoSelecionado =
-        document.getElementById('os-orcamento').value;
-
+        document.getElementById(
+            'os-orcamento'
+        ).value;
 
     if (!codigoSelecionado) return;
 
-    const orc = (window.db.orcamentos || []).find(o =>
-        String(o.codigo).trim() === String(codigoSelecionado).trim()
-    );
+    const orc =
+        (window.db.orcamentos || [])
+            .find(o =>
+                String(o.codigo).trim()
+                ===
+                String(codigoSelecionado).trim()
+            );
 
     if (!orc) {
-        console.log('Orçamento não encontrado:', codigoSelecionado);
+
+        console.log(
+            'Orçamento não encontrado:',
+            codigoSelecionado
+        );
+
         return;
     }
 
-    document.getElementById('os-cliente').value =
+    document.getElementById(
+        'os-cliente'
+    ).value =
         orc.cliente || '';
 
-    document.getElementById('os-numero-orcamento').value =
+    document.getElementById(
+        'os-numero-orcamento'
+    ).value =
         orc.codigo || '';
 
-    document.getElementById('os-itens').innerHTML = '';
+    document.getElementById(
+        'os-itens'
+    ).innerHTML =
+        '';
 
     (orc.itens || []).forEach(i => {
 
-      addItemOS({
-    produto: i.produto || i.descricao || '',
-    quantidade: i.quantidade || i.qtd || '',
-    altura: i.altura || '',
-    largura: i.largura || '',
-    comprimento: i.comprimento || ''
-});
+        addItemOS({
+
+            produto:
+                i.produto ||
+                i.descricao ||
+                '',
+
+            quantidade:
+                i.quantidade ||
+                i.qtd ||
+                '',
+
+            altura:
+                i.altura || '',
+
+            largura:
+                i.largura || '',
+
+            comprimento:
+                i.comprimento || ''
+
+        });
 
     });
 
 }
+
 /* ===================================================== */
-/* SALVAR OS                                           */
+/* SALVAR OS                                            */
 /* ===================================================== */
 
 function salvarOS() {
 
     const itens = [];
 
-    document.querySelectorAll('#os-itens > div').forEach(d => {
+    document
+        .querySelectorAll(
+            '#os-itens > div'
+        )
+        .forEach(d => {
 
-        itens.push({
-            produto: d.querySelector('.p').value.trim(),
-            quantidade: d.querySelector('.q').value,
-            altura: d.querySelector('.a').value,
-            largura: d.querySelector('.l').value,
-            comprimento: d.querySelector('.c').value
+            itens.push({
+
+                produto:
+                    d.querySelector('.p')
+                        .value
+                        .trim(),
+
+                quantidade:
+                    d.querySelector('.q')
+                        .value,
+
+                altura:
+                    d.querySelector('.a')
+                        .value,
+
+                largura:
+                    d.querySelector('.l')
+                        .value,
+
+                comprimento:
+                    d.querySelector('.c')
+                        .value
+
+            });
+
         });
-
-    });
 
     const os = {
 
-    codigo:
-        osEditando !== null
-        ? listaOS[osEditando].codigo
-        : gerarCodigoOS(),
+        codigo:
+            osEditando !== null
+            ? listaOS[osEditando].codigo
+            : gerarCodigoOS(),
 
-    tipoCriacao:
-        document.querySelector(
-            'input[name="tipo-os"]:checked'
-        )?.value || 'manual',
+        tipoCriacao:
+            document.querySelector(
+                'input[name="tipo-os"]:checked'
+            )?.value || 'manual',
 
-    cliente:
-        document.getElementById(
-            'os-cliente'
-        ).value,
+        cliente:
+            document.getElementById(
+                'os-cliente'
+            ).value,
 
-    numeroOrcamento:
-        document.getElementById(
-            'os-numero-orcamento'
-        ).value,
+        numeroOrcamento:
+            document.getElementById(
+                'os-numero-orcamento'
+            ).value,
 
-    observacao:
-        document.getElementById(
-            'os-observacao'
-        ).value,
+        observacao:
+            document.getElementById(
+                'os-observacao'
+            ).value,
 
-    dataEmissao:
-        osEditando !== null
-        ? listaOS[osEditando].dataEmissao
-        : new Date().toLocaleDateString(),
+        dataEmissao:
+            osEditando !== null
+            ? listaOS[osEditando].dataEmissao
+            : new Date().toLocaleDateString(),
 
-    dataEntrega:
-        document.getElementById(
-            'os-data-entrega'
-        ).value,
+        dataEntrega:
+            document.getElementById(
+                'os-data-entrega'
+            ).value,
 
-    status:
-        document.getElementById(
-            'os-status'
-        ).value,
+        status:
+            document.getElementById(
+                'os-status'
+            ).value,
 
-    itens
-};
+        itens
+
+    };
 
     if (osEditando !== null) {
+
         listaOS[osEditando] = os;
+
     } else {
+
         listaOS.push(os);
+
     }
 
-   salvarOSStorage();
-   carregarOS();
+    salvarOSStorage();
 
-closeModal();
+    carregarOS();
 
-setTimeout(() => {
-    if (typeof renderPage === 'function') {
-        renderPage();
-    }
-}, 100);
-window.db.ordensServico = listaOS;
+    closeModal();
 
-carregarOS(); // 🔥 garante sync real
+    setTimeout(() => {
 
-setTimeout(() => {
-    renderOrdensServico(); // força re-render da tela atual
-    renderPage?.(); // fallback do teu sistema
-}, 50);
+        if (
+            typeof renderPage ===
+            'function'
+        ) {
+
+            renderPage();
+
+        }
+
+    }, 100);
+
+    window.db.ordensServico =
+        listaOS;
+
+    carregarOS();
+
+    setTimeout(() => {
+
+        renderOrdensServico();
+
+        renderPage?.();
+
+    }, 50);
 }
 
 /* ===================================================== */
-/* GERAR CÓDIGO                                        */
+/* GERAR CÓDIGO                                         */
 /* ===================================================== */
 
 function gerarCodigoOS() {
 
-    const numerosExistentes = (window.db.ordensServico || [])
-        .map(os => parseInt(
-            String(os.codigo)
-                .replace('OS-', '')
-        ))
-        .filter(n => !isNaN(n))
-        .sort((a, b) => a - b);
+    const numerosExistentes =
+        (window.db.ordensServico || [])
+
+        .map(os =>
+            parseInt(
+                String(os.codigo)
+                    .replace('OS-', '')
+            )
+        )
+
+        .filter(n =>
+            !isNaN(n)
+        )
+
+        .sort((a, b) =>
+            a - b
+        );
 
     let proximo = 1;
 
-    for (const numero of numerosExistentes) {
+    for (
+        const numero
+        of numerosExistentes
+    ) {
 
-        if (numero === proximo) {
+        if (
+            numero === proximo
+        ) {
+
             proximo++;
+
         } else {
+
             break;
+
         }
 
     }
@@ -894,31 +1172,36 @@ function gerarCodigoOS() {
 }
 
 /* ===================================================== */
-/* VISUALIZAR OS                                         */
+/* VISUALIZAR OS                                        */
 /* ===================================================== */
 
 function visualizarOS(index) {
 
-    const os = listaOS[index];
+    const os =
+        listaOS[index];
 
     configModal({
 
-        title: `OS ${os.codigo}`,
+        title:
+            `OS ${os.codigo}`,
 
-        size: 'fullscreen',
+        size:
+            'fullscreen',
 
-        hideConfirm: true,
+        hideConfirm:
+            true,
 
         body: `
 
 <div
-id="print-os"
-style="
-    background:#fff;
-    padding:20px;
-    font-family:Arial,sans-serif;
-    color:#000;
-">
+    id="print-os"
+    style="
+        background:#fff;
+        padding:20px;
+        font-family:Arial,sans-serif;
+        color:#000;
+    "
+>
 
     <!-- CABEÇALHO -->
 
@@ -945,7 +1228,9 @@ style="
 
         </div>
 
-        <div style="text-align:right;">
+        <div style="
+            text-align:right;
+        ">
 
             <div style="
                 font-size:34px;
@@ -970,58 +1255,90 @@ style="
     <!-- DADOS GERAIS -->
 
     <div style="
-    background:#f5f5f5;
-    padding:10px 14px;
-    border-radius:14px;
-    margin-bottom:12px;
-">
+        background:#f5f5f5;
+        padding:10px 14px;
+        border-radius:14px;
+        margin-bottom:12px;
+    ">
 
         <div style="
-    font-size:16px;
-    font-weight:700;
-    margin-bottom:8px;
-">
+            font-size:16px;
+            font-weight:700;
+            margin-bottom:8px;
+        ">
             Informações Gerais
         </div>
 
         <div style="
             display:grid;
-grid-template-columns:1fr 1fr;
-gap:6px 18px;
-font-size:12px;
-line-height:1.25;
+            grid-template-columns:1fr 1fr;
+            gap:6px 18px;
+            font-size:12px;
+            line-height:1.25;
         ">
 
             <div>
+
                 <span style="
-    color:#6b7280;
-    font-size:11px;
-">
-Cliente
-</span><br>
+                    color:#6b7280;
+                    font-size:11px;
+                ">
+                    Cliente
+                </span>
 
-<b>${os.cliente || '-'}</b>
-                ${os.cliente || '-'}
+                <br>
+
+                <b>
+                    ${os.cliente || '-'}
+                </b>
+
             </div>
 
             <div>
-                <b>Orçamento:</b><br>
+
+                <b>
+                    Orçamento:
+                </b>
+
+                <br>
+
                 ${os.numeroOrcamento || '-'}
+
             </div>
 
             <div>
-                <b>Data de Emissão:</b><br>
+
+                <b>
+                    Data de Emissão:
+                </b>
+
+                <br>
+
                 ${os.dataEmissao || '-'}
+
             </div>
 
             <div>
-                <b>Data de Entrega:</b><br>
-                ${formatarDataBR(os.dataEntrega)}
+
+                <b>
+                    Data de Entrega:
+                </b>
+
+                <br>
+
+                ${formatarDataBR(
+                    os.dataEntrega
+                )}
+
             </div>
 
-            <div style="grid-column:1/3;">
+            <div style="
+                grid-column:1/3;
+            ">
 
-                <b>Status:</b>
+                <b>
+                    Status:
+                </b>
 
                 <span style="
                     display:inline-block;
@@ -1069,8 +1386,6 @@ Cliente
                 margin-bottom:8px;
             ">
 
-                <!-- PRODUTO -->
-
                 <div style="
                     display:flex;
                     justify-content:space-between;
@@ -1079,7 +1394,9 @@ Cliente
                     margin-bottom:14px;
                 ">
 
-                    <div style="flex:1;">
+                    <div style="
+                        flex:1;
+                    ">
 
                         <div style="
                             font-size:12px;
@@ -1090,14 +1407,16 @@ Cliente
                         </div>
 
                         <div style="
-    font-size:15px;
-    font-weight:700;
-    line-height:1.5;
-    margin:0;
-    padding:0;
-">
-    ${String(i.produto || '-').trim()}
-</div>
+                            font-size:15px;
+                            font-weight:700;
+                            line-height:1.5;
+                            margin:0;
+                            padding:0;
+                        ">
+                            ${String(
+                                i.produto || '-'
+                            ).trim()}
+                        </div>
 
                     </div>
 
@@ -1223,30 +1542,30 @@ Cliente
 
     ${os.observacao ? `
 
-    <div style="
-        background:#f5f5f5;
-        padding:16px;
-        border-radius:14px;
-        margin-bottom:14px;
-    ">
-
         <div style="
-            font-size:18px;
-            font-weight:700;
-            margin-bottom:10px;
+            background:#f5f5f5;
+            padding:16px;
+            border-radius:14px;
+            margin-bottom:14px;
         ">
-            Observações da Produção
-        </div>
 
-        <div style="
-            white-space:pre-wrap;
-            line-height:1.6;
-            font-size:13px;
-        ">
-            ${os.observacao}
-        </div>
+            <div style="
+                font-size:18px;
+                font-weight:700;
+                margin-bottom:10px;
+            ">
+                Observações da Produção
+            </div>
 
-    </div>
+            <div style="
+                white-space:pre-wrap;
+                line-height:1.6;
+                font-size:13px;
+            ">
+                ${os.observacao}
+            </div>
+
+        </div>
 
     ` : ''}
 
@@ -1259,12 +1578,13 @@ Cliente
 }
 
 /* ===================================================== */
-/* IMPRESSÃO                                           */
+/* IMPRESSÃO                                            */
 /* ===================================================== */
 
 async function imprimirOS(index) {
 
-    const os = listaOS[index];
+    const os =
+        listaOS[index];
 
     const html = `
 
@@ -1273,18 +1593,18 @@ async function imprimirOS(index) {
 <head>
 
 <title>
-Ordem de Serviço ${os.codigo}
+    Ordem de Serviço ${os.codigo}
 </title>
 
 <style>
 
-*{
+* {
     -webkit-print-color-adjust:exact !important;
     print-color-adjust:exact !important;
     box-sizing:border-box;
 }
 
-body{
+body {
     font-family:Arial,sans-serif;
     background:#fff;
     margin:0;
@@ -1292,18 +1612,18 @@ body{
     color:#000;
 }
 
-@page{
+@page {
     size:A4;
     margin:12mm;
 }
 
-@media print{
+@media print {
 
-    body{
+    body {
         padding:0;
     }
 
-    *{
+    * {
         -webkit-print-color-adjust:exact !important;
         print-color-adjust:exact !important;
     }
@@ -1316,8 +1636,7 @@ body{
 
 <body>
 
-<div
-style="
+<div style="
     background:#fff;
     color:#000;
 ">
@@ -1347,7 +1666,9 @@ style="
 
         </div>
 
-        <div style="text-align:right;">
+        <div style="
+            text-align:right;
+        ">
 
             <div style="
                 font-size:34px;
@@ -1395,28 +1716,62 @@ style="
         ">
 
             <div>
-                <b>Cliente:</b><br>
+
+                <b>
+                    Cliente:
+                </b>
+
+                <br>
+
                 ${os.cliente || '-'}
+
             </div>
 
             <div>
-                <b>Orçamento:</b><br>
+
+                <b>
+                    Orçamento:
+                </b>
+
+                <br>
+
                 ${os.numeroOrcamento || '-'}
+
             </div>
 
             <div>
-                <b>Data de Emissão:</b><br>
+
+                <b>
+                    Data de Emissão:
+                </b>
+
+                <br>
+
                 ${os.dataEmissao || '-'}
+
             </div>
 
             <div>
-                <b>Data de Entrega:</b><br>
-                ${formatarDataBR(os.dataEntrega)}
+
+                <b>
+                    Data de Entrega:
+                </b>
+
+                <br>
+
+                ${formatarDataBR(
+                    os.dataEntrega
+                )}
+
             </div>
 
-            <div style="grid-column:1/3;">
+            <div style="
+                grid-column:1/3;
+            ">
 
-                <b>Status:</b>
+                <b>
+                    Status:
+                </b>
 
                 <span style="
                     display:inline-block;
@@ -1473,7 +1828,9 @@ style="
                     margin-bottom:14px;
                 ">
 
-                    <div style="flex:1;">
+                    <div style="
+                        flex:1;
+                    ">
 
                         <div style="
                             font-size:12px;
@@ -1484,14 +1841,16 @@ style="
                         </div>
 
                         <div style="
-    font-size:13px;
-    font-weight:700;
-    line-height:1.3;
-    margin:0;
-    padding:0;
-">
-    ${String(i.produto || '-').trim()}
-</div>
+                            font-size:13px;
+                            font-weight:700;
+                            line-height:1.3;
+                            margin:0;
+                            padding:0;
+                        ">
+                            ${String(
+                                i.produto || '-'
+                            ).trim()}
+                        </div>
 
                     </div>
 
@@ -1615,39 +1974,36 @@ style="
 
     ${os.observacao ? `
 
-    <div style="
-        background:#f5f5f5;
-        padding:16px;
-        border-radius:14px;
-        margin-bottom:14px;
-    ">
-
         <div style="
-            font-size:18px;
-            font-weight:700;
-            margin-bottom:10px;
+            background:#f5f5f5;
+            padding:16px;
+            border-radius:14px;
+            margin-bottom:14px;
         ">
-            Observações da Produção
-        </div>
 
-        <div style="
-            white-space:pre-wrap;
-            line-height:1.6;
-            font-size:13px;
-        ">
-            ${os.observacao}
-        </div>
+            <div style="
+                font-size:18px;
+                font-weight:700;
+                margin-bottom:10px;
+            ">
+                Observações da Produção
+            </div>
 
-    </div>
+            <div style="
+                white-space:pre-wrap;
+                line-height:1.6;
+                font-size:13px;
+            ">
+                ${os.observacao}
+            </div>
+
+        </div>
 
     ` : ''}
 
 </div>
 
-    ${`
-
-<div
-style="
+<div style="
     display:flex;
     justify-content:space-between;
     gap:80px;
@@ -1704,8 +2060,6 @@ style="
 
 </div>
 
-`}
-
 <script>
 
 window.onload = () => {
@@ -1718,7 +2072,6 @@ window.onload = () => {
 
 };
 
-
 </script>
 
 </body>
@@ -1729,7 +2082,8 @@ window.onload = () => {
 
     try {
 
-        await window.api.imprimirHTML(html);
+        await window.api
+            .imprimirHTML(html);
 
     }
 
@@ -1744,11 +2098,17 @@ window.onload = () => {
 
 }
 
+/* ===================================================== */
+/* EXCLUIR OS                                           */
+/* ===================================================== */
+
 function excluirOS(index) {
 
-    const os = listaOS[index];
+    const os =
+        listaOS[index];
 
-    const confirmar = confirm(
+    const confirmar =
+        confirm(
 `ATENÇÃO
 
 Você está excluindo a OS ${os.codigo}
@@ -1756,13 +2116,17 @@ Você está excluindo a OS ${os.codigo}
 Esta ação não poderá ser desfeita.
 
 Deseja continuar?`
-);
+        );
 
     if (!confirmar) return;
 
-    listaOS.splice(index, 1);
+    listaOS.splice(
+        index,
+        1
+    );
 
-    window.db.ordensServico = listaOS;
+    window.db.ordensServico =
+        listaOS;
 
     salvarOSStorage();
 
@@ -1775,4 +2139,7 @@ Deseja continuar?`
 /* REGISTRO                                             */
 /* ===================================================== */
 
-registerPage('ordens-servico', renderOrdensServico);
+registerPage(
+    'ordens-servico',
+    renderOrdensServico
+);

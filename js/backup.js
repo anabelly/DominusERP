@@ -138,6 +138,7 @@ flex-wrap:wrap;
 `;
 };
 
+
 /* ========================= */
 /* BAIXAR BACKUP */
 /* ========================= */
@@ -165,12 +166,16 @@ window.baixarBackup = function () {
             );
 
         const url =
+
             URL.createObjectURL(
                 blob
             );
 
         const link =
-            document.createElement('a');
+
+            document.createElement(
+                'a'
+            );
 
         const data =
 
@@ -178,7 +183,8 @@ window.baixarBackup = function () {
                 .toISOString()
                 .split('T')[0];
 
-        link.href = url;
+        link.href =
+            url;
 
         link.download =
 
@@ -202,15 +208,22 @@ window.baixarBackup = function () {
             'Backup gerado com sucesso.'
         );
 
-    } catch(err){
+    }
 
-        console.error(err);
+    catch(err){
+
+        console.error(
+            err
+        );
 
         alert(
             'Erro ao gerar backup.'
         );
+
     }
+
 };
+
 
 /* ========================= */
 /* RESTAURAR BACKUP */
@@ -219,11 +232,15 @@ window.baixarBackup = function () {
 window.restaurarBackup = function () {
 
     const input =
+
         document.getElementById(
             'backup-file'
         );
 
+
     if (
+        !input ||
+        !input.files ||
         !input.files.length
     ) {
 
@@ -232,15 +249,23 @@ window.restaurarBackup = function () {
         );
 
         return;
+
     }
 
+
     const arquivo =
+
         input.files[0];
 
+
     const leitor =
+
         new FileReader();
 
-    leitor.onload = function(e){
+
+    leitor.onload =
+
+        async function(e){
 
         try{
 
@@ -249,6 +274,24 @@ window.restaurarBackup = function () {
                 JSON.parse(
                     e.target.result
                 );
+
+
+            /* ========================= */
+            /* VALIDAR ESTRUTURA */
+            /* ========================= */
+
+            if (
+                !dados ||
+                typeof dados !== 'object' ||
+                Array.isArray(dados)
+            ) {
+
+                throw new Error(
+                    'Estrutura de backup inválida.'
+                );
+
+            }
+
 
             const confirmar =
 
@@ -259,11 +302,56 @@ window.restaurarBackup = function () {
 A restauração irá substituir TODOS os dados atuais do sistema.
 
 Deseja continuar?`
+
                 );
+
 
             if(
                 !confirmar
-            ) return;
+            ){
+
+                return;
+
+            }
+
+
+            /* ========================= */
+            /* CENTRO DE CUSTOS */
+            /* ========================= */
+
+            let centroCustosRestaurado;
+
+
+            if (
+
+                typeof window
+                .normalizarCentroCustos
+                ===
+                'function'
+
+            ) {
+
+                centroCustosRestaurado =
+
+                    window
+                    .normalizarCentroCustos(
+
+                        dados.centroCustos
+                        || {}
+
+                    );
+
+            }
+
+            else {
+
+                centroCustosRestaurado =
+
+                    dados.centroCustos
+                    || {};
+
+            }
+
 
             /* ========================= */
             /* SUBSTITUIR DB */
@@ -271,57 +359,238 @@ Deseja continuar?`
 
             window.db = {
 
+
                 funcionarios:
-                    dados.funcionarios || [],
+
+                    Array.isArray(
+                        dados.funcionarios
+                    )
+
+                    ? dados.funcionarios
+
+                    : [],
+
 
                 clientes:
-                    dados.clientes || [],
+
+                    Array.isArray(
+                        dados.clientes
+                    )
+
+                    ? dados.clientes
+
+                    : [],
+
 
                 fornecedores:
-                    dados.fornecedores || [],
+
+                    Array.isArray(
+                        dados.fornecedores
+                    )
+
+                    ? dados.fornecedores
+
+                    : [],
+
 
                 contatos:
-                    dados.contatos || [],
+
+                    Array.isArray(
+                        dados.contatos
+                    )
+
+                    ? dados.contatos
+
+                    : [],
+
 
                 produtos:
-                    dados.produtos || [],
+
+                    Array.isArray(
+                        dados.produtos
+                    )
+
+                    ? dados.produtos
+
+                    : [],
+
 
                 financeiro:
-                    dados.financeiro || [],
 
-                orcamentos:
-                    dados.orcamentos || [],
+                    Array.isArray(
+                        dados.financeiro
+                    )
+
+                    ? dados.financeiro
+
+                    : [],
+                                    orcamentos:
+
+                    Array.isArray(
+                        dados.orcamentos
+                    )
+
+                    ? dados.orcamentos
+
+                    : [],
+
+
+                ordensServico:
+
+                    Array.isArray(
+                        dados.ordensServico
+                    )
+
+                    ? dados.ordensServico
+
+                    : [],
+
 
                 recibos:
-                    dados.recibos || [],
+
+                    Array.isArray(
+                        dados.recibos
+                    )
+
+                    ? dados.recibos
+
+                    : [],
+
 
                 tiposProduto:
-                    dados.tiposProduto || []
+
+                    Array.isArray(
+                        dados.tiposProduto
+                    )
+
+                    ? dados.tiposProduto
+
+                    : [],
+
+
+                /* ========================= */
+                /* CENTRO DE CUSTOS */
+                /* ========================= */
+
+                centroCustos:
+
+                    centroCustosRestaurado,
+
+
+                /* ========================= */
+                /* CONTADORES */
+                /* ========================= */
+
+                ultimoRecibo:
+
+                    Number.isFinite(
+                        Number(
+                            dados.ultimoRecibo
+                        )
+                    )
+
+                    ? Number(
+                        dados.ultimoRecibo
+                    )
+
+                    : 0,
+
+
+                ultimoOrcamento:
+
+                    Number.isFinite(
+                        Number(
+                            dados.ultimoOrcamento
+                        )
+                    )
+
+                    ? Number(
+                        dados.ultimoOrcamento
+                    )
+
+                    : 3687,
+
+
+                ultimaOS:
+
+                    Number.isFinite(
+                        Number(
+                            dados.ultimaOS
+                        )
+                    )
+
+                    ? Number(
+                        dados.ultimaOS
+                    )
+
+                    : 0
 
             };
 
-            save();
+
+            /* ========================= */
+            /* SALVAR NO SERVIDOR */
+            /* ========================= */
+
+            await save();
+
 
             alert(
                 'Backup restaurado com sucesso.'
             );
 
-            navigate('dash');
 
-        } catch(err){
+            /* ========================= */
+            /* VOLTAR AO DASHBOARD */
+            /* ========================= */
 
-            console.error(err);
+            await navigate(
+                'dash',
+                false
+            );
+
+        }
+
+        catch(err){
+
+            console.error(
+                err
+            );
 
             alert(
                 'Arquivo inválido ou corrompido.'
             );
+
         }
+
     };
+
+
+    /* ========================= */
+    /* ERRO AO LER ARQUIVO */
+    /* ========================= */
+
+    leitor.onerror =
+
+        function(err){
+
+            console.error(
+                err
+            );
+
+            alert(
+                'Não foi possível ler o arquivo de backup.'
+            );
+
+        };
+
 
     leitor.readAsText(
         arquivo
     );
+
 };
+
 
 /* ========================= */
 /* REGISTRAR PÁGINA */

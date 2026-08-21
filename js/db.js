@@ -1,23 +1,236 @@
 /* ========================= */
+/* ESTRUTURA PADRÃO */
+/* CENTRO DE CUSTOS */
+/* ========================= */
+
+window.criarEstruturaPadraoCentroCustos =
+function () {
+
+    return {
+
+        /* ========================= */
+        /* ENDEREÇO DE ORIGEM */
+        /* ========================= */
+
+        enderecoOrigem: {
+
+            logradouro:
+                'Rua Paissandu',
+
+            numero:
+                '25',
+
+            bairro:
+                'Parque dos Eucaliptos',
+
+            cidade:
+                'Gravataí',
+
+            uf:
+                'RS',
+
+            cep:
+                '94130-380'
+
+        },
+
+        /* ========================= */
+        /* COMBUSTÍVEIS */
+        /* ========================= */
+
+        combustiveis: [],
+
+        /* ========================= */
+        /* VEÍCULOS */
+        /* ========================= */
+
+        veiculos: [],
+
+        /* ========================= */
+        /* EQUIPAMENTOS PRÓPRIOS */
+        /* ========================= */
+
+        equipamentos: [],
+
+        /* ========================= */
+        /* MÃO DE OBRA */
+        /* ========================= */
+
+        maoDeObra: {
+
+            horasMensais:
+                220,
+
+            encargosPercentual:
+                0
+
+        },
+
+        /* ========================= */
+        /* PRECIFICAÇÃO */
+        /* ========================= */
+
+        parametros: {
+
+            desperdicioPercentual:
+                0,
+
+            administrativoPercentual:
+                0,
+
+            margemLucroPercentual:
+                0,
+
+            metodoMargem:
+                'acrescimo'
+
+        }
+
+    };
+
+};
+
+
+/* ========================= */
+/* NORMALIZAR CENTRO CUSTOS */
+/* ========================= */
+
+/*
+    Essa função é importante
+    para bancos antigos.
+
+    Se o banco ainda não tiver
+    Centro de Custos, ela cria.
+
+    Se futuramente adicionarmos
+    novos campos, ela preserva
+    os dados antigos e acrescenta
+    os campos que estiverem faltando.
+*/
+
+window.normalizarCentroCustos =
+function (
+    dados = {}
+) {
+
+    const padrao =
+        criarEstruturaPadraoCentroCustos();
+
+    return {
+
+        enderecoOrigem: {
+
+            ...padrao.enderecoOrigem,
+
+            ...(
+                dados.enderecoOrigem
+                || {}
+            )
+
+        },
+
+        combustiveis:
+
+            Array.isArray(
+                dados.combustiveis
+            )
+
+            ? dados.combustiveis
+
+            : [],
+
+        veiculos:
+
+            Array.isArray(
+                dados.veiculos
+            )
+
+            ? dados.veiculos
+
+            : [],
+
+        equipamentos:
+
+            Array.isArray(
+                dados.equipamentos
+            )
+
+            ? dados.equipamentos
+
+            : [],
+
+        maoDeObra: {
+
+            ...padrao.maoDeObra,
+
+            ...(
+                dados.maoDeObra
+                || {}
+            )
+
+        },
+
+        parametros: {
+
+            ...padrao.parametros,
+
+            ...(
+                dados.parametros
+                || {}
+            )
+
+        }
+
+    };
+
+};
+
+
+/* ========================= */
 /* DB CENTRALIZADO */
 /* ========================= */
 
 window.db = {
 
     funcionarios:[],
+
     clientes:[],
+
     fornecedores:[],
+
     contatos:[],
+
     produtos:[],
+
     financeiro:[],
+
     orcamentos:[],
+
     ordensServico:[],
+
     recibos:[],
+
     tiposProduto:[],
+
+    /* ========================= */
+    /* CENTRO DE CUSTOS */
+    /* ========================= */
+
+    centroCustos:
+        criarEstruturaPadraoCentroCustos(),
+
+    /* ========================= */
+    /* SEQUÊNCIAS */
+    /* ========================= */
+
     ultimoRecibo:0,
+
     ultimoOrcamento:3687,
+
     ultimaOS:0
+
 };
+
 
 /* ========================= */
 /* URL API */
@@ -25,13 +238,15 @@ window.db = {
 
 window.API_URL =
 
-    'http://10.1.1.17:3000';
+    'http://DESKTOP-FN92I64:3000';
+
 
 /* ========================= */
 /* LOAD */
 /* ========================= */
 
-window.loadDB = async function(){
+window.loadDB =
+async function(){
 
     try{
 
@@ -45,54 +260,112 @@ window.loadDB = async function(){
 
             .then(
 
-                r=>r.json()
+                r =>
+                    r.json()
 
             );
 
+
         if(saved){
 
-         window.db = {
+            window.db = {
 
-    funcionarios:
-        saved.funcionarios || [],
+                funcionarios:
 
-    clientes:
-        saved.clientes || [],
+                    saved.funcionarios
+                    || [],
 
-    fornecedores:
-        saved.fornecedores || [],
 
-    contatos:
-        saved.contatos || [],
+                clientes:
 
-    produtos:
-        saved.produtos || [],
+                    saved.clientes
+                    || [],
 
-    financeiro:
-        saved.financeiro || [],
 
-    orcamentos:
-        saved.orcamentos || [],
+                fornecedores:
 
-    ordensServico:
-        saved.ordensServico || [],
+                    saved.fornecedores
+                    || [],
 
-    recibos:
-        saved.recibos || [],
 
-    tiposProduto:
-        saved.tiposProduto || [],
+                contatos:
 
-    ultimoRecibo:
-        saved.ultimoRecibo || 0,
+                    saved.contatos
+                    || [],
 
-    ultimoOrcamento:
-        saved.ultimoOrcamento || 3687,
 
-    ultimaOS:
-        saved.ultimaOS || 0
+                produtos:
 
-};
+                    saved.produtos
+                    || [],
+
+
+                financeiro:
+
+                    saved.financeiro
+                    || [],
+
+
+                orcamentos:
+
+                    saved.orcamentos
+                    || [],
+
+
+                ordensServico:
+
+                    saved.ordensServico
+                    || [],
+
+
+                recibos:
+
+                    saved.recibos
+                    || [],
+
+
+                tiposProduto:
+
+                    saved.tiposProduto
+                    || [],
+
+
+                /* ========================= */
+                /* CENTRO DE CUSTOS */
+                /* ========================= */
+
+                centroCustos:
+
+                    normalizarCentroCustos(
+
+                        saved.centroCustos
+                        || {}
+
+                    ),
+
+
+                /* ========================= */
+                /* SEQUÊNCIAS */
+                /* ========================= */
+
+                ultimoRecibo:
+
+                    saved.ultimoRecibo
+                    || 0,
+
+
+                ultimoOrcamento:
+
+                    saved.ultimoOrcamento
+                    || 3687,
+
+
+                ultimaOS:
+
+                    saved.ultimaOS
+                    || 0
+
+            };
 
         }
 
@@ -112,11 +385,13 @@ window.loadDB = async function(){
 
 };
 
+
 /* ========================= */
 /* SAVE */
 /* ========================= */
 
-window.saveDB = async function(){
+window.saveDB =
+async function(){
 
     try{
 
@@ -126,11 +401,13 @@ window.saveDB = async function(){
 
             {
 
-                method:'POST',
+                method:
+                    'POST',
 
                 headers:{
 
-                    'Content-Type':'application/json'
+                    'Content-Type':
+                        'application/json'
 
                 },
 
@@ -162,11 +439,13 @@ window.saveDB = async function(){
 
 };
 
+
 /* ========================= */
 /* ATALHO */
 /* ========================= */
 
-window.save = async function(){
+window.save =
+async function(){
 
     await saveDB();
 

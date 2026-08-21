@@ -74,104 +74,119 @@ window.renderOrcamentos = function () {
                 + Novo Orçamento
 
             </button>
+
         <button
-    class="btn-action"
-    style="
-        background:#7c3aed;
-    "
-    onclick="abrirAssistenteOrcamentoIA()">
+            class="btn-action"
+            style="
+                background:#7c3aed;
+            "
+            onclick="abrirAssistenteOrcamentoIA()">
 
-    🤖 Criar com IA
+            🤖 Criar com IA
 
-</button>
-
-        
+        </button>
 
         </div>
 
+    </div>
+
+    <div style="
+        width:150px;
+        margin-top:10px;
+        margin-left:auto;
+    ">
+
+        <label style="
+            font-size:12px;
+            color:#6b7280;
+        ">
+            Status
+        </label>
+
+        <select
+            id="filtro-status-orcamento"
+            onchange="filtrarStatusOrcamento()"
+            style="
+                width:100%;
+                padding:8px;
+                border-radius:8px;
+                border:1px solid #ccc;
+            "
+        >
+
+            <option value=""
+            ${
+                window.filtroStatusOrcamentoAtual === ''
+                ? 'selected'
+                : ''
+            }
+            >
+                Todos
+            </option>
+
+            <option value="Aguardando"
+            ${
+                window.filtroStatusOrcamentoAtual === 'Aguardando'
+                ? 'selected'
+                : ''
+            }
+            >
+                Aguardando
+            </option>
+
+            <option value="Aprovado"
+            ${
+                window.filtroStatusOrcamentoAtual === 'Aprovado'
+                ? 'selected'
+                : ''
+            }
+            >
+                Aprovado
+            </option>
+
+            <option value="Em Produção"
+            ${
+                window.filtroStatusOrcamentoAtual === 'Em Produção'
+                ? 'selected'
+                : ''
+            }
+            >
+                Em Produção
+            </option>
+
+            <option value="Recusado"
+            ${
+                window.filtroStatusOrcamentoAtual === 'Recusado'
+                ? 'selected'
+                : ''
+            }
+            >
+                Recusado
+            </option>
+
+            <option value="Cancelado"
+            ${
+                window.filtroStatusOrcamentoAtual === 'Cancelado'
+                ? 'selected'
+                : ''
+            }
+            >
+                Cancelado
+            </option>
+
+            <option value="Finalizado"
+            ${
+                window.filtroStatusOrcamentoAtual === 'Finalizado'
+                ? 'selected'
+                : ''
+            }
+            >
+                Finalizado
+            </option>
+
+        </select>
 
     </div>
-        <div style="
-    width:150px;
-    margin-top:10px;
-         margin-left:auto;
-">
-
-    <label style="
-        font-size:12px;
-        color:#6b7280;
-    ">
-        Status
-    </label>
-
-    <select
-        id="filtro-status-orcamento"
-        onchange="filtrarStatusOrcamento()"
-        style="
-            width:100%;
-            padding:8px;
-            border-radius:8px;
-            border:1px solid #ccc;
-        "
-    >
-
-       <option value=""
-${
-window.filtroStatusOrcamentoAtual === ''
-? 'selected'
-: ''
-}
->
-    Todos
-</option>
-
-
-<option value="Aguardando"
-${
-window.filtroStatusOrcamentoAtual === 'Aguardando'
-? 'selected'
-: ''
-}
->
-    Aguardando
-</option>
-
-
-<option value="Aprovado"
-${
-window.filtroStatusOrcamentoAtual === 'Aprovado'
-? 'selected'
-: ''
-}
->
-    Aprovado
-</option>
-
-
-<option value="Recusado"
-${
-window.filtroStatusOrcamentoAtual === 'Recusado'
-? 'selected'
-: ''
-}
->
-    Recusado
-</option>
-
-
-<option value="Cancelado"
-${
-window.filtroStatusOrcamentoAtual === 'Cancelado'
-? 'selected'
-: ''
-}
->
-    Cancelado
-</option>
-
-    </select>
-
-</div>
 
     <!-- TABELA -->
 
@@ -227,32 +242,31 @@ window.filtroStatusOrcamentoAtual === 'Cancelado'
 </tr>
 `;
     }
+
     let listaOrcamentos =
-    [...db.orcamentos];
+        [...db.orcamentos];
 
+    const filtroStatus =
+        filtroStatusOrcamentoAtual;
 
-const filtroStatus =
-    filtroStatusOrcamentoAtual;
+    if(filtroStatus){
 
+        listaOrcamentos =
+            listaOrcamentos.filter(o =>
 
-if(filtroStatus){
+                o.status === filtroStatus
 
-    listaOrcamentos =
-        listaOrcamentos.filter(o =>
+            );
+    }
 
-            o.status === filtroStatus
+    listaOrcamentos.forEach(
+        (orcamento) => {
 
-        );
+        const idx =
+            db.orcamentos.indexOf(orcamento);
 
-}
-
-   listaOrcamentos.forEach(
-    (orcamento) => {
-
-    const idx =
-        db.orcamentos.indexOf(orcamento);
-
-        let corStatus = '#f59e0b';
+        let corStatus =
+            '#f59e0b';
 
         if (
             (orcamento.status || '')
@@ -260,7 +274,18 @@ if(filtroStatus){
             'aprovado'
         ) {
 
-            corStatus = '#16a34a';
+            corStatus =
+                '#16a34a';
+        }
+
+        if (
+            (orcamento.status || '')
+            .toLowerCase() ===
+            'em produção'
+        ) {
+
+            corStatus =
+                '#ea580c';
         }
 
         if (
@@ -269,7 +294,8 @@ if(filtroStatus){
             'recusado'
         ) {
 
-            corStatus = '#dc2626';
+            corStatus =
+                '#dc2626';
         }
 
         if (
@@ -278,7 +304,18 @@ if(filtroStatus){
             'cancelado'
         ) {
 
-            corStatus = '#2563eb';
+            corStatus =
+                '#2563eb';
+        }
+
+        if (
+            (orcamento.status || '')
+            .toLowerCase() ===
+            'finalizado'
+        ) {
+
+            corStatus =
+                '#6b7280';
         }
 
         html += `
@@ -286,9 +323,7 @@ if(filtroStatus){
 <tr>
 
     <td>
-
         ${orcamento.codigo || '-'}
-
     </td>
 
     <td>
@@ -304,9 +339,7 @@ if(filtroStatus){
     </td>
 
     <td>
-
         ${orcamento.cliente || '-'}
-
     </td>
 
     <td>
@@ -332,17 +365,17 @@ if(filtroStatus){
     <td>
 
         <span style="
-            background:${corStatus};
-            color:#fff;
-            padding:6px 12px;
-            border-radius:999px;
-            font-size:12px;
-            font-weight:600;
-        ">
-
-            ${orcamento.status || '-'}
-
-        </span>
+    background:${corStatus};
+    color:#fff;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
+    display:inline-block;
+">
+    ${orcamento.status || '-'}
+</span>
 
     </td>
 
@@ -362,7 +395,7 @@ if(filtroStatus){
                 style="
                     padding:6px 10px;
                     font-size:12px;
-            background:#2563eb !important;
+                    background:#2563eb !important;
                 "
                 onclick="visualizarOrcamento(${idx})">
 
@@ -382,18 +415,19 @@ if(filtroStatus){
                 ✏ Editar
 
             </button>
+
             <button
-    class="btn-action"
-    style="
-        background:#7c3aed;
-        padding:6px 10px;
-        font-size:12px;
-    "
-    onclick="duplicarOrcamento(${idx})">
+                class="btn-action"
+                style="
+                    background:#7c3aed;
+                    padding:6px 10px;
+                    font-size:12px;
+                "
+                onclick="duplicarOrcamento(${idx})">
 
-    📄 Duplicar
+                📄 Duplicar
 
-</button>
+            </button>
 
             <button
                 class="btn-del"
@@ -432,6 +466,7 @@ if(filtroStatus){
 /* ========================= */
 /* FILTRO STATUS ORÇAMENTO */
 /* ========================= */
+
 window.filtrarStatusOrcamento = function(){
 
     const select =
@@ -439,15 +474,12 @@ window.filtrarStatusOrcamento = function(){
             'filtro-status-orcamento'
         );
 
-
     filtroStatusOrcamentoAtual =
         select.value;
-
 
     navigate(
         'orcamentos'
     );
-
 };
 
 /* ========================= */
@@ -474,7 +506,6 @@ window.excluirOrcamento = function (idx) {
         'orcamentos'
     );
 };
-
 
 /* ========================= */
 /* CONSULTA ORÇAMENTOS */
@@ -567,11 +598,19 @@ window.abrirConsultaOrcamentos = function () {
                 </option>
 
                 <option>
+                    Em Produção
+                </option>
+
+                <option>
                     Recusado
                 </option>
 
                 <option>
                     Cancelado
+                </option>
+
+                <option>
+                    Finalizado
                 </option>
 
             </select>
@@ -597,7 +636,6 @@ window.abrirConsultaOrcamentos = function () {
 
     <div
         id="resultado-consulta-orcamentos">
-
     </div>
 
 </div>
@@ -623,7 +661,6 @@ window.abrirConsultaOrcamentos = function () {
         }
     });
 };
-
 
 /* ========================= */
 /* FILTRAR CONSULTA */
@@ -828,6 +865,16 @@ Nenhum orçamento encontrado
         if (
             (o.status || '')
             .toLowerCase() ===
+            'em produção'
+        ) {
+
+            corStatus =
+                '#3b82f6';
+        }
+
+        if (
+            (o.status || '')
+            .toLowerCase() ===
             'recusado'
         ) {
 
@@ -845,14 +892,22 @@ Nenhum orçamento encontrado
                 '#2563eb';
         }
 
+        if (
+            (o.status || '')
+            .toLowerCase() ===
+            'finalizado'
+        ) {
+
+            corStatus =
+                '#6b7280';
+        }
+
         html += `
 
 <tr>
 
     <td>
-
         ${o.codigo || '-'}
-
     </td>
 
     <td>
@@ -868,9 +923,7 @@ Nenhum orçamento encontrado
     </td>
 
     <td>
-
         ${o.cliente || '-'}
-
     </td>
 
     <td>
@@ -926,7 +979,7 @@ Nenhum orçamento encontrado
                 style="
                     padding:6px 10px;
                     font-size:12px;
-            background:#2563eb !important;
+                    background:#2563eb !important;
                 "
                 onclick="visualizarOrcamento(${idx})">
 
@@ -946,18 +999,19 @@ Nenhum orçamento encontrado
                 ✏ Editar
 
             </button>
+
             <button
-    class="btn-action"
-    style="
-        background:#7c3aed;
-        padding:6px 10px;
-        font-size:12px;
-    "
-    onclick="duplicarOrcamento(${idx})">
+                class="btn-action"
+                style="
+                    background:#7c3aed;
+                    padding:6px 10px;
+                    font-size:12px;
+                "
+                onclick="duplicarOrcamento(${idx})">
 
-    📄 Duplicar
+                📄 Duplicar
 
-</button>
+            </button>
 
             <button
                 class="btn-del"
@@ -1019,7 +1073,6 @@ window.obterProximoCodigoOrcamento = function () {
 
     return esperado;
 };
-
 /* ========================= */
 /* NOVO ORÇAMENTO */
 /* ========================= */
@@ -1035,15 +1088,15 @@ function () {
         db.clientes = [];
     }
 
- if (
-    db.ultimoOrcamento === undefined ||
-    db.ultimoOrcamento === null
-) {
-    db.ultimoOrcamento = 3688;
-}
+    if (
+        db.ultimoOrcamento === undefined ||
+        db.ultimoOrcamento === null
+    ) {
+        db.ultimoOrcamento = 3688;
+    }
 
     const codigo =
-    obterProximoCodigoOrcamento();
+        obterProximoCodigoOrcamento();
 
     let optionsClientes = `
 
@@ -1105,7 +1158,6 @@ function () {
 
         </div>
 
-
         <!-- CLIENTE -->
 
 <div>
@@ -1154,6 +1206,7 @@ function () {
 
     </div>
 </div>
+
         <!-- A/C -->
 
         <div>
@@ -1237,15 +1290,11 @@ function () {
                 ">
 
                 <option value="sim">
-
                     Sim
-
                 </option>
 
                 <option value="nao">
-
                     Não
-
                 </option>
 
             </select>
@@ -1272,6 +1321,10 @@ function () {
                 </option>
 
                 <option>
+                    Em Produção
+                </option>
+
+                <option>
                     Recusado
                 </option>
 
@@ -1279,9 +1332,14 @@ function () {
                     Cancelado
                 </option>
 
+                <option>
+                    Finalizado
+                </option>
+
             </select>
 
         </div>
+
         <!-- PRÉ CONTRATO -->
 
 <div>
@@ -1332,14 +1390,11 @@ function () {
     <hr>
 
     <h3>
-
         Produtos
-
     </h3>
 
     <div
         id="orc-produtos">
-
     </div>
 
     <button
@@ -1366,7 +1421,6 @@ function () {
         <textarea
             id="orc-obs"
             rows="4">
-
         </textarea>
 
     </div>
@@ -1381,9 +1435,7 @@ function () {
         Total:
 
         <span id="orc-total">
-
             R$ 0,00
-
         </span>
 
     </h2>
@@ -1467,7 +1519,6 @@ function () {
             cliente.email || '';
 };
 
-
 /* ========================= */
 /* SALVAR ORÇAMENTO */
 /* ========================= */
@@ -1550,7 +1601,7 @@ function () {
     const novoOrcamento = {
 
         codigo:
-    obterProximoCodigoOrcamento(),
+            obterProximoCodigoOrcamento(),
 
         data:
             new Date()
@@ -1616,11 +1667,11 @@ function () {
             .value,
 
         preContrato:
-    document
-    .getElementById(
-        'orc-precontrato'
-    )
-    .value,
+            document
+            .getElementById(
+                'orc-precontrato'
+            )
+            .value,
 
         observacoes:
             document
@@ -1752,6 +1803,7 @@ function (
         ">
 
         ✕
+
     </button>
 
 </div>
@@ -1761,7 +1813,6 @@ function (
 
     calcularTotalOrcamento();
 };
-
 
 /* ========================= */
 /* AUTO RESIZE */
@@ -1779,7 +1830,6 @@ function (el) {
         el.scrollHeight +
         'px';
 };
-
 
 /* ========================= */
 /* CALCULAR TOTAL */
@@ -1867,7 +1917,6 @@ function () {
     );
 };
 
-
 /* ========================= */
 /* TEXTO FIXO IMPOSTO */
 /* ========================= */
@@ -1887,8 +1936,6 @@ function (subtotal,totalFinal) {
             'orc-nota'
         )?.value;
 
-    /* REMOVER TEXTO FIXO ANTIGO */
-
     campoObs.value =
         campoObs.value.replace(
 
@@ -1897,21 +1944,14 @@ function (subtotal,totalFinal) {
             ''
         ).trim();
 
-    /* SE TEM NOTA → NÃO MOSTRA TEXTO */
-
     if (temNota !== 'nao') {
 
         return;
-
     }
-
-    /* TEXTO USANDO SUBTOTAL (SEM IMPOSTO) */
 
     const texto =
 
 `Valor total do orçamento ${formatarMoeda(subtotal)} acrescido do valor de imposto.`;
-
-    /* ADICIONAR TEXTO */
 
     if (campoObs.value.trim()) {
 
@@ -1924,7 +1964,6 @@ function (subtotal,totalFinal) {
 
         campoObs.value =
             texto;
-
     }
 };
 /* ========================= */
@@ -1935,8 +1974,11 @@ window.visualizarOrcamento = async function(index){
 
     const o =
         db.orcamentos[index];
-        const logoPath =
-    await window.api.getLogoPath();
+
+    window.orcamentoAtual = o;
+
+    const logoPath =
+        await window.api.getLogoPath();
 
 /* ========================= */
 /* CLIENTE COMPLETO */
@@ -2173,6 +2215,7 @@ ${o.email || '-'}
 </table>
 
 </div>
+
 <!-- ORÇAMENTO -->
 
 <div style="
@@ -2339,6 +2382,7 @@ ${formatarMoeda(o.total)}
 </div>
 
 </div>
+
 <!-- RODAPÉ -->
 
 <div style="
@@ -2418,6 +2462,7 @@ COM CHEQUES
 </div>
 
 </div>
+
 ${
 o.preContrato === 'sim'
 
@@ -2566,7 +2611,6 @@ dos materiais ou serviços.
 
 </p>
 
-
 <div style="
 display:flex;
 justify-content:space-between;
@@ -2642,6 +2686,9 @@ async function(){
 
     if(!conteudo) return;
 
+    const numeroOrcamento =
+        window.orcamentoAtual?.codigo || '';
+
     const html = `
 
 <html>
@@ -2649,7 +2696,7 @@ async function(){
 <head>
 
 <title>
-Orçamento
+${numeroOrcamento} - Orçamento 
 </title>
 
 <style>
@@ -2794,7 +2841,6 @@ window.onload=()=>{
     }
 
 };
-
 /* ========================= */
 /* EDITAR ORÇAMENTO */
 /* ========================= */
@@ -2815,13 +2861,13 @@ window.editarOrcamento = function(index){
         size:'fullscreen',
 
         confirmText:'Salvar',
+
         onConfirm(){
 
-    salvarEdicaoOrcamento(
-        index
-    );
-
-},
+            salvarEdicaoOrcamento(
+                index
+            );
+        },
 
         body:`
 
@@ -3041,6 +3087,18 @@ Aprovado
 
 <option
 ${
+o.status === 'Em Produção'
+? 'selected'
+: ''
+}
+>
+
+Em Produção
+
+</option>
+
+<option
+${
 o.status === 'Recusado'
 ? 'selected'
 : ''
@@ -3060,6 +3118,18 @@ o.status === 'Cancelado'
 >
 
 Cancelado
+
+</option>
+
+<option
+${
+o.status === 'Finalizado'
+? 'selected'
+: ''
+}
+>
+
+Finalizado
 
 </option>
 
@@ -3129,7 +3199,6 @@ margin-top:10px;
 margin:20px 0;
 ">
 
-
 <label>
 Observações
 </label>
@@ -3151,6 +3220,7 @@ text-align:right;
 ">
 
 Total:
+
 <span id="orc-total">
 
 ${formatarMoeda(
@@ -3167,28 +3237,26 @@ o.total || 0
     /* CARREGAR PRODUTOS */
     /* ========================= */
 
-/* ========================= */
+    if (
+        o.itens &&
+        o.itens.length
+    ) {
 
-if (
-    o.itens &&
-    o.itens.length
-) {
+        o.itens.forEach(item => {
 
-    o.itens.forEach(item => {
+            adicionarProdutoOrcamento(
+                item
+            );
 
-        adicionarProdutoOrcamento(
-            item
-        );
+        });
 
-    });
+    }
 
-}
+    else {
 
-else {
+        adicionarProdutoOrcamento();
 
-    adicionarProdutoOrcamento();
-
-}
+    }
 
     /* ========================= */
     /* AUTO RESIZE */
@@ -3210,10 +3278,7 @@ else {
 
     calcularTotalOrcamento();
 
-
-    
 };
-
 
 /* ========================= */
 /* SALVAR EDIÇÃO ORÇAMENTO */
@@ -3300,69 +3365,68 @@ function(index){
 
     db.orcamentos[index] = {
 
-    codigo:
-        db.orcamentos[index]?.codigo
-        || o.codigo,
+        codigo:
+            db.orcamentos[index]?.codigo,
 
-    data:
-        db.orcamentos[index]?.data,
+        data:
+            db.orcamentos[index]?.data,
 
-    cliente:
-        document.getElementById(
-            'orc-cliente'
-        ).value,
+        cliente:
+            document.getElementById(
+                'orc-cliente'
+            ).value,
 
-    ac:
-        document.getElementById(
-            'orc-ac'
-        ).value,
+        ac:
+            document.getElementById(
+                'orc-ac'
+            ).value,
 
-    telefone:
-        document.getElementById(
-            'orc-telefone'
-        ).value,
+        telefone:
+            document.getElementById(
+                'orc-telefone'
+            ).value,
 
-    email:
-        document.getElementById(
-            'orc-email'
-        ).value,
+        email:
+            document.getElementById(
+                'orc-email'
+            ).value,
 
-    validade:
-        document.getElementById(
-            'orc-validade'
-        ).value,
+        validade:
+            document.getElementById(
+                'orc-validade'
+            ).value,
 
-    prazo:
-        document.getElementById(
-            'orc-prazo'
-        ).value,
+        prazo:
+            document.getElementById(
+                'orc-prazo'
+            ).value,
 
-    prazoEntrega:
-        document.getElementById(
-            'orc-entrega'
-        ).value,
+        prazoEntrega:
+            document.getElementById(
+                'orc-entrega'
+            ).value,
 
-    temNota,
+        temNota,
 
-    status:
-        document.getElementById(
-            'orc-status'
-        ).value,
+        status:
+            document.getElementById(
+                'orc-status'
+            ).value,
 
-    preContrato:
-        document.getElementById(
-            'orc-precontrato'
-        ).value,
+        preContrato:
+            document.getElementById(
+                'orc-precontrato'
+            ).value,
 
-    observacoes:
-        document.getElementById(
-            'orc-obs'
-        ).value,
+        observacoes:
+            document.getElementById(
+                'orc-obs'
+            ).value,
 
-    itens,
+        itens,
 
-    total
-};
+        total
+    };
 
     save();
 
@@ -3374,553 +3438,22 @@ function(index){
 
 };
 
-
 /* ========================= */
-/* ASSISTENTE IA ORÇAMENTO */
+/* IA ORÇAMENTO EM ARQUIVO SEPARADO */
 /* ========================= */
 
+/*
+    A funcionalidade do botão
+    "Criar com IA" será implementada
+    posteriormente no arquivo:
 
-window.abrirAssistenteOrcamentoIA =
-function(){
+    js/orcamentos-ia.js
 
-    window.chatIAOrcamento = {
+    A função que esse arquivo deverá
+    disponibilizar será:
 
-        etapa:0,
-
-        dados:{},
-
-        mensagens:[
-
-            {
-                tipo:'ia',
-                texto:
-                'Olá! 🤖 Vou ajudar você a criar um orçamento. Qual o nome do cliente?'
-            }
-
-        ]
-
-    };
-
-
-    renderChatIA();
-
-
-};
-
-
-
-window.renderChatIA =
-function(){
-
-
-let mensagensHTML='';
-
-
-chatIAOrcamento.mensagens
-.forEach(msg=>{
-
-
-mensagensHTML += `
-
-
-<div style="
-display:flex;
-justify-content:
-${msg.tipo==='ia'
-?'flex-start'
-:'flex-end'};
-margin-bottom:12px;
-">
-
-
-<div style="
-
-background:
-${msg.tipo==='ia'
-?'#f3f4f6'
-:'#7c3aed'};
-
-color:
-${msg.tipo==='ia'
-?'#000'
-:'#fff'};
-
-padding:12px 16px;
-
-border-radius:15px;
-
-max-width:75%;
-
-">
-
-
-${msg.texto}
-
-
-</div>
-
-
-</div>
-
-
-`;
-
-
-});
-
-
-
-configModal({
-
-title:
-'🤖 Assistente IA - Orçamento',
-
-
-size:
-'large',
-
-
-confirmText:
-'Fechar',
-
-
-onConfirm(){
-
-closeModal();
-
-},
-
-
-body:`
-
-
-<div id="chat-ia"
-style="
-height:450px;
-overflow:auto;
-padding:15px;
-background:#fff;
-border-radius:10px;
-border:1px solid #ddd;
-">
-
-${mensagensHTML}
-
-
-</div>
-
-
-<div style="
-display:flex;
-gap:10px;
-margin-top:15px;
-">
-
-
-<input
-
-id="entrada-chat-ia"
-
-placeholder="
-Digite sua resposta..."
-
-style="
-flex:1;
-padding:12px;
-"
-
-
-onkeydown="
-if(event.key==='Enter')
-enviarMensagemIA();
-"
-
-
->
-
-
-<button
-
-class="btn-action"
-
-style="
-background:#7c3aed;
-"
-
-onclick="
-enviarMensagemIA()
-">
-
-Enviar
-
-</button>
-
-
-</div>
-
-
-`
-
-});
-
-
-setTimeout(()=>{
-
-const box=
-document.getElementById(
-'chat-ia'
-);
-
-if(box)
-box.scrollTop=
-box.scrollHeight;
-
-
-},100);
-
-
-};
-
-
-
-
-
-window.enviarMensagemIA =
-function(){
-
-
-const input =
-document.getElementById(
-'entrada-chat-ia'
-);
-
-
-if(!input)
-return;
-
-
-
-const texto =
-input.value.trim();
-
-
-
-if(!texto)
-return;
-
-
-
-chatIAOrcamento.mensagens.push({
-
-tipo:'usuario',
-
-texto
-
-});
-
-
-
-input.value='';
-
-
-
-processarRespostaIA(texto);
-
-
-
-};
-
-
-
-
-
-window.processarRespostaIA =
-function(resposta){
-
-
-const ia =
-chatIAOrcamento;
-
-
-
-switch(
-ia.etapa
-){
-
-
-case 0:
-
-
-ia.dados.cliente =
-resposta;
-
-
-ia.etapa=1;
-
-
-ia.mensagens.push({
-
-tipo:'ia',
-
-texto:
-'Qual serviço será realizado? Exemplo: fachada ACM, letreiro, adesivo, banner...'
-
-});
-
-
-break;
-
-
-
-case 1:
-
-
-ia.dados.servico =
-resposta;
-
-
-ia.etapa=2;
-
-
-ia.mensagens.push({
-
-tipo:'ia',
-
-texto:
-'Qual a medida ou quantidade do serviço?'
-
-});
-
-
-break;
-
-
-
-case 2:
-
-
-ia.dados.medida =
-resposta;
-
-
-ia.etapa=3;
-
-
-ia.mensagens.push({
-
-tipo:'ia',
-
-texto:
-'Quais materiais ou detalhes deseja incluir?'
-
-});
-
-
-break;
-
-
-
-case 3:
-
-
-ia.dados.materiais =
-resposta;
-
-
-ia.etapa=4;
-
-
-ia.mensagens.push({
-
-tipo:'ia',
-
-texto:
-'Alguma observação ou prazo desejado?'
-
-});
-
-
-break;
-
-
-
-case 4:
-
-
-ia.dados.observacao =
-resposta;
-
-
-
-ia.mensagens.push({
-
-tipo:'ia',
-
-texto:
-`Perfeito! Montei uma sugestão:
-
-Cliente:
-${ia.dados.cliente}
-
-
-Serviço:
-${ia.dados.servico}
-
-
-Medidas:
-${ia.dados.medida}
-
-
-Materiais:
-${ia.dados.materiais}
-
-
-Observação:
-${ia.dados.observacao}
-
-
-Deseja criar o orçamento com esses dados?
-Digite SIM para gerar.`
-
-});
-
-
-ia.etapa=5;
-
-
-break;
-
-
-
-case 5:
-
-
-if(
-resposta.toLowerCase()
-==='sim'
-){
-
-
-criarOrcamentoComIA();
-
-
-}
-
-else{
-
-
-ia.mensagens.push({
-
-tipo:'ia',
-
-texto:
-'Tudo bem. Você pode continuar ajustando as informações.'
-
-});
-
-
-}
-
-
-break;
-
-
-
-}
-
-
-renderChatIA();
-
-
-};
-
-
-
-
-
-
-window.criarOrcamentoComIA =
-function(){
-
-
-abrirModalOrcamento();
-
-
-setTimeout(()=>{
-
-
-const campoObs =
-document.getElementById(
-'orc-obs'
-);
-
-
-
-if(campoObs){
-
-campoObs.value =
-`
-Criado pelo Assistente IA
-
-Serviço:
-${chatIAOrcamento.dados.servico}
-
-Medidas:
-${chatIAOrcamento.dados.medida}
-
-Materiais:
-${chatIAOrcamento.dados.materiais}
-
-${chatIAOrcamento.dados.observacao}
-`;
-
-}
-
-
-const cliente =
-document.getElementById(
-'orc-cliente'
-);
-
-
-
-if(cliente){
-
-cliente.value =
-chatIAOrcamento.dados.cliente;
-
-preencherDadosClienteOrcamento();
-
-}
-
-
-
-const produto =
-document.querySelector(
-'.orc-prod'
-);
-
-
-
-if(produto){
-
-produto.value =
-chatIAOrcamento.dados.servico;
-
-
-autoResize(produto);
-
-}
-
-
-},500);
-
-
-
-closeModal();
-
-
-};
+    window.abrirAssistenteOrcamentoIA
+*/
 
 /* ========================= */
 /* NOVO CLIENTE PELO ORÇAMENTO */
@@ -3944,7 +3477,6 @@ function(index){
     const original =
         db.orcamentos[index];
 
-
     if(!original){
 
         alert(
@@ -3955,67 +3487,51 @@ function(index){
 
     }
 
-
     const novoCodigo =
         obterProximoCodigoOrcamento();
 
-
     const novoOrcamento = {
-
 
         codigo:
             novoCodigo,
-
 
         data:
             new Date()
             .toISOString()
             .split('T')[0],
 
-
         cliente:
             original.cliente,
-
 
         ac:
             original.ac || '',
 
-
         telefone:
             original.telefone || '',
-
 
         email:
             original.email || '',
 
-
         validade:
             original.validade || '',
-
 
         prazo:
             original.prazo || '',
 
-
         prazoEntrega:
             original.prazoEntrega || '',
-
 
         temNota:
             original.temNota || 'sim',
 
-
         status:
             'Aguardando',
-
 
         preContrato:
             original.preContrato || 'nao',
 
-
         observacoes:
             original.observacoes || '',
-
 
         itens:
             JSON.parse(
@@ -4024,34 +3540,27 @@ function(index){
                 )
             ),
 
-
         total:
             original.total || 0
 
     };
 
-
     db.orcamentos.push(
         novoOrcamento
     );
 
-
     db.ultimoOrcamento =
         novoCodigo;
 
-
     save();
-
 
     alert(
         `Orçamento duplicado com sucesso!\nNovo código: ${novoCodigo}`
     );
 
-
     navigate(
         'orcamentos'
     );
-
 
 };
 
@@ -4063,4 +3572,3 @@ registerPage(
     'orcamentos',
     renderOrcamentos
 );
-

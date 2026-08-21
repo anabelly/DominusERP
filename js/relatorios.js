@@ -199,13 +199,17 @@ window.abrirRelatorio = function(tipo){
 
     const status = [
 
-        'Aberto',
+        'Aguardando',
 
         'Aprovado',
 
-        'Reprovado',
+        'Em Produção',
 
-        'Cancelado'
+        'Recusado',
+
+        'Cancelado',
+
+        'Finalizado'
 
     ];
 
@@ -1903,460 +1907,1606 @@ onclick="imprimirRelatorio()">
 
 window.gerarDRE = function(){
 
+    const inicio =
+        document.getElementById(
+            'relatorio-inicio'
+        )?.value || '';
+
+    const fim =
+        document.getElementById(
+            'relatorio-fim'
+        )?.value || '';
+
+    /*
+        PERÍODO DO DRE
+
+        Para os agrupamentos de despesas, usamos a mesma
+        referência do relatório "Tipo de Conta": vencimento.
+
+        Assim, qualquer valor mostrado no DRE para um tipo de
+        conta bate com a consulta daquele mesmo tipo + período.
+    */
     const dados =
-        filtrarPeriodoRelatorio(
-            db.financeiro
-        );
+        (db.financeiro || [])
+        .filter(item => {
 
+            const dataMovimento =
+                item.vencimento
+                ||
+                '';
 
-    const receitas =
-        dados.filter(l =>
-            l.tipo === 'Receber' &&
-            l.status === 'Recebido'
-        );
+            if(!dataMovimento){
+                return false;
+            }
 
-
-    const despesas =
-        dados.filter(l =>
-            l.tipo === 'Pagar' &&
-            l.status === 'Pago'
-        );
-
-
-    const receitaBruta =
-        receitas.reduce(
-            (total,item)=>
-                total + Number(item.valor || 0),
-            0
-        );
-
-
-    const impostos =
-        despesas
-        .filter(item =>
-            (item.tipoConta || '')
-            .toLowerCase()
-            .includes('imposto')
-        )
-        .reduce(
-            (total,item)=>
-                total + Number(item.valor || 0),
-            0
-        );
-
-
-    const custos =
-        despesas
-        .filter(item =>
-            (item.tipoConta || '')
-            .toLowerCase()
-            .includes('estoque')
-        )
-        .reduce(
-            (total,item)=>
-                total + Number(item.valor || 0),
-            0
-        );
-
-
-    const despesasOperacionais =
-        despesas
-        .filter(item=>{
-
-            const tipo =
-                (item.tipoConta || '')
-                .toLowerCase();
-
-
-            return !tipo.includes('imposto')
+            if(
+                inicio
                 &&
-                   !tipo.includes('estoque');
+                dataMovimento < inicio
+            ){
+                return false;
+            }
 
-        })
-        .reduce(
-            (total,item)=>
-                total + Number(item.valor || 0),
-            0
+            if(
+                fim
+                &&
+                dataMovimento > fim
+            ){
+                return false;
+            }
+
+            return true;
+        });
+
+
+    /* ========================= */
+    /* AUXILIARES                */
+    /* ========================= */
+
+    function numDRE(valor){
+
+        if(
+            typeof valor === 'number'
+            &&
+            Number.isFinite(valor)
+        ){
+            return valor;
+        }
+
+        let texto =
+            String(valor ?? '')
+            .trim()
+            .replace(/R\$/gi,'')
+            .replace(/\s/g,'');
+
+        if(!texto){
+            return 0;
+        }
+
+        /*
+            Aceita tanto:
+            12439.65
+            quanto:
+            12.439,65
+        */
+        if(texto.includes(',')){
+            texto =
+                texto
+                .replace(/\./g,'')
+                .replace(',','.');
+        }
+
+        texto =
+            texto.replace(
+                /[^0-9.-]/g,
+                ''
+            );
+
+        const numero =
+            Number(texto);
+
+        return Number.isFinite(numero)
+            ? numero
+            : 0;
+    }
+
+    function escDRE(valor){
+        return String(valor ?? '')
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;')
+            .replace(/'/g,'&#039;');
+    }
+
+    function percentualDRE(valor, base){
+        if(!(base > 0)) return '0,0%';
+
+        return (
+            valor / base * 100
+        )
+        .toLocaleString(
+            'pt-BR',
+            {
+                minimumFractionDigits:1,
+                maximumFractionDigits:1
+            }
+        ) + '%';
+    }
+
+    function dataBRDRE(data){
+        if(!data) return '-';
+
+        const partes =
+            String(data).split('-');
+
+        if(partes.length !== 3){
+            return data;
+        }
+
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    function dataISODRE(data){
+        return new Date(
+            `${data}T12:00:00`
+        );
+    }
+
+    function isoDRE(data){
+        return [
+            data.getFullYear(),
+            String(data.getMonth()+1).padStart(2,'0'),
+            String(data.getDate()).padStart(2,'0')
+        ].join('-');
+    }
+
+    function normalizarTipoContaDRE(valor){
+        return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g,'')
+            .trim()
+            .toLowerCase();
+    }
+
+    /*
+        AGRUPAMENTO DO DRE
+
+        Cada grupo abaixo usa SOMENTE os Tipos de Conta
+        definidos para ele. Qualquer Tipo de Conta que não
+        estiver em nenhum grupo conhecido cai em
+        "Outras despesas".
+    */
+    const tiposDRE = {
+
+        impostos:
+            new Set([
+                'simples nacional/impostos'
+            ]),
+
+        pessoal:
+            new Set([
+                'salarios',
+                'bonificacao/gratificacao',
+                'comissao'
+            ]),
+
+        administrativo:
+            new Set([
+                'advogado',
+                'agua e saneamento',
+                'alarme/seguranca',
+                'aluguel',
+                'cartao',
+                'contabilidade',
+                'energia eletrica',
+                'internet/telefone',
+                'iptu',
+                'limpeza/manutencao',
+                'marketing/anuncios',
+                'plano de saude',
+                'seguros',
+                'software/erp'
+            ]),
+
+        materiaPrima:
+            new Set([
+                'materia prima/estoque'
+            ]),
+
+        veiculos:
+            new Set([
+                'despesa veiculos',
+                'multa veiculos',
+                'ipva/licenciamento'
+            ])
+    };
+
+    function categoriaDespesaDRE(item){
+
+        const tipo =
+            normalizarTipoContaDRE(
+                item.tipoConta
+            );
+
+        if(
+            tiposDRE.impostos.has(tipo)
+        ){
+            return 'Impostos / Deduções';
+        }
+
+        if(
+            tiposDRE.pessoal.has(tipo)
+        ){
+            return 'Pessoal e remunerações';
+        }
+
+        if(
+            tiposDRE.administrativo.has(tipo)
+        ){
+            return 'Administrativo e serviços';
+        }
+
+        if(
+            tiposDRE.materiaPrima.has(tipo)
+        ){
+            return 'Matéria prima';
+        }
+
+        if(
+            tiposDRE.veiculos.has(tipo)
+        ){
+            return 'Veículos';
+        }
+
+        return 'Outras despesas';
+    }
+
+    function somarItensDRE(lista){
+        return (lista || [])
+            .reduce(
+                (total,item)=>
+                    total + numDRE(item.valor),
+                0
+            );
+    }
+
+    function calcularResumoDRE(lista){
+
+        /*
+            RECEITA:
+            mantém a lógica atual do DRE:
+            somente contas a receber já marcadas como Recebido.
+
+            DESPESAS:
+            seguem Tipo de Conta + período, exatamente como
+            solicitado, independentemente do status.
+            Isso faz os totais baterem com o relatório
+            "Tipo de Conta" para o mesmo período.
+        */
+        const receitas =
+            (lista || [])
+            .filter(item =>
+                item.tipo === 'Receber'
+                &&
+                item.status === 'Recebido'
+            );
+
+        const despesas =
+            (lista || [])
+            .filter(item =>
+                item.tipo === 'Pagar'
+            );
+
+        const receitaBruta =
+            somarItensDRE(
+                receitas
+            );
+
+        const itensImpostos = [];
+        const itensPessoal = [];
+        const itensAdministrativo = [];
+        const itensMateriaPrima = [];
+        const itensVeiculos = [];
+        const itensOutras = [];
+
+        despesas.forEach(item=>{
+
+            const categoria =
+                categoriaDespesaDRE(
+                    item
+                );
+
+            if(
+                categoria ===
+                'Impostos / Deduções'
+            ){
+                itensImpostos.push(
+                    item
+                );
+                return;
+            }
+
+            if(
+                categoria ===
+                'Pessoal e remunerações'
+            ){
+                itensPessoal.push(
+                    item
+                );
+                return;
+            }
+
+            if(
+                categoria ===
+                'Administrativo e serviços'
+            ){
+                itensAdministrativo.push(
+                    item
+                );
+                return;
+            }
+
+            if(
+                categoria ===
+                'Matéria prima'
+            ){
+                itensMateriaPrima.push(
+                    item
+                );
+                return;
+            }
+
+            if(
+                categoria ===
+                'Veículos'
+            ){
+                itensVeiculos.push(
+                    item
+                );
+                return;
+            }
+
+            itensOutras.push(
+                item
+            );
+        });
+
+        const impostos =
+            somarItensDRE(
+                itensImpostos
+            );
+
+        const pessoal =
+            somarItensDRE(
+                itensPessoal
+            );
+
+        const administrativo =
+            somarItensDRE(
+                itensAdministrativo
+            );
+
+        const custos =
+            somarItensDRE(
+                itensMateriaPrima
+            );
+
+        const veiculos =
+            somarItensDRE(
+                itensVeiculos
+            );
+
+        const outrasDespesas =
+            somarItensDRE(
+                itensOutras
+            );
+
+        const itensOperacionais = [
+            ...itensPessoal,
+            ...itensAdministrativo,
+            ...itensVeiculos,
+            ...itensOutras
+        ];
+
+        const despesasOperacionais =
+            pessoal
+            +
+            administrativo
+            +
+            veiculos
+            +
+            outrasDespesas;
+
+        const receitaLiquida =
+            receitaBruta - impostos;
+
+        const lucroBruto =
+            receitaLiquida - custos;
+
+        const resultadoOperacional =
+            lucroBruto - despesasOperacionais;
+
+        const lucroLiquido =
+            resultadoOperacional;
+
+        const totalSaidas =
+            impostos
+            +
+            custos
+            +
+            despesasOperacionais;
+
+        /*
+            Ordem fixa de exibição, conforme solicitado.
+            Matéria prima fica na linha de custo direto do DRE,
+            mas também aparece na Composição das despesas.
+        */
+        const gruposOrdenados = [
+            {
+                nome:
+                    'Pessoal e remunerações',
+                valor:
+                    pessoal
+            },
+            {
+                nome:
+                    'Administrativo e serviços',
+                valor:
+                    administrativo
+            },
+            {
+                nome:
+                    'Veículos',
+                valor:
+                    veiculos
+            },
+            {
+                nome:
+                    'Outras despesas',
+                valor:
+                    outrasDespesas
+            }
+        ];
+
+        return {
+            receitas,
+            despesas,
+            itensImpostos,
+            itensPessoal,
+            itensAdministrativo,
+            itensMateriaPrima,
+            itensVeiculos,
+            itensOutras,
+            itensOperacionais,
+            receitaBruta,
+            impostos,
+            pessoal,
+            administrativo,
+            custos,
+            veiculos,
+            outrasDespesas,
+            despesasOperacionais,
+            receitaLiquida,
+            lucroBruto,
+            resultadoOperacional,
+            lucroLiquido,
+            totalSaidas,
+            gruposOrdenados
+        };
+    }
+
+    const resumo =
+        calcularResumoDRE(
+            dados
         );
 
+    const {
+        receitaBruta,
+        impostos,
+        pessoal,
+        administrativo,
+        custos,
+        veiculos,
+        outrasDespesas,
+        despesasOperacionais,
+        receitaLiquida,
+        lucroBruto,
+        lucroLiquido,
+        totalSaidas,
+        gruposOrdenados
+    } = resumo;
 
-
-    const receitaLiquida =
-        receitaBruta - impostos;
-
-
-    const lucroBruto =
-        receitaLiquida - custos;
-
-
-    const resultadoOperacional =
-        lucroBruto - despesasOperacionais;
-
-
-    const lucroLiquido =
-        resultadoOperacional;
-
-
-    const margem =
-        receitaBruta > 0
+    const margemBruta =
+        receitaLiquida > 0
         ?
-        (
-            lucroLiquido /
-            receitaBruta *
-            100
-        ).toFixed(1)
+        lucroBruto / receitaLiquida * 100
         :
         0;
 
-
+    const margemLiquida =
+        receitaBruta > 0
+        ?
+        lucroLiquido / receitaBruta * 100
+        :
+        0;
 
     const positivo =
         lucroLiquido >= 0;
 
-
-    const cor =
+    const corResultado =
         positivo
-        ?
-        '#16a34a'
-        :
-        '#dc2626';
+        ? '#16a34a'
+        : '#dc2626';
 
-
-
-    const analise =
+    const fundoResultado =
         positivo
+        ? '#f0fdf4'
+        : '#fef2f2';
 
-        ?
+    /* ========================= */
+    /* COMPARATIVO ANTERIOR      */
+    /* ========================= */
 
-        `
-        O período apresentou resultado positivo,
-        com lucro de <strong>
-        ${formatarMoeda(lucroLiquido)}
-        </strong>.
-        A margem obtida foi de
-        <strong>${margem}%</strong>.
-        `
+    let comparativo = null;
 
-        :
+    if(
+        inicio
+        &&
+        fim
+        &&
+        fim >= inicio
+    ){
+        const inicioAtual =
+            dataISODRE(inicio);
 
-        `
-        O período apresentou resultado negativo,
-        com prejuízo de
-        <strong>
-        ${formatarMoeda(
-            Math.abs(lucroLiquido)
-        )}
-        </strong>.
-        `;
+        const fimAtual =
+            dataISODRE(fim);
 
+        const duracaoDias =
+            Math.round(
+                (
+                    fimAtual - inicioAtual
+                )
+                /
+                86400000
+            ) + 1;
 
+        const fimAnterior =
+            new Date(
+                inicioAtual
+            );
 
-    function linha(titulo,valor,classe=''){
+        fimAnterior.setDate(
+            fimAnterior.getDate() - 1
+        );
 
+        const inicioAnterior =
+            new Date(
+                fimAnterior
+            );
+
+        inicioAnterior.setDate(
+            inicioAnterior.getDate()
+            -
+            duracaoDias
+            +
+            1
+        );
+
+        const inicioAnteriorISO =
+            isoDRE(
+                inicioAnterior
+            );
+
+        const fimAnteriorISO =
+            isoDRE(
+                fimAnterior
+            );
+
+        const dadosAnterior =
+            (db.financeiro || [])
+            .filter(item=>{
+
+                const data =
+                    item.vencimento
+                    ||
+                    '';
+
+                if(!data){
+                    return false;
+                }
+
+                return (
+                    data >= inicioAnteriorISO
+                    &&
+                    data <= fimAnteriorISO
+                );
+            });
+
+        const resumoAnterior =
+            calcularResumoDRE(
+                dadosAnterior
+            );
+
+        comparativo = {
+            inicio:
+                inicioAnteriorISO,
+            fim:
+                fimAnteriorISO,
+            atual:
+                resumo,
+            anterior:
+                resumoAnterior
+        };
+    }
+
+    function variacaoDRE(
+        atual,
+        anterior,
+        inverso = false
+    ){
+        if(!(anterior > 0)){
+            return {
+                texto:'Sem base anterior',
+                cor:'#6b7280',
+                simbolo:'•'
+            };
+        }
+
+        const variacao =
+            (
+                atual - anterior
+            )
+            /
+            anterior
+            *
+            100;
+
+        const favoravel =
+            inverso
+            ? variacao <= 0
+            : variacao >= 0;
+
+        return {
+            texto:
+                `${Math.abs(variacao).toLocaleString(
+                    'pt-BR',
+                    {
+                        minimumFractionDigits:1,
+                        maximumFractionDigits:1
+                    }
+                )}%`,
+            cor:
+                favoravel
+                ? '#16a34a'
+                : '#dc2626',
+            simbolo:
+                variacao > 0
+                ? '▲'
+                : variacao < 0
+                ? '▼'
+                : '•'
+        };
+    }
+
+    function cardKPIDRE(
+        titulo,
+        valor,
+        subtitulo,
+        cor,
+        icone
+    ){
         return `
-
         <div style="
-            display:flex;
-            justify-content:space-between;
-            padding:8px 12px;
-            border-bottom:1px solid #eee;
-            font-size:13px;
+            background:#fff;
+            border:1px solid #e5e7eb;
+            border-radius:16px;
+            padding:18px;
+            min-height:118px;
+            box-shadow:0 6px 18px rgba(15,23,42,.05);
+            page-break-inside:avoid;
         ">
+            <div style="
+                display:flex;
+                align-items:flex-start;
+                justify-content:space-between;
+                gap:12px;
+            ">
+                <div>
+                    <div style="
+                        font-size:11px;
+                        font-weight:800;
+                        letter-spacing:.08em;
+                        text-transform:uppercase;
+                        color:#6b7280;
+                    ">
+                        ${titulo}
+                    </div>
 
-            <span class="${classe}">
-                ${titulo}
-            </span>
+                    <div style="
+                        margin-top:8px;
+                        font-size:24px;
+                        font-weight:900;
+                        color:${cor};
+                        line-height:1.15;
+                    ">
+                        ${valor}
+                    </div>
+                </div>
 
-            <strong>
-                ${formatarMoeda(valor)}
-            </strong>
+                <div style="
+                    width:40px;
+                    height:40px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    border-radius:12px;
+                    background:#f8fafc;
+                    font-size:20px;
+                ">
+                    ${icone}
+                </div>
+            </div>
 
+            <div style="
+                margin-top:10px;
+                color:#94a3b8;
+                font-size:11px;
+                line-height:1.4;
+            ">
+                ${subtitulo}
+            </div>
         </div>
-
         `;
     }
 
+    function linhaDRE(
+        titulo,
+        valor,
+        opcoes = {}
+    ){
+        const destaque =
+            !!opcoes.destaque;
 
+        const principal =
+            !!opcoes.principal;
 
+        const negativo =
+            !!opcoes.negativo;
+
+        const indent =
+            Number(opcoes.indent || 0);
+
+        const cor =
+            opcoes.cor
+            ||
+            (
+                negativo
+                ? '#b91c1c'
+                : '#0f172a'
+            );
+
+        return `
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:15px;
+            padding:${principal ? '15px 18px' : '11px 18px'};
+            padding-left:${18 + indent}px;
+            border-top:${destaque || principal ? '1px solid #dbe2ea' : '1px solid #f1f5f9'};
+            background:${principal ? '#f8fafc' : destaque ? '#fbfdff' : '#fff'};
+            font-size:${principal ? '14px' : '12.5px'};
+            font-weight:${principal ? '900' : destaque ? '800' : '500'};
+        ">
+            <span style="
+                color:${principal ? '#111827' : '#475569'};
+            ">
+                ${titulo}
+            </span>
+
+            <strong style="
+                white-space:nowrap;
+                color:${cor};
+                font-size:${principal ? '15px' : '13px'};
+            ">
+                ${formatarMoeda(valor)}
+            </strong>
+        </div>
+        `;
+    }
+
+    function barraIndicadorDRE(
+        titulo,
+        valor,
+        percentual,
+        cor
+    ){
+        const largura =
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    Number(percentual) || 0
+                )
+            );
+
+        return `
+        <div style="margin-bottom:15px;">
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                gap:15px;
+                margin-bottom:6px;
+                font-size:12px;
+            ">
+                <span style="color:#475569;font-weight:700;">
+                    ${titulo}
+                </span>
+
+                <strong style="color:#0f172a;">
+                    ${formatarMoeda(valor)}
+                </strong>
+            </div>
+
+            <div style="
+                height:8px;
+                background:#eef2f7;
+                border-radius:999px;
+                overflow:hidden;
+            ">
+                <div style="
+                    height:100%;
+                    width:${largura}%;
+                    background:${cor};
+                    border-radius:999px;
+                "></div>
+            </div>
+        </div>
+        `;
+    }
+
+    function cardComparativoDRE(
+        titulo,
+        atual,
+        anterior,
+        inverso = false
+    ){
+        const v =
+            variacaoDRE(
+                atual,
+                anterior,
+                inverso
+            );
+
+        return `
+        <div style="
+            border:1px solid #e5e7eb;
+            border-radius:14px;
+            padding:14px;
+            background:#fff;
+        ">
+            <div style="
+                color:#64748b;
+                font-size:11px;
+                font-weight:800;
+                text-transform:uppercase;
+                letter-spacing:.05em;
+            ">
+                ${titulo}
+            </div>
+
+            <div style="
+                font-size:19px;
+                font-weight:900;
+                color:#111827;
+                margin-top:6px;
+            ">
+                ${formatarMoeda(atual)}
+            </div>
+
+            <div style="
+                margin-top:6px;
+                font-size:11px;
+                color:${v.cor};
+                font-weight:800;
+            ">
+                ${v.simbolo} ${v.texto}
+                <span style="color:#94a3b8;font-weight:500;">
+                    vs. período anterior
+                </span>
+            </div>
+        </div>
+        `;
+    }
+
+    const maiorGrupo =
+        gruposOrdenados
+        .slice()
+        .sort(
+            (a,b)=>
+                b.valor - a.valor
+        )
+        [0]
+        ||
+        null;
+
+    const consumoReceita =
+        receitaBruta > 0
+        ? totalSaidas / receitaBruta * 100
+        : 0;
+
+    let analise = '';
+
+    if(!(receitaBruta > 0) && !(totalSaidas > 0)){
+        analise = `
+            Não existem movimentações recebidas ou pagas
+            no período selecionado para compor o DRE.
+        `;
+    }
+    else if(positivo){
+        analise = `
+            O período encerrou com
+            <strong style="color:#15803d;">
+                resultado positivo de ${formatarMoeda(lucroLiquido)}
+            </strong>,
+            equivalente a uma margem líquida de
+            <strong>${margemLiquida.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong>.
+            ${
+                maiorGrupo
+                ?
+                `O maior grupo de despesas operacionais foi
+                <strong>${escDRE(maiorGrupo.nome)}</strong>,
+                totalizando
+                <strong>${formatarMoeda(maiorGrupo.valor)}</strong>.`
+                :
+                ''
+            }
+        `;
+    }
+    else{
+        analise = `
+            O período encerrou com
+            <strong style="color:#b91c1c;">
+                resultado negativo de ${formatarMoeda(Math.abs(lucroLiquido))}
+            </strong>.
+            As saídas consumiram
+            <strong>${consumoReceita.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong>
+            da receita bruta registrada no período.
+            ${
+                maiorGrupo
+                ?
+                `O maior grupo de despesas operacionais foi
+                <strong>${escDRE(maiorGrupo.nome)}</strong>.`
+                :
+                ''
+            }
+        `;
+    }
 
     let html =
         getCabecalhoRelatorio(
             'DRE GERENCIAL'
         );
 
-
-
     html += `
 
-
-<div style="
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:12px;
-margin-bottom:15px;
-">
-
-
-<div class="report-card"
-style="
-padding:15px;
-">
-
-<div style="
-font-size:12px;
-color:#666;
-">
-Receita Bruta
-</div>
-
-<div style="
-font-size:22px;
-font-weight:800;
-color:#16a34a;
-">
-${formatarMoeda(receitaBruta)}
-</div>
-
-</div>
-
-
-
-<div class="report-card"
-style="
-padding:15px;
-">
-
-<div style="
-font-size:12px;
-color:#666;
-">
-Lucro Líquido
-</div>
-
-<div style="
-font-size:22px;
-font-weight:800;
-color:${cor};
-">
-${formatarMoeda(lucroLiquido)}
-</div>
-
-</div>
-
-
-
-
-<div class="report-card"
-style="
-padding:15px;
-">
-
-<div style="
-font-size:12px;
-color:#666;
-">
-Margem
-</div>
-
-<div style="
-font-size:22px;
-font-weight:800;
-">
-${margem}%
-</div>
-
-</div>
-
-
-</div>
-
-
-
-<div style="
-background:#fff;
-border-radius:10px;
-border:1px solid #ddd;
-overflow:hidden;
-">
-
-
-<h3 style="
-margin:0;
-padding:12px;
-background:#f4f4f4;
-font-size:15px;
-">
-RECEITAS
-</h3>
-
-
-${linha(
-'Receita Bruta',
-receitaBruta
-)}
-
-
-
-<h3 style="
-margin:0;
-padding:12px;
-background:#f4f4f4;
-font-size:15px;
-">
-DEDUÇÕES
-</h3>
-
-
-${linha(
-'(-) Impostos',
--impostos
-)}
-
-
-${linha(
-'Receita Líquida',
-receitaLiquida
-)}
-
-
-
-<h3 style="
-margin:0;
-padding:12px;
-background:#f4f4f4;
-font-size:15px;
-">
-CUSTOS
-</h3>
-
-
-${linha(
-'(-) Custos / Estoque',
--custos
-)}
-
-
-${linha(
-'Lucro Bruto',
-lucroBruto
-)}
-
-
-
-
-<h3 style="
-margin:0;
-padding:12px;
-background:#f4f4f4;
-font-size:15px;
-">
-DESPESAS OPERACIONAIS
-</h3>
-
-
-${linha(
-'(-) Despesas Operacionais',
--despesasOperacionais
-)}
-
-
-
-<div style="
-display:flex;
-justify-content:space-between;
-padding:15px;
-background:${cor};
-color:white;
-font-size:17px;
-font-weight:800;
-">
-
-<span>
-LUCRO LÍQUIDO
-</span>
-
-
-<span>
-${formatarMoeda(lucroLiquido)}
-</span>
-
-
-</div>
-
-
-</div>
-
-
-
-
-<div class="report-card"
-style="
-margin-top:15px;
-padding:15px;
-page-break-inside:avoid;
-">
-
-
-<div style="
-font-size:16px;
-font-weight:800;
-margin-bottom:8px;
-">
-Análise do Período
-</div>
-
-
-<div style="
-font-size:13px;
-line-height:1.5;
-">
-
-${analise}
-
-</div>
-
-
-</div>
-
-
-
-<div style="
-margin-top:15px;
-text-align:right;
-">
-
-<button
-class="btn-action"
-onclick="imprimirRelatorio()">
-
-🖨 IMPRIMIR DRE
-
-</button>
-
-</div>
-
-
-
-<div style="
-margin-top:10px;
-page-break-inside:avoid;
-">
-
-${getRodapeRelatorio()}
-
-</div>
-
-
-`;
-
-
-
-document.getElementById(
-'resultado-relatorio'
-).innerHTML = html;
-
+    <div style="
+        background:linear-gradient(135deg,#111827 0%,#1f2937 100%);
+        color:#fff;
+        border-radius:18px;
+        padding:20px 22px;
+        margin-bottom:18px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:18px;
+        flex-wrap:wrap;
+        box-shadow:0 10px 30px rgba(15,23,42,.14);
+        page-break-inside:avoid;
+    ">
+        <div>
+            <div style="
+                font-size:11px;
+                text-transform:uppercase;
+                letter-spacing:.12em;
+                color:#cbd5e1;
+                font-weight:800;
+            ">
+                Visão executiva
+            </div>
+
+            <div style="
+                font-size:22px;
+                font-weight:900;
+                margin-top:5px;
+            ">
+                Demonstrativo de Resultado
+            </div>
+
+            <div style="
+                margin-top:6px;
+                font-size:12px;
+                color:#cbd5e1;
+            ">
+                ${
+                    inicio || fim
+                    ?
+                    `Período: ${dataBRDRE(inicio)} até ${dataBRDRE(fim)}`
+                    :
+                    'Período selecionado no filtro'
+                }
+                • Regime gerencial por caixa
+            </div>
+        </div>
+
+        <div style="
+            padding:10px 14px;
+            border-radius:999px;
+            background:${positivo ? 'rgba(22,163,74,.18)' : 'rgba(220,38,38,.18)'};
+            color:${positivo ? '#bbf7d0' : '#fecaca'};
+            border:1px solid ${positivo ? 'rgba(134,239,172,.3)' : 'rgba(252,165,165,.3)'};
+            font-size:12px;
+            font-weight:900;
+        ">
+            ${positivo ? '▲ RESULTADO POSITIVO' : '▼ RESULTADO NEGATIVO'}
+        </div>
+    </div>
+
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+        gap:12px;
+        margin-bottom:18px;
+    ">
+        ${cardKPIDRE(
+            'Receita Bruta',
+            formatarMoeda(receitaBruta),
+            'Recebimentos efetivamente realizados',
+            '#15803d',
+            '💰'
+        )}
+
+        ${cardKPIDRE(
+            'Receita Líquida',
+            formatarMoeda(receitaLiquida),
+            `Após ${formatarMoeda(impostos)} em deduções`,
+            '#047857',
+            '🧾'
+        )}
+
+        ${cardKPIDRE(
+            'Lucro Bruto',
+            formatarMoeda(lucroBruto),
+            `Margem bruta de ${margemBruta.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%`,
+            lucroBruto >= 0 ? '#2563eb' : '#dc2626',
+            '📈'
+        )}
+
+        ${cardKPIDRE(
+            'Despesas Operacionais',
+            formatarMoeda(despesasOperacionais),
+            `${percentualDRE(despesasOperacionais,receitaBruta)} da receita bruta`,
+            '#b45309',
+            '💳'
+        )}
+
+        ${cardKPIDRE(
+            'Lucro Líquido',
+            formatarMoeda(lucroLiquido),
+            positivo ? 'Resultado final positivo' : 'Resultado final negativo',
+            corResultado,
+            positivo ? '✅' : '⚠️'
+        )}
+
+        ${cardKPIDRE(
+            'Margem Líquida',
+            `${margemLiquida.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%`,
+            'Lucro líquido ÷ receita bruta',
+            corResultado,
+            '🎯'
+        )}
+    </div>
+
+    <div style="
+        display:grid;
+        grid-template-columns:minmax(0,1.45fr) minmax(280px,.75fr);
+        gap:16px;
+        align-items:start;
+        margin-bottom:18px;
+    ">
+        <div style="
+            background:#fff;
+            border:1px solid #e5e7eb;
+            border-radius:18px;
+            overflow:hidden;
+            box-shadow:0 6px 18px rgba(15,23,42,.04);
+            page-break-inside:avoid;
+        ">
+            <div style="
+                padding:16px 18px;
+                background:#0f172a;
+                color:#fff;
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:15px;
+            ">
+                <div>
+                    <div style="font-size:15px;font-weight:900;">
+                        Estrutura do DRE
+                    </div>
+                    <div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;">
+                        Receitas, deduções, custos e despesas do período
+                    </div>
+                </div>
+                <div style="font-size:20px;">📊</div>
+            </div>
+
+            ${linhaDRE(
+                '(+) Receita Bruta',
+                receitaBruta,
+                {
+                    principal:true,
+                    cor:'#15803d'
+                }
+            )}
+
+            ${linhaDRE(
+                '(-) Impostos / Deduções',
+                -impostos,
+                {
+                    negativo:true,
+                    indent:14
+                }
+            )}
+
+            ${linhaDRE(
+                '(=) Receita Líquida',
+                receitaLiquida,
+                {
+                    destaque:true,
+                    cor:'#047857'
+                }
+            )}
+
+            ${linhaDRE(
+                '(-) Matéria prima',
+                -custos,
+                {
+                    negativo:true,
+                    indent:14
+                }
+            )}
+
+            ${linhaDRE(
+                '(=) Lucro Bruto',
+                lucroBruto,
+                {
+                    destaque:true,
+                    cor:lucroBruto >= 0 ? '#2563eb' : '#dc2626'
+                }
+            )}
+
+            <div style="
+                padding:10px 18px;
+                background:#f8fafc;
+                border-top:1px solid #e2e8f0;
+                color:#334155;
+                font-size:10.5px;
+                font-weight:900;
+                letter-spacing:.08em;
+                text-transform:uppercase;
+            ">
+                Despesas Operacionais
+            </div>
+
+            ${
+                gruposOrdenados.length
+                ?
+                gruposOrdenados
+                .map(grupo=>
+                    linhaDRE(
+                        `(-) ${escDRE(grupo.nome)}`,
+                        -grupo.valor,
+                        {
+                            negativo:true,
+                            indent:14
+                        }
+                    )
+                )
+                .join('')
+                :
+                linhaDRE(
+                    'Nenhuma despesa operacional registrada',
+                    0,
+                    {
+                        indent:14
+                    }
+                )
+            }
+
+            ${linhaDRE(
+                '(=) Resultado Operacional',
+                lucroLiquido,
+                {
+                    destaque:true,
+                    cor:corResultado
+                }
+            )}
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:15px;
+                padding:18px;
+                background:${fundoResultado};
+                border-top:2px solid ${corResultado};
+            ">
+                <div>
+                    <div style="
+                        font-size:11px;
+                        color:#64748b;
+                        text-transform:uppercase;
+                        letter-spacing:.08em;
+                        font-weight:900;
+                    ">
+                        Resultado Final
+                    </div>
+                    <div style="
+                        font-size:17px;
+                        font-weight:900;
+                        color:#111827;
+                        margin-top:3px;
+                    ">
+                        LUCRO LÍQUIDO
+                    </div>
+                </div>
+
+                <div style="
+                    font-size:23px;
+                    font-weight:900;
+                    color:${corResultado};
+                    white-space:nowrap;
+                ">
+                    ${formatarMoeda(lucroLiquido)}
+                </div>
+            </div>
+        </div>
+
+        <div style="
+            display:flex;
+            flex-direction:column;
+            gap:16px;
+        ">
+            <div style="
+                background:#fff;
+                border:1px solid #e5e7eb;
+                border-radius:18px;
+                padding:18px;
+                box-shadow:0 6px 18px rgba(15,23,42,.04);
+                page-break-inside:avoid;
+            ">
+                <div style="
+                    font-size:14px;
+                    font-weight:900;
+                    color:#111827;
+                    margin-bottom:16px;
+                ">
+                    Indicadores do período
+                </div>
+
+                <div style="
+                    display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:10px;
+                ">
+                    <div style="background:#f8fafc;border-radius:12px;padding:12px;">
+                        <div style="font-size:10px;color:#64748b;font-weight:800;">
+                            MARGEM BRUTA
+                        </div>
+                        <div style="font-size:18px;font-weight:900;margin-top:5px;color:#2563eb;">
+                            ${margemBruta.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%
+                        </div>
+                    </div>
+
+                    <div style="background:#f8fafc;border-radius:12px;padding:12px;">
+                        <div style="font-size:10px;color:#64748b;font-weight:800;">
+                            MARGEM LÍQUIDA
+                        </div>
+                        <div style="font-size:18px;font-weight:900;margin-top:5px;color:${corResultado};">
+                            ${margemLiquida.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%
+                        </div>
+                    </div>
+
+                    <div style="background:#f8fafc;border-radius:12px;padding:12px;">
+                        <div style="font-size:10px;color:#64748b;font-weight:800;">
+                            CUSTOS / RECEITA
+                        </div>
+                        <div style="font-size:18px;font-weight:900;margin-top:5px;color:#b45309;">
+                            ${percentualDRE(custos,receitaBruta)}
+                        </div>
+                    </div>
+
+                    <div style="background:#f8fafc;border-radius:12px;padding:12px;">
+                        <div style="font-size:10px;color:#64748b;font-weight:800;">
+                            DESPESAS / RECEITA
+                        </div>
+                        <div style="font-size:18px;font-weight:900;margin-top:5px;color:#b45309;">
+                            ${percentualDRE(despesasOperacionais,receitaBruta)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="
+                background:#fff;
+                border:1px solid #e5e7eb;
+                border-radius:18px;
+                padding:18px;
+                box-shadow:0 6px 18px rgba(15,23,42,.04);
+                page-break-inside:avoid;
+            ">
+                <div style="
+                    font-size:14px;
+                    font-weight:900;
+                    color:#111827;
+                    margin-bottom:16px;
+                ">
+                    Composição das despesas
+                </div>
+
+                ${(() => {
+                    const totalComposicao =
+                        totalSaidas;
+
+                    const categorias = [
+                        {
+                            nome:
+                                'Impostos / Deduções',
+                            valor:
+                                impostos,
+                            cor:
+                                '#dc2626'
+                        },
+                        {
+                            nome:
+                                'Pessoal e remunerações',
+                            valor:
+                                pessoal,
+                            cor:
+                                '#2563eb'
+                        },
+                        {
+                            nome:
+                                'Administrativo e serviços',
+                            valor:
+                                administrativo,
+                            cor:
+                                '#0891b2'
+                        },
+                        {
+                            nome:
+                                'Matéria prima',
+                            valor:
+                                custos,
+                            cor:
+                                '#d97706'
+                        },
+                        {
+                            nome:
+                                'Veículos',
+                            valor:
+                                veiculos,
+                            cor:
+                                '#7c3aed'
+                        },
+                        {
+                            nome:
+                                'Outras despesas',
+                            valor:
+                                outrasDespesas,
+                            cor:
+                                '#be123c'
+                        }
+                    ];
+
+                    if(!(totalComposicao > 0)){
+                        return `<div style="color:#94a3b8;font-size:12px;">
+                            Nenhuma despesa ou imposto no período.
+                        </div>`;
+                    }
+
+                    return categorias
+                        .map(categoria=>
+                            barraIndicadorDRE(
+                                categoria.nome,
+                                categoria.valor,
+                                totalComposicao > 0
+                                    ? categoria.valor / totalComposicao * 100
+                                    : 0,
+                                categoria.cor
+                            )
+                        )
+                        .join('');
+                })()}
+            </div>
+        </div>
+    </div>
+
+    ${
+        comparativo
+        ?
+        `
+        <div style="
+            background:#f8fafc;
+            border:1px solid #e2e8f0;
+            border-radius:18px;
+            padding:18px;
+            margin-bottom:18px;
+            page-break-inside:avoid;
+        ">
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:flex-end;
+                gap:15px;
+                flex-wrap:wrap;
+                margin-bottom:14px;
+            ">
+                <div>
+                    <div style="font-size:15px;font-weight:900;color:#111827;">
+                        Comparativo com período anterior
+                    </div>
+                    <div style="font-size:11px;color:#64748b;margin-top:3px;">
+                        ${dataBRDRE(comparativo.inicio)} até ${dataBRDRE(comparativo.fim)}
+                    </div>
+                </div>
+
+                <div style="font-size:10px;color:#94a3b8;">
+                    Mesmo número de dias do período selecionado
+                </div>
+            </div>
+
+            <div style="
+                display:grid;
+                grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+                gap:10px;
+            ">
+                ${cardComparativoDRE(
+                    'Receita Bruta',
+                    comparativo.atual.receitaBruta,
+                    comparativo.anterior.receitaBruta
+                )}
+
+                ${cardComparativoDRE(
+                    'Custos + Despesas',
+                    comparativo.atual.totalSaidas,
+                    comparativo.anterior.totalSaidas,
+                    true
+                )}
+
+                ${cardComparativoDRE(
+                    'Lucro Líquido',
+                    comparativo.atual.lucroLiquido,
+                    comparativo.anterior.lucroLiquido
+                )}
+            </div>
+        </div>
+        `
+        :
+        ''
+    }
+
+    <div style="
+        background:${fundoResultado};
+        border:1px solid ${positivo ? '#bbf7d0' : '#fecaca'};
+        border-radius:18px;
+        padding:18px;
+        margin-bottom:18px;
+        page-break-inside:avoid;
+    ">
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:9px;
+            margin-bottom:10px;
+        ">
+            <div style="font-size:20px;">
+                ${positivo ? '💡' : '🔎'}
+            </div>
+            <div style="font-size:14px;font-weight:900;color:#111827;">
+                Análise do período
+            </div>
+        </div>
+
+        <div style="
+            font-size:12.5px;
+            line-height:1.7;
+            color:#475569;
+        ">
+            ${analise}
+        </div>
+
+        <div style="
+            margin-top:14px;
+            padding-top:12px;
+            border-top:1px solid ${positivo ? '#bbf7d0' : '#fecaca'};
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:10px;
+        ">
+            <div>
+                <div style="font-size:9.5px;color:#94a3b8;font-weight:800;">
+                    TOTAL DE SAÍDAS
+                </div>
+                <div style="font-size:14px;font-weight:900;color:#111827;margin-top:3px;">
+                    ${formatarMoeda(totalSaidas)}
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:9.5px;color:#94a3b8;font-weight:800;">
+                    SAÍDAS / RECEITA
+                </div>
+                <div style="font-size:14px;font-weight:900;color:#111827;margin-top:3px;">
+                    ${percentualDRE(totalSaidas,receitaBruta)}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="
+        background:#fffbeb;
+        border:1px solid #fde68a;
+        color:#92400e;
+        border-radius:12px;
+        padding:11px 14px;
+        margin-bottom:18px;
+        font-size:10.5px;
+        line-height:1.5;
+        page-break-inside:avoid;
+    ">
+        <strong>Observação:</strong>
+        este DRE é gerencial e utiliza somente lançamentos financeiros com status
+        <strong>Recebido</strong> e <strong>Pago</strong> dentro do período selecionado.
+    </div>
+
+    <div style="
+        display:flex;
+        justify-content:flex-end;
+        margin-top:15px;
+        page-break-inside:avoid;
+    ">
+        <button
+            class="btn-action"
+            onclick="imprimirRelatorio()"
+            style="
+                padding:10px 18px;
+                font-weight:800;
+            "
+        >
+            🖨 IMPRIMIR DRE
+        </button>
+    </div>
+
+    <div style="
+        margin-top:10px;
+        page-break-inside:avoid;
+    ">
+        ${getRodapeRelatorio()}
+    </div>
+
+    `;
+
+    document.getElementById(
+        'resultado-relatorio'
+    ).innerHTML = html;
 
 };
+
 
 /* ========================= */
 /* LOGO EMPRESA */
