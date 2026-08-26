@@ -1,3 +1,40 @@
+/* ========================================================= */
+/* DOMINUS ERP - ASSISTENTE-ORCAMENTOS-LOCAL.JS              */
+/* ========================================================= */
+/*
+    ASSISTENTE LOCAL DE ORÇAMENTOS
+
+    Este arquivo implementa o assistente de criação de
+    orçamentos utilizando regras locais e os próprios dados
+    cadastrados no Dominus ERP.
+
+    NÃO depende de modelo de IA externo para calcular ou
+    escolher valores. O fluxo é controlado por etapas,
+    validações e dados internos do sistema.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Interpretar respostas digitadas pelo usuário
+    2. Pesquisar clientes, materiais e cadastros internos
+    3. Controlar o estado da conversa
+    4. Calcular materiais, mão de obra e deslocamento
+    5. Calcular equipamentos e outros custos
+    6. Aplicar desperdício e administrativo
+    7. Aplicar margem configurada no Centro de Custos
+    8. Aplicar a regra de orçamento sem nota
+    9. Consultar rota pelo servidor local
+    10. Montar o resumo final do orçamento
+    11. Permitir alterações antes da confirmação
+    12. Gerar e salvar o orçamento no ERP
+    13. Renderizar a interface do assistente
+    14. Manter compatibilidade com os nomes usados pela tela
+
+    IMPORTANTE:
+    Somente comentários e organização visual foram alterados.
+    Nenhuma regra de cálculo, valor, etapa, texto, endereço,
+    campo do banco ou comportamento foi modificado.
+*/
+
+
 /* ===================================================== */
 /* DOMINUS ERP - ASSISTENTE LOCAL DE ORÇAMENTOS          */
 /* IA PRÓPRIA POR REGRAS + DADOS INTERNOS DO ERP         */
@@ -8,9 +45,23 @@
 (function () {
 
 
-    /* ========================= */
-    /* HELPERS */
-    /* ========================= */
+    /* ========================================================= */
+    /* 01. FUNÇÕES AUXILIARES / HELPERS                         */
+    /* ========================================================= */
+    /*
+        Funções pequenas e reutilizáveis para:
+        - arrays seguros
+        - números
+        - arredondamento
+        - normalização de texto
+        - escape de HTML
+        - moeda e números brasileiros
+        - respostas Sim/Não/Pular
+        - datas
+        - leitura de números, horas, km e medidas
+        - busca aproximada
+        - escolha por número
+    */
 
     const A =
         v =>
@@ -20,6 +71,11 @@
             :
             [];
 
+
+    /* --------------------------------------------------------- */
+    /* n                                                    */
+    /* Converte valores variados para número seguro. */
+    /* --------------------------------------------------------- */
 
     function n(v) {
 
@@ -79,6 +135,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* round                                                    */
+    /* Arredonda valores numéricos para a quantidade de casas informada. */
+    /* --------------------------------------------------------- */
+
     function round(
         v,
         c = 2
@@ -107,6 +168,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* norm                                                    */
+    /* Normaliza texto para comparação, busca e interpretação de comandos. */
+    /* --------------------------------------------------------- */
+
     function norm(v) {
 
         return String(
@@ -130,6 +196,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* esc                                                    */
+    /* Escapa caracteres especiais antes de exibir texto no HTML. */
+    /* --------------------------------------------------------- */
 
     function esc(v) {
 
@@ -160,6 +231,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* money                                                    */
+    /* Formata um número como moeda brasileira. */
+    /* --------------------------------------------------------- */
+
     function money(v) {
 
         return Number(
@@ -183,6 +259,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* brNum                                                    */
+    /* Formata um número usando vírgula decimal no padrão brasileiro. */
+    /* --------------------------------------------------------- */
 
     function brNum(
         v,
@@ -211,6 +292,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* sim                                                    */
+    /* Reconhece respostas equivalentes a Sim. */
+    /* --------------------------------------------------------- */
+
     function sim(v) {
 
         return [
@@ -231,6 +317,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* nao                                                    */
+    /* Reconhece respostas equivalentes a Não. */
+    /* --------------------------------------------------------- */
+
     function nao(v) {
 
         return [
@@ -246,6 +337,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* pular                                                    */
+    /* Reconhece respostas usadas para deixar um campo em branco. */
+    /* --------------------------------------------------------- */
 
     function pular(v) {
 
@@ -264,6 +360,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* hoje                                                    */
+    /* Retorna a data atual em YYYY-MM-DD. */
+    /* --------------------------------------------------------- */
+
     function hoje() {
 
         return new Date()
@@ -272,6 +373,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* somarDias                                                    */
+    /* Soma uma quantidade de dias à data atual. */
+    /* --------------------------------------------------------- */
 
     function somarDias(
         qtd
@@ -305,6 +411,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* parseNumeroLivre                                                    */
+    /* Extrai o primeiro número utilizável de um texto livre. */
+    /* --------------------------------------------------------- */
+
     function parseNumeroLivre(
         texto
     ) {
@@ -328,6 +439,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* parseHoras                                                    */
+    /* Interpreta quantidade de horas digitada pelo usuário. */
+    /* --------------------------------------------------------- */
 
     function parseHoras(
         texto
@@ -353,6 +469,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* parseKm                                                    */
+    /* Interpreta distância em quilômetros. */
+    /* --------------------------------------------------------- */
+
     function parseKm(
         texto
     ) {
@@ -376,6 +497,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* parseMedida                                                    */
+    /* Interpreta largura x altura e calcula a área. */
+    /* --------------------------------------------------------- */
 
     function parseMedida(
         texto
@@ -446,6 +572,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* parseValidade                                                    */
+    /* Interpreta validade informada como data ou quantidade de dias. */
+    /* --------------------------------------------------------- */
+
     function parseValidade(
         texto
     ) {
@@ -487,6 +618,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* tokens                                                    */
+    /* Divide texto normalizado em palavras úteis para comparação. */
+    /* --------------------------------------------------------- */
+
     function tokens(v) {
 
         return norm(v)
@@ -498,6 +634,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* score                                                    */
+    /* Calcula pontuação de semelhança entre busca e cadastro. */
+    /* --------------------------------------------------------- */
 
     function score(
         query,
@@ -598,6 +739,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* buscar                                                    */
+    /* Ordena resultados conforme a pontuação de semelhança. */
+    /* --------------------------------------------------------- */
+
     function buscar(
         query,
         itens,
@@ -640,6 +786,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* escolhaNumero                                                    */
+    /* Transforma uma escolha numérica em uma opção da lista. */
+    /* --------------------------------------------------------- */
+
     function escolhaNumero(
         texto,
         opcoes
@@ -671,10 +822,30 @@
     }
 
 
-    /* ========================= */
-    /* DADOS DO ERP */
-    /* ========================= */
+    /* ========================================================= */
+    /* 02. ACESSO AOS DADOS INTERNOS DO ERP                     */
+    /* ========================================================= */
+    /*
+        Centraliza a leitura dos cadastros usados pelo assistente.
 
+        Inclui:
+        - Centro de Custos
+        - endereço de origem
+        - endereço do cliente
+        - clientes
+        - produtos / estoque
+        - funcionários
+        - veículos
+        - equipamentos
+
+        Também contém funções de pesquisa e filtragem.
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* centroCustos                                                    */
+    /* Retorna uma visão segura das configurações do Centro de Custos. */
+    /* --------------------------------------------------------- */
 
     function centroCustos() {
 
@@ -775,6 +946,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* enderecoOrigemTexto                                                    */
+    /* Monta o endereço de origem usado no cálculo de rota. */
+    /* --------------------------------------------------------- */
+
     function enderecoOrigemTexto() {
 
         const e =
@@ -812,6 +988,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* enderecoClienteTexto                                                    */
+    /* Monta o endereço completo de um cliente. */
+    /* --------------------------------------------------------- */
 
     function enderecoClienteTexto(
         cliente
@@ -857,6 +1038,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* clienteAtual                                                    */
+    /* Localiza o cliente selecionado na sessão. */
+    /* --------------------------------------------------------- */
+
     function clienteAtual(s) {
 
         return A(
@@ -898,6 +1084,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* produtoPorCodigo                                                    */
+    /* Localiza um produto/estoque pelo código. */
+    /* --------------------------------------------------------- */
+
     function produtoPorCodigo(
         codigo
     ) {
@@ -923,6 +1114,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* funcionarioPorId                                                    */
+    /* Localiza um funcionário pelo ID. */
+    /* --------------------------------------------------------- */
 
     function funcionarioPorId(
         id
@@ -950,6 +1146,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* veiculoPorId                                                    */
+    /* Localiza um veículo do Centro de Custos pelo ID. */
+    /* --------------------------------------------------------- */
+
     function veiculoPorId(
         id
     ) {
@@ -973,6 +1174,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* equipamentoPorId                                                    */
+    /* Localiza um equipamento do Centro de Custos pelo ID. */
+    /* --------------------------------------------------------- */
 
     function equipamentoPorId(
         id
@@ -998,6 +1204,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* clientesEncontrados                                                    */
+    /* Pesquisa clientes usando a busca aproximada. */
+    /* --------------------------------------------------------- */
+
     function clientesEncontrados(q) {
 
         return buscar(
@@ -1021,6 +1232,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* produtosEncontrados                                                    */
+    /* Pesquisa materiais/produtos usando a busca aproximada. */
+    /* --------------------------------------------------------- */
 
     function produtosEncontrados(q) {
 
@@ -1046,6 +1262,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* funcionariosAtivos                                                    */
+    /* Retorna funcionários disponíveis para seleção. */
+    /* --------------------------------------------------------- */
+
     function funcionariosAtivos() {
 
         return A(
@@ -1068,6 +1289,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* veiculosAtivos                                                    */
+    /* Retorna veículos ativos cadastrados. */
+    /* --------------------------------------------------------- */
+
     function veiculosAtivos() {
 
         return centroCustos()
@@ -1081,6 +1307,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* equipamentosAtivos                                                    */
+    /* Retorna equipamentos ativos cadastrados. */
+    /* --------------------------------------------------------- */
 
     function equipamentosAtivos() {
 
@@ -1096,10 +1327,35 @@
     }
 
 
-    /* ========================= */
-    /* ESTADO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 03. ESTADO DA SESSÃO DO ASSISTENTE                       */
+    /* ========================================================= */
+    /*
+        Define a estrutura usada durante a conversa.
 
+        O estado guarda:
+        - etapa atual
+        - cliente
+        - serviço
+        - medidas
+        - materiais
+        - mão de obra
+        - deslocamento
+        - equipamentos
+        - outros custos
+        - pagamento
+        - prazo
+        - validade
+        - nota
+        - margem
+        - campos já concluídos
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* novoEstado                                                    */
+    /* Cria o estado inicial de uma nova conversa de orçamento. */
+    /* --------------------------------------------------------- */
 
     function novoEstado() {
 
@@ -1261,6 +1517,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* novaSessao                                                    */
+    /* Cria e registra uma nova sessão global do assistente. */
+    /* --------------------------------------------------------- */
+
     function novaSessao() {
 
         window
@@ -1288,6 +1549,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* sessao                                                    */
+    /* Retorna a sessão atual ou cria uma nova quando necessário. */
+    /* --------------------------------------------------------- */
+
     function sessao() {
 
         return window
@@ -1297,6 +1563,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* msgIA                                                    */
+    /* Adiciona uma mensagem do assistente ao histórico. */
+    /* --------------------------------------------------------- */
 
     function msgIA(
         texto
@@ -1319,6 +1590,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* msgUser                                                    */
+    /* Adiciona uma mensagem do usuário ao histórico. */
+    /* --------------------------------------------------------- */
+
     function msgUser(
         texto
     ) {
@@ -1340,10 +1616,23 @@
     }
 
 
-    /* ========================= */
-    /* CÁLCULO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 04. MOTOR DE CÁLCULO DO ORÇAMENTO                        */
+    /* ========================================================= */
+    /*
+        calcular(s)
 
+        Consolida todos os custos escolhidos durante a conversa
+        e gera o preço sugerido e o total para o cliente.
+
+        Os valores são buscados nos próprios cadastros do ERP.
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* calcular                                                    */
+    /* Executa o cálculo completo usando o estado atual. */
+    /* --------------------------------------------------------- */
 
     function calcular(s) {
 
@@ -1351,9 +1640,14 @@
             centroCustos();
 
 
-        /* ===================== */
-        /* MATERIAIS */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.1 CÁLCULO DE MATERIAIS                             */
+        /* ===================================================== */
+        /*
+            Busca cada material pelo código cadastrado,
+            multiplica quantidade pelo custo unitário e
+            calcula também o desperdício configurado.
+        */
 
         const materiais =
             s.materiais
@@ -1453,9 +1747,13 @@
             );
 
 
-        /* ===================== */
-        /* MÃO DE OBRA */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.2 CÁLCULO DE MÃO DE OBRA                           */
+        /* ===================================================== */
+        /*
+            Calcula custo-hora a partir do salário, horas mensais
+            e encargos configurados no Centro de Custos.
+        */
 
         const mao =
             s.maoDeObra
@@ -1564,9 +1862,18 @@
             );
 
 
-        /* ===================== */
-        /* DESLOCAMENTO */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.3 CÁLCULO DE DESLOCAMENTO                          */
+        /* ===================================================== */
+        /*
+            Considera:
+            - veículo
+            - combustível
+            - consumo em km/L
+            - valor por litro
+            - custo operacional por km
+            - distância calculada ou manual
+        */
 
         let deslocamento = {
 
@@ -1716,9 +2023,13 @@
         }
 
 
-        /* ===================== */
-        /* EQUIPAMENTOS */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.4 CÁLCULO DE EQUIPAMENTOS                          */
+        /* ===================================================== */
+        /*
+            Calcula o custo dos equipamentos selecionados
+            conforme quantidade e valor cadastrado.
+        */
 
         const equipamentos =
             s.equipamentos
@@ -1807,9 +2118,13 @@
             );
 
 
-        /* ===================== */
-        /* OUTROS CUSTOS */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.5 OUTROS CUSTOS                                    */
+        /* ===================================================== */
+        /*
+            Soma custos adicionais informados manualmente
+            durante a conversa.
+        */
 
         const outros =
             s.outrosCustos
@@ -1852,9 +2167,13 @@
             );
 
 
-        /* ===================== */
-        /* SUBTOTAL */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.6 SUBTOTAL DOS CUSTOS                              */
+        /* ===================================================== */
+        /*
+            Soma materiais, desperdício, mão de obra,
+            deslocamento, equipamentos e outros custos.
+        */
 
         const subtotal =
             round(
@@ -1874,9 +2193,13 @@
             );
 
 
-        /* ===================== */
-        /* ADMINISTRATIVO */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.7 CUSTO ADMINISTRATIVO                             */
+        /* ===================================================== */
+        /*
+            Aplica o percentual administrativo configurado
+            no Centro de Custos sobre o subtotal.
+        */
 
         const administrativo =
             round(
@@ -1899,9 +2222,17 @@
             );
 
 
-        /* ===================== */
-        /* MARGEM */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.8 MARGEM / ACRÉSCIMO                              */
+        /* ===================================================== */
+        /*
+            Aplica a margem definida pelo usuário ou pelo
+            Centro de Custos.
+
+            O cálculo respeita o método configurado:
+            - acréscimo sobre custo
+            - margem sobre preço de venda
+        */
 
         const margem =
             n(
@@ -1979,9 +2310,14 @@
             );
 
 
-        /* ===================== */
-        /* REGRA NOTA */
-        /* ===================== */
+        /* ===================================================== */
+        /* 04.9 REGRA DE ORÇAMENTO SEM NOTA                      */
+        /* ===================================================== */
+        /*
+            Mantém a regra já existente no sistema:
+            quando temNota === 'nao', acrescenta 12%
+            sobre o preço sugerido.
+        */
 
         const acrescimoNota =
             s.temNota
@@ -2108,10 +2444,20 @@
     }
 
 
-    /* ========================= */
-    /* FORMATAR OPÇÕES */
-    /* ========================= */
+    /* ========================================================= */
+    /* 05. FORMATAÇÃO DAS OPÇÕES DA CONVERSA                    */
+    /* ========================================================= */
+    /*
+        Converte clientes, materiais, funcionários,
+        veículos e equipamentos em textos amigáveis
+        para apresentação ao usuário.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* textoCliente                                                    */
+    /* Formata um cliente para exibição nas opções. */
+    /* --------------------------------------------------------- */
 
     function textoCliente(c) {
 
@@ -2137,6 +2483,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* textoProduto                                                    */
+    /* Formata um material do estoque para exibição. */
+    /* --------------------------------------------------------- */
+
     function textoProduto(p) {
 
         return `#${p.codigo ?? '-'} - ${
@@ -2158,6 +2509,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* textoFuncionario                                                    */
+    /* Formata um funcionário para exibição. */
+    /* --------------------------------------------------------- */
+
     function textoFuncionario(f) {
 
         return `${f.nome || 'Funcionário'}${
@@ -2170,6 +2526,11 @@
 
     }
 
+
+    /* --------------------------------------------------------- */
+    /* textoVeiculo                                                    */
+    /* Formata um veículo para exibição. */
+    /* --------------------------------------------------------- */
 
     function textoVeiculo(v) {
 
@@ -2213,6 +2574,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* textoEquipamento                                                    */
+    /* Formata um equipamento para exibição. */
+    /* --------------------------------------------------------- */
+
     function textoEquipamento(e) {
 
         const tipo =
@@ -2250,6 +2616,11 @@
     }
 
 
+    /* --------------------------------------------------------- */
+    /* listarOpcoes                                                    */
+    /* Monta uma lista numerada de opções. */
+    /* --------------------------------------------------------- */
+
     function listarOpcoes(
         titulo,
         opcoes,
@@ -2275,6 +2646,11 @@ Digite o número da opção correta.`;
     }
 
 
+    /* --------------------------------------------------------- */
+    /* prefixo                                                    */
+    /* Une uma confirmação à próxima pergunta. */
+    /* --------------------------------------------------------- */
+
     function prefixo(
         resp,
         proxima
@@ -2289,10 +2665,21 @@ Digite o número da opção correta.`;
     }
 
 
-    /* ========================= */
-    /* PRÓXIMA PERGUNTA */
-    /* ========================= */
+    /* ========================================================= */
+    /* 06. DEFINIÇÃO DA PRÓXIMA PERGUNTA                        */
+    /* ========================================================= */
+    /*
+        proxima(s)
 
+        Analisa quais etapas já foram concluídas
+        e define qual pergunta deve aparecer em seguida.
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* proxima                                                    */
+    /* Define a próxima etapa ainda não concluída. */
+    /* --------------------------------------------------------- */
 
     function proxima(s) {
 
@@ -2508,10 +2895,23 @@ Digite o número da opção correta.`;
     }
 
 
-    /* ========================= */
-    /* CONSULTAR ROTA */
-    /* ========================= */
+    /* ========================================================= */
+    /* 07. CONSULTA DE ROTA PELO SERVIDOR LOCAL                 */
+    /* ========================================================= */
+    /*
+        Envia origem, destino e opção de ida/volta para:
 
+            /rota/calcular
+
+        O cálculo real da rota é executado pelo main.js
+        usando OpenStreetMap + OSRM.
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* consultarRota                                                    */
+    /* Consulta distância e duração da rota no servidor local. */
+    /* --------------------------------------------------------- */
 
     async function consultarRota(s) {
 
@@ -2627,10 +3027,19 @@ Digite o número da opção correta.`;
     }
 
 
-    /* ========================= */
-    /* RESUMO FINAL */
-    /* ========================= */
+    /* ========================================================= */
+    /* 08. RESUMO FINAL DO ORÇAMENTO                            */
+    /* ========================================================= */
+    /*
+        Recalcula os dados e monta um resumo textual completo
+        antes da geração definitiva do orçamento.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* resumoFinal                                                    */
+    /* Gera o resumo final antes da confirmação. */
+    /* --------------------------------------------------------- */
 
     function resumoFinal(s) {
 
@@ -2821,10 +3230,23 @@ Digite o número da opção correta.`;
     }
 
 
-    /* ========================= */
-    /* PROCESSAR */
-    /* ========================= */
+    /* ========================================================= */
+    /* 09. PROCESSAMENTO DAS RESPOSTAS DO USUÁRIO               */
+    /* ========================================================= */
+    /*
+        processar(texto)
 
+        É o controlador principal da conversa.
+
+        A função lê a etapa atual e decide como interpretar
+        a resposta digitada pelo usuário.
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* processar                                                    */
+    /* Processa a mensagem conforme a etapa atual. */
+    /* --------------------------------------------------------- */
 
     async function processar(
         texto
@@ -2841,9 +3263,16 @@ Digite o número da opção correta.`;
             );
 
 
-        /* ===================== */
-        /* COMANDOS */
-        /* ===================== */
+        /* ===================================================== */
+        /* 09.1 COMANDOS GERAIS                                  */
+        /* ===================================================== */
+        /*
+            Trata comandos como:
+            - reiniciar
+            - recomeçar
+            - novo orçamento
+            - resumo
+        */
 
         if (
             [
@@ -2893,9 +3322,13 @@ Digite o número da opção correta.`;
         ) {
 
 
-            /* ===================== */
-            /* CLIENTE */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.2 ETAPA - CLIENTE                                  */
+            /* ===================================================== */
+            /*
+                Pesquisa o cliente no cadastro e exige confirmação
+                da opção correta antes de continuar.
+            */
 
             case 'cliente_busca': {
 
@@ -3031,9 +3464,12 @@ Digite o número da opção correta.`;
             }
 
 
-            /* ===================== */
-            /* SERVIÇO */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.3 ETAPA - SERVIÇO                                  */
+            /* ===================================================== */
+            /*
+                Registra a descrição do serviço que será realizado.
+            */
 
             case 'servico': {
 
@@ -3069,9 +3505,13 @@ Digite o número da opção correta.`;
             }
 
 
-            /* ===================== */
-            /* MEDIDA */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.4 ETAPA - MEDIDA / QUANTIDADE                      */
+            /* ===================================================== */
+            /*
+                Aceita medidas como largura x altura, quantidade
+                livre ou a opção de pular.
+            */
 
             case 'medida': {
 
@@ -3172,9 +3612,18 @@ Digite o número da opção correta.`;
             }
 
 
-            /* ===================== */
-            /* MATERIAIS */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.5 ETAPA - MATERIAIS                                */
+            /* ===================================================== */
+            /*
+                Permite:
+                - escolher se haverá material
+                - pesquisar no estoque
+                - selecionar item
+                - informar quantidade
+                - confirmar uso acima do estoque
+                - incluir vários materiais
+            */
 
             case 'materiais_sim_nao': {
 
@@ -3581,9 +4030,13 @@ Digite o número da opção correta.`;
             }
 
 
-            /* ===================== */
-            /* MÃO DE OBRA */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.6 ETAPA - MÃO DE OBRA                              */
+            /* ===================================================== */
+            /*
+                Permite escolher funcionários ativos,
+                informar horas e incluir mais de um funcionário.
+            */
 
             case 'mao_sim_nao': {
 
@@ -3816,9 +4269,13 @@ Digite o número da opção correta.`;
             }
 
 
-            /* ===================== */
-            /* DESLOCAMENTO */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.7 ETAPA - DESLOCAMENTO                             */
+            /* ===================================================== */
+            /*
+                Controla necessidade de deslocamento, destino,
+                cálculo de rota, distância e escolha do veículo.
+            */
 
             case 'deslocamento_sim_nao': {
 
@@ -4230,9 +4687,13 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* EQUIPAMENTOS */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.8 ETAPA - EQUIPAMENTOS                             */
+            /* ===================================================== */
+            /*
+                Permite selecionar equipamentos cadastrados,
+                informar quantidade/uso e adicionar mais itens.
+            */
 
             case 'equipamento_sim_nao': {
 
@@ -4473,9 +4934,13 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* OUTROS CUSTOS */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.9 ETAPA - OUTROS CUSTOS                            */
+            /* ===================================================== */
+            /*
+                Permite adicionar despesas extras que não pertencem
+                aos grupos anteriores.
+            */
 
             case 'outros_sim_nao': {
 
@@ -4643,9 +5108,12 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* PAGAMENTO */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.10 ETAPA - FORMA DE PAGAMENTO                      */
+            /* ===================================================== */
+            /*
+                Registra a condição de pagamento ou permite pular.
+            */
 
             case 'pagamento': {
 
@@ -4685,9 +5153,12 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* PRAZO */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.11 ETAPA - PRAZO DE ENTREGA                        */
+            /* ===================================================== */
+            /*
+                Registra o prazo de entrega informado pelo usuário.
+            */
 
             case 'prazo': {
 
@@ -4727,9 +5198,13 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* VALIDADE */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.12 ETAPA - VALIDADE DO ORÇAMENTO                   */
+            /* ===================================================== */
+            /*
+                Aceita uma data ou quantidade de dias,
+                conforme a lógica já existente.
+            */
 
             case 'validade': {
 
@@ -4790,9 +5265,12 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* NOTA */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.13 ETAPA - NOTA                                    */
+            /* ===================================================== */
+            /*
+                Define se o orçamento será com ou sem nota.
+            */
 
             case 'nota': {
 
@@ -4846,9 +5324,13 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* MARGEM */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.14 ETAPA - MARGEM                                  */
+            /* ===================================================== */
+            /*
+                Confirma a margem padrão ou permite alterar
+                percentual e método.
+            */
 
             case 'margem_confirmar': {
 
@@ -4974,9 +5456,13 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* CONFIRMAR FINAL */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.15 CONFIRMAÇÃO FINAL                               */
+            /* ===================================================== */
+            /*
+                Permite gerar o orçamento ou voltar para alterar
+                alguma informação antes de salvar.
+            */
 
             case 'confirmar_final': {
 
@@ -5029,9 +5515,13 @@ Total do deslocamento: ${money(d.total)}.`,
             }
 
 
-            /* ===================== */
-            /* ALTERAÇÕES */
-            /* ===================== */
+            /* ===================================================== */
+            /* 09.16 ESCOLHA DO CAMPO A ALTERAR                      */
+            /* ===================================================== */
+            /*
+                Direciona o usuário para a etapa correspondente
+                ao dado que deseja corrigir.
+            */
 
             case 'alterar_escolha': {
 
@@ -5152,10 +5642,19 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* ADICIONAR MATERIAL */
-    /* ========================= */
+    /* ========================================================= */
+    /* 10. ADICIONAR MATERIAL AO ESTADO                         */
+    /* ========================================================= */
+    /*
+        Inclui ou acumula a quantidade de um material
+        escolhido durante a conversa.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* adicionarMaterial                                                    */
+    /* Adiciona ou acumula material no estado. */
+    /* --------------------------------------------------------- */
 
     function adicionarMaterial(
         s,
@@ -5205,10 +5704,18 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* ADICIONAR FUNCIONÁRIO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 11. ADICIONAR FUNCIONÁRIO AO ESTADO                      */
+    /* ========================================================= */
+    /*
+        Inclui ou acumula horas de um funcionário selecionado.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* adicionarFuncionario                                                    */
+    /* Adiciona ou acumula horas de funcionário. */
+    /* --------------------------------------------------------- */
 
     function adicionarFuncionario(
         s,
@@ -5258,10 +5765,18 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* ADICIONAR EQUIPAMENTO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 12. ADICIONAR EQUIPAMENTO AO ESTADO                      */
+    /* ========================================================= */
+    /*
+        Inclui ou acumula o uso de um equipamento selecionado.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* adicionarEquipamento                                                    */
+    /* Adiciona ou acumula equipamento no estado. */
+    /* --------------------------------------------------------- */
 
     function adicionarEquipamento(
         s,
@@ -5311,10 +5826,19 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* FORMATAR ROTA */
-    /* ========================= */
+    /* ========================================================= */
+    /* 13. FORMATAR RESULTADO DA ROTA                           */
+    /* ========================================================= */
+    /*
+        Transforma os dados retornados pela API de rota
+        em texto compreensível para a conversa.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* formatarRota                                                    */
+    /* Formata a rota calculada para exibição. */
+    /* --------------------------------------------------------- */
 
     function formatarRota(
         rota
@@ -5342,10 +5866,19 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* MENU ALTERAÇÕES */
-    /* ========================= */
+    /* ========================================================= */
+    /* 14. MENU DE ALTERAÇÕES                                   */
+    /* ========================================================= */
+    /*
+        Monta a lista de campos que podem ser alterados
+        antes da geração definitiva do orçamento.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* menuAlteracoes                                                    */
+    /* Monta o menu de campos que podem ser alterados. */
+    /* --------------------------------------------------------- */
 
     function menuAlteracoes() {
 
@@ -5387,10 +5920,19 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* RESETAR CAMPO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 15. RESETAR CAMPO PARA NOVA EDIÇÃO                       */
+    /* ========================================================= */
+    /*
+        Limpa o valor e marca a etapa como não concluída
+        para que o assistente pergunte novamente.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* resetarCampo                                                    */
+    /* Limpa um campo para refazer a etapa correspondente. */
+    /* --------------------------------------------------------- */
 
     function resetarCampo(
         s,
@@ -5596,10 +6138,19 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* PERGUNTA ETAPA */
-    /* ========================= */
+    /* ========================================================= */
+    /* 16. PERGUNTA DA ETAPA ATUAL                              */
+    /* ========================================================= */
+    /*
+        Retorna a pergunta adequada depois que um campo
+        é resetado para alteração.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* perguntaEtapaAtual                                                    */
+    /* Retorna a pergunta correta após uma alteração. */
+    /* --------------------------------------------------------- */
 
     function perguntaEtapaAtual(s) {
 
@@ -5680,10 +6231,25 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* GERAR ORÇAMENTO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 17. GERAR E SALVAR O ORÇAMENTO                           */
+    /* ========================================================= */
+    /*
+        Cria o objeto final no formato usado por db.orcamentos.
 
+        Depois:
+        - salva no banco
+        - atualiza o último código
+        - fecha o modal
+        - volta para Orçamentos
+        - encerra a sessão do assistente
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* gerarOrcamento                                                    */
+    /* Gera o registro definitivo e salva em db.orcamentos. */
+    /* --------------------------------------------------------- */
 
     async function gerarOrcamento() {
 
@@ -5852,9 +6418,13 @@ Total do deslocamento: ${money(d.total)}.`,
                     .totalCliente,
 
 
-            /* ===================== */
-            /* DADOS INTERNOS */
-            /* ===================== */
+            /* ===================================================== */
+            /* 17.1 DADOS INTERNOS DO CÁLCULO                        */
+            /* ===================================================== */
+            /*
+                Guarda uma cópia do estado da conversa e do cálculo
+                dentro do orçamento para rastreabilidade interna.
+            */
 
             calculoInterno:{
 
@@ -5957,10 +6527,21 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* INTERFACE */
-    /* ========================= */
+    /* ========================================================= */
+    /* 18. INTERFACE DO ASSISTENTE                               */
+    /* ========================================================= */
+    /*
+        renderizar()
 
+        Monta o chat, mensagens, área de digitação,
+        resumo de valores e controles visuais.
+    */
+
+
+    /* --------------------------------------------------------- */
+    /* renderizar                                                    */
+    /* Renderiza o conteúdo visual do assistente. */
+    /* --------------------------------------------------------- */
 
     function renderizar() {
 
@@ -6210,10 +6791,19 @@ Total do deslocamento: ${money(d.total)}.`,
     }
 
 
-    /* ========================= */
-    /* ABRIR ASSISTENTE */
-    /* ========================= */
+    /* ========================================================= */
+    /* 19. ABRIR ASSISTENTE                                     */
+    /* ========================================================= */
+    /*
+        Inicia uma nova sessão, adiciona a primeira mensagem
+        e abre o modal do assistente.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* abrirAssistenteOrcamentoIA */
+    /* Abre o assistente local a partir da tela de Orçamentos. */
+    /* --------------------------------------------------------- */
 
     window
         .abrirAssistenteOrcamentoIA =
@@ -6240,10 +6830,19 @@ Total do deslocamento: ${money(d.total)}.`,
     };
 
 
-    /* ========================= */
-    /* ENVIAR */
-    /* ========================= */
+    /* ========================================================= */
+    /* 20. ENVIAR MENSAGEM                                      */
+    /* ========================================================= */
+    /*
+        Recebe a mensagem digitada, registra no histórico,
+        processa a etapa atual e atualiza a interface.
+    */
 
+
+    /* --------------------------------------------------------- */
+    /* enviarMensagemAssistenteLocal */
+    /* Captura e envia a mensagem digitada para o processador local. */
+    /* --------------------------------------------------------- */
 
     window
         .enviarMensagemAssistenteLocal =
@@ -6375,9 +6974,13 @@ Total do deslocamento: ${money(d.total)}.`,
     };
 
 
-    /* ========================= */
-    /* COMPATIBILIDADE */
-    /* ========================= */
+    /* ========================================================= */
+    /* 21. NOMES DE COMPATIBILIDADE COM O ERP                   */
+    /* ========================================================= */
+    /*
+        Mantém aliases usados por outras partes do sistema,
+        evitando quebrar botões ou chamadas existentes.
+    */
 
 
     window.renderChatIA =

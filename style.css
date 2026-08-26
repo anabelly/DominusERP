@@ -1,12 +1,76 @@
+/* ========================================================= */
+/* DOMINUS ERP - STYLE.CSS                                   */
+/* ========================================================= */
+/*
+    ARQUIVO PRINCIPAL DE ESTILOS DO SISTEMA
+
+    Este arquivo controla o visual geral do Dominus ERP.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Cores e variáveis globais
+    2. Reset e tipografia
+    3. Menu lateral / Sidebar
+    4. Área principal
+    5. Cards e Dashboard
+    6. Formulários
+    7. Botões
+    8. Tabelas
+    9. Modal global
+    10. Classes utilitárias
+    11. Estilos de impressão
+    12. Status dos funcionários
+    13. Cards das Ordens de Serviço
+
+    IMPORTANTE:
+    Apenas os comentários foram reorganizados e ampliados.
+    Nenhuma regra visual, valor, seletor ou propriedade foi alterada.
+*/
+
+
+/* ========================================================= */
+/* 00. AJUSTE GLOBAL DE CORES PARA IMPRESSÃO                 */
+/* ========================================================= */
+/*
+    Mantém as cores o mais fiéis possível quando a página
+    for impressa ou convertida para PDF.
+*/
+
 html,
 * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
 }
 
-/* ========================= */
-/* ROOT */
-/* ========================= */
+/* ========================================================= */
+/* 01. VARIÁVEIS GLOBAIS / ROOT                              */
+/* ========================================================= */
+/*
+    Cores principais reutilizadas em todo o sistema.
+
+    --primary:
+        vermelho principal do Dominus.
+
+    --primary-dark:
+        vermelho mais escuro usado em hover.
+
+    --secondary:
+        cor secundária escura.
+
+    --bg:
+        fundo geral do sistema.
+
+    --card:
+        fundo padrão dos cards.
+
+    --border:
+        cor padrão de bordas.
+
+    --text / --text-light:
+        cores de textos.
+
+    --success / --danger / --warning:
+        cores de estados e alertas.
+*/
 
 :root {
     --primary: #ff1f2d;
@@ -23,9 +87,16 @@ html,
     --warning: #f59e0b;
 }
 
-/* ========================= */
-/* RESET */
-/* ========================= */
+/* ========================================================= */
+/* 02. RESET E CONFIGURAÇÕES GERAIS                          */
+/* ========================================================= */
+/*
+    Remove margens e espaçamentos padrão do navegador,
+    aplica box-sizing e define a fonte principal.
+
+    Também configura o body para ocupar toda a altura
+    da janela e organizar Sidebar + conteúdo principal.
+*/
 
 * {
     margin: 0;
@@ -42,9 +113,19 @@ body {
     overflow: hidden;
 }
 
-/* ========================= */
-/* SIDEBAR */
-/* ========================= */
+/* ========================================================= */
+/* 03. MENU LATERAL / SIDEBAR                                */
+/* ========================================================= */
+/*
+    Controla:
+    - largura da barra lateral
+    - rolagem
+    - logo
+    - grupos do menu
+    - itens de navegação
+    - hover
+    - item ativo
+*/
 
 .sidebar {
     width: 250px;
@@ -107,9 +188,19 @@ body {
     font-weight: 600;
 }
 
-/* ========================= */
-/* MAIN */
-/* ========================= */
+/* ========================================================= */
+/* 04. ÁREA PRINCIPAL / MAIN                                 */
+/* ========================================================= */
+/*
+    Área onde as páginas do Dominus são renderizadas.
+
+    Inclui:
+    - espaçamento interno
+    - rolagem vertical
+    - fundo
+    - efeito decorativo no canto
+    - card padrão de conteúdo
+*/
 
 main {
     flex: 1;
@@ -141,9 +232,24 @@ main::before {
     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
 }
 
-/* ========================= */
-/* DASHBOARD */
-/* ========================= */
+/* ========================================================= */
+/* 05. DASHBOARD                                              */
+/* ========================================================= */
+/*
+    Estilos usados nos cards de indicadores do Dashboard.
+
+    stat-grid:
+        organiza os cards automaticamente em colunas.
+
+    stat-card:
+        estrutura visual de cada indicador.
+
+    green / yellow:
+        variações da faixa lateral.
+
+    stat-label / stat-value:
+        rótulo e valor principal.
+*/
 
 .stat-grid {
     display: grid;
@@ -187,9 +293,19 @@ main::before {
     margin-top: 5px;
 }
 
-/* ========================= */
-/* FORM */
-/* ========================= */
+/* ========================================================= */
+/* 06. FORMULÁRIOS                                            */
+/* ========================================================= */
+/*
+    Estilo padrão para:
+    - input
+    - select
+    - textarea
+    - label
+
+    Também define o destaque visual quando um campo
+    está selecionado/focado.
+*/
 
 input,
 select,
@@ -218,9 +334,19 @@ label {
     display: block;
 }
 
-/* ========================= */
-/* BUTTONS */
-/* ========================= */
+/* ========================================================= */
+/* 07. BOTÕES                                                 */
+/* ========================================================= */
+/*
+    .btn-action:
+        botão principal do sistema.
+
+    .btn-action:hover:
+        efeito ao passar o mouse.
+
+    .btn-del:
+        botão de exclusão/perigo.
+*/
 
 .btn-action {
     background: var(--primary);
@@ -248,9 +374,18 @@ label {
     cursor: pointer;
 }
 
-/* ========================= */
-/* TABLES */
-/* ========================= */
+/* ========================================================= */
+/* 08. TABELAS                                                */
+/* ========================================================= */
+/*
+    Configura:
+    - largura
+    - espaçamento
+    - cabeçalhos
+    - linhas
+    - bordas
+    - tipografia
+*/
 
 table {
     width: 100%;
@@ -273,9 +408,24 @@ td {
     font-size: 0.85rem;
 }
 
-/* ========================= */
-/* MODAL */
-/* ========================= */
+/* ========================================================= */
+/* 09. MODAL GLOBAL                                           */
+/* ========================================================= */
+/*
+    Controla a camada de modal utilizada em várias telas.
+
+    .modal:
+        fundo escuro e centralização.
+
+    .hidden:
+        esconde elementos.
+
+    #modal-global:
+        ocupa toda a tela.
+
+    #modal-global > div:
+        tamanho padrão da janela interna.
+*/
 
 .modal {
     position: fixed;
@@ -315,9 +465,13 @@ td {
 }
 
 
-/* ========================= */
-/* UTIL */
-/* ========================= */
+/* ========================================================= */
+/* 10. CLASSES UTILITÁRIAS                                   */
+/* ========================================================= */
+/*
+    .form-row:
+        cria uma linha de formulário com duas colunas.
+*/
 
 .form-row {
     display: grid;
@@ -325,9 +479,19 @@ td {
     gap: 10px;
 }
 
-/* ========================= */
-/* PRINT */
-/* ========================= */
+/* ========================================================= */
+/* 11. IMPRESSÃO                                              */
+/* ========================================================= */
+/*
+    Regras aplicadas somente durante a impressão.
+
+    Objetivos:
+    - manter as cores
+    - esconder o menu lateral
+    - esconder botões
+    - remover espaços desnecessários
+    - deixar tabelas adequadas para impressão
+*/
 
 @media print {
 
@@ -367,9 +531,20 @@ td {
         color: #333 !important;
     }
 }
-/* =========================
-   STATUS FUNCIONÁRIOS
-========================= */
+/* ========================================================= */
+/* 12. STATUS DOS FUNCIONÁRIOS                               */
+/* ========================================================= */
+/*
+    Classes utilizadas para exibir o status do funcionário
+    em formato de selo.
+
+    Variações:
+    - Ativo
+    - Férias
+    - Afastado
+    - Desligado
+    - Padrão
+*/
 
 .status {
     display: inline-flex;
@@ -416,6 +591,25 @@ td {
     background: #e5e7eb;
     color: #374151;
 }
+
+/* ========================================================= */
+/* 13. CARDS DE ESCOLHA - ORDENS DE SERVIÇO                  */
+/* ========================================================= */
+/*
+    Estilos usados em opções/cartões da tela de OS.
+
+    .os-choice:
+        container das opções.
+
+    .os-card:
+        cartão clicável.
+
+    .os-card:hover:
+        efeito de destaque.
+
+    .os-cancel:
+        ação de cancelamento.
+*/
 
 .os-choice {
     display: flex;

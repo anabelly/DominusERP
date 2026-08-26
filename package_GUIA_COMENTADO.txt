@@ -1,0 +1,217 @@
+============================================================
+DOMINUS ERP - GUIA DO PACKAGE.JSON
+============================================================
+
+IMPORTANTE
+---------
+O package.json é um arquivo JSON.
+
+Por isso, NÃO coloque comentários dentro dele usando:
+    // comentário
+ou
+    /* comentário */
+
+Isso deixaria o JSON inválido.
+
+O arquivo "package_ORGANIZADO_PRONTO_PARA_COLAR.txt" contém
+somente JSON válido e pode ser copiado diretamente para package.json.
+
+
+============================================================
+01. IDENTIFICAÇÃO DO PROJETO
+============================================================
+
+"name": "sistema"
+    Nome interno do projeto usado pelo Node/NPM.
+
+"version": "2.0.0"
+    Versão atual do Dominus ERP.
+    Também é utilizada pelo Electron e pelo instalador.
+
+"description": "ERP Sistema"
+    Descrição curta do projeto.
+
+"main": "main.js"
+    Arquivo principal iniciado pelo Electron.
+
+"type": "commonjs"
+    Define o sistema de módulos utilizado pelo Node.
+    "commonjs" permite usar require() no main.js.
+
+
+============================================================
+02. COMANDOS NPM
+============================================================
+
+"scripts"
+
+"start": "electron ."
+    Inicia o Dominus em modo Electron.
+
+    Comando:
+        npm start
+
+"build": "electron-builder"
+    Gera o instalador do sistema.
+
+    Comando:
+        npm run build
+
+
+============================================================
+03. DEPENDÊNCIAS DO SISTEMA
+============================================================
+
+"dependencies"
+
+cors:
+    Libera o acesso à API Express pelo frontend.
+
+electron-updater:
+    Responsável pela verificação, download e instalação
+    de atualizações do Dominus ERP.
+
+express:
+    Servidor HTTP local utilizado pelo sistema.
+
+sqlite3:
+    Banco de dados local usado pelo main.js.
+
+
+============================================================
+04. DEPENDÊNCIAS DE DESENVOLVIMENTO
+============================================================
+
+"devDependencies"
+
+electron:
+    Framework desktop utilizado pelo Dominus ERP.
+
+electron-builder:
+    Responsável por gerar o instalador do programa.
+
+
+============================================================
+05. CONFIGURAÇÃO DE BUILD
+============================================================
+
+"build"
+
+"appId": "com.dominus.erp"
+    Identificador interno do aplicativo.
+
+"productName": "Dominus ERP"
+    Nome exibido no instalador e no sistema operacional.
+
+
+============================================================
+06. PASTA DE SAÍDA
+============================================================
+
+"directories"
+
+"output": "release"
+    Pasta onde o electron-builder grava os arquivos gerados.
+
+
+============================================================
+07. ARQUIVOS INCLUÍDOS NO BUILD
+============================================================
+
+"files"
+
+"**/*"
+    Inclui todos os arquivos do projeto.
+
+"!release/*"
+    Exclui a própria pasta de builds anteriores.
+
+
+============================================================
+08. CONFIGURAÇÃO DO WINDOWS
+============================================================
+
+"win"
+
+"target": "nsis"
+    Tipo de instalador usado no Windows.
+
+"icon": "dominus.ico"
+    Ícone utilizado pelo aplicativo/instalador.
+
+
+============================================================
+09. CONFIGURAÇÃO DO INSTALADOR NSIS
+============================================================
+
+"oneClick": false
+    O instalador não instala tudo automaticamente em um clique.
+
+"allowToChangeInstallationDirectory": true
+    Permite escolher a pasta de instalação.
+
+"createDesktopShortcut": true
+    Cria atalho na Área de Trabalho.
+
+"createStartMenuShortcut": true
+    Cria atalho no Menu Iniciar.
+
+"artifactName":
+    Dominus-ERP-Setup-${version}.${ext}
+
+    Define o nome final do instalador.
+
+
+============================================================
+10. PUBLICAÇÃO / ATUALIZAÇÕES
+============================================================
+
+"publish"
+
+"provider": "github"
+    Plataforma usada para distribuir atualizações.
+
+"owner": "anabelly"
+    Proprietário do repositório.
+
+"repo": "DominusERP"
+    Repositório usado pelo electron-updater.
+
+
+============================================================
+11. METADADOS
+============================================================
+
+"keywords"
+    Palavras-chave do pacote.
+
+"author"
+    Autor do projeto.
+
+"license": "ISC"
+    Licença declarada no projeto.
+
+
+============================================================
+RESUMO
+============================================================
+
+Este arquivo controla principalmente:
+
+- versão do Dominus
+- main.js principal
+- comandos npm
+- dependências
+- configuração do Electron
+- criação do instalador
+- ícone
+- pasta release
+- atalhos do instalador
+- publicação pelo GitHub
+- atualização automática
+
+Sempre que alterar a versão do sistema, confira principalmente:
+
+    "version"
+
+antes de gerar um novo build.

@@ -1,12 +1,64 @@
-/* ========================= */
-/* PAGINAÇÃO FORNECEDORES */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - FORNECEDORES.JS                             */
+/* ========================================================= */
+/*
+    CADASTRO, CONSULTA E GERENCIAMENTO DE FORNECEDORES
+
+    Este arquivo controla toda a tela de Fornecedores
+    do Dominus ERP.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Controlar a paginação da listagem
+    2. Renderizar a tabela de fornecedores
+    3. Cadastrar novos fornecedores
+    4. Evitar fornecedores duplicados pelo nome
+    5. Salvar novos registros no banco
+    6. Visualizar dados em modo somente leitura
+    7. Editar fornecedores existentes
+    8. Evitar duplicidade durante a edição
+    9. Excluir fornecedores
+    10. Abrir a consulta de fornecedores
+    11. Filtrar por nome, documento, cidade e UF
+    12. Registrar a página "fornecedores" no sistema
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma regra, campo, índice, filtro ou lógica foi modificada.
+*/
+
+
+/* ========================================================= */
+/* 01. CONTROLE DE PAGINAÇÃO DOS FORNECEDORES               */
+/* ========================================================= */
+/*
+    paginaFornecedores:
+        página atualmente exibida.
+
+    limiteFornecedores:
+        quantidade máxima de registros por página.
+*/
 
 window.paginaFornecedores = 1;
 window.limiteFornecedores = 15;
-/* ========================= */
-/* FORNECEDORES */
-/* ========================= */
+/* ========================================================= */
+/* 02. RENDERIZAÇÃO DA PÁGINA DE FORNECEDORES               */
+/* ========================================================= */
+/*
+    renderFornecedores()
+
+    Monta:
+    - cabeçalho
+    - botão Consultar
+    - botão Novo Fornecedor
+    - tabela principal
+    - ações Visualizar / Editar / Remover
+    - controles de paginação
+*/
+
+/* --------------------------------------------------------- */
+/* renderFornecedores */
+/* Renderiza a página atual de fornecedores. */
+/* --------------------------------------------------------- */
 
 window.renderFornecedores = function () {
 
@@ -37,7 +89,7 @@ const fornecedoresTela =
     gap:20px;
 ">
 
-    <!-- TOPO -->
+    <!-- 02.1 CABEÇALHO E AÇÕES DA PÁGINA -->
 
     <div style="
         display:flex;
@@ -92,7 +144,7 @@ const fornecedoresTela =
 
     </div>
 
-    <!-- TABELA -->
+    <!-- 02.2 TABELA PRINCIPAL DE FORNECEDORES -->
 
     <div style="
         overflow:auto;
@@ -241,7 +293,7 @@ const fornecedoresTela =
         </table>
 
     </div>
-<!-- PAGINAÇÃO -->
+<!-- 02.3 CONTROLES DE PAGINAÇÃO -->
 
 <div style="
     display:flex;
@@ -290,10 +342,22 @@ Próxima ➡
 
     return html;
 };
-/* ========================= */
-/* PAGINAÇÃO FORNECEDORES */
-/* ========================= */
+/* ========================================================= */
+/* 03. FUNÇÕES DE NAVEGAÇÃO DA PAGINAÇÃO                    */
+/* ========================================================= */
+/*
+    proximaPaginaFornecedores()
+        avança uma página quando houver próxima página.
 
+    paginaAnteriorFornecedores()
+        retorna uma página quando possível.
+*/
+
+
+/* --------------------------------------------------------- */
+/* proximaPaginaFornecedores */
+/* Avança para a próxima página quando existir. */
+/* --------------------------------------------------------- */
 
 window.proximaPaginaFornecedores = function(){
 
@@ -324,6 +388,11 @@ window.proximaPaginaFornecedores = function(){
 
 
 
+/* --------------------------------------------------------- */
+/* paginaAnteriorFornecedores */
+/* Volta uma página quando possível. */
+/* --------------------------------------------------------- */
+
 window.paginaAnteriorFornecedores = function(){
 
 
@@ -342,9 +411,34 @@ window.paginaAnteriorFornecedores = function(){
     }
 
 };
-/* ========================= */
-/* NOVO FORNECEDOR */
-/* ========================= */
+/* ========================================================= */
+/* 04. CADASTRO DE NOVO FORNECEDOR                          */
+/* ========================================================= */
+/*
+    abrirNovoFornecedor(dados)
+
+    Abre o formulário reutilizado para:
+    - cadastro
+    - visualização
+    - edição
+
+    Campos:
+    - nome / razão social
+    - documento
+    - nome fantasia
+    - contato
+    - e-mail
+    - telefone
+    - endereço
+    - cidade
+    - UF
+    - observações
+*/
+
+/* --------------------------------------------------------- */
+/* abrirNovoFornecedor */
+/* Abre o formulário reutilizado de fornecedor. */
+/* --------------------------------------------------------- */
 
 window.abrirNovoFornecedor = function (dados = {}) {
 
@@ -363,7 +457,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
         gap:15px;
     ">
 
-        <!-- NOME -->
+        <!-- 04.1 NOME / RAZÃO SOCIAL -->
 
         <div>
 
@@ -377,7 +471,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- DOCUMENTO -->
+        <!-- 04.2 DOCUMENTO -->
 
         <div>
 
@@ -391,7 +485,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- FANTASIA -->
+        <!-- 04.3 NOME FANTASIA -->
 
         <div>
 
@@ -405,7 +499,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- CONTATO -->
+        <!-- 04.4 CONTATO -->
 
         <div>
 
@@ -419,7 +513,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- EMAIL -->
+        <!-- 04.5 E-MAIL -->
 
         <div>
 
@@ -433,7 +527,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- TELEFONE -->
+        <!-- 04.6 TELEFONE -->
 
         <div>
 
@@ -447,7 +541,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- ENDEREÇO -->
+        <!-- 04.7 ENDEREÇO -->
 
         <div style="
             grid-column:span 2;
@@ -463,7 +557,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- CIDADE -->
+        <!-- 04.8 CIDADE -->
 
         <div>
 
@@ -477,7 +571,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- UF -->
+        <!-- 04.9 UF -->
 
         <div>
 
@@ -491,7 +585,7 @@ window.abrirNovoFornecedor = function (dados = {}) {
 
         </div>
 
-        <!-- OBS -->
+        <!-- 04.10 OBSERVAÇÕES -->
 
         <div style="
             grid-column:span 2;
@@ -535,9 +629,20 @@ window.abrirNovoFornecedor = function (dados = {}) {
         }
     });
 };
-/* ========================= */
-/* SALVAR FORNECEDOR */
-/* ========================= */
+/* ========================================================= */
+/* 05. SALVAR NOVO FORNECEDOR                               */
+/* ========================================================= */
+/*
+    salvarNovoFornecedor()
+
+    Valida o nome, impede duplicidade e adiciona o
+    fornecedor em db.fornecedores.
+*/
+
+/* --------------------------------------------------------- */
+/* salvarNovoFornecedor */
+/* Valida e salva um novo fornecedor. */
+/* --------------------------------------------------------- */
 
 window.salvarNovoFornecedor = function () {
 
@@ -558,9 +663,13 @@ window.salvarNovoFornecedor = function () {
         return;
     }
 
-    /* ========================= */
-    /* EVITAR DUPLICADOS */
-    /* ========================= */
+    /* ===================================================== */
+    /* 05.1 EVITAR FORNECEDOR DUPLICADO                      */
+    /* ===================================================== */
+    /*
+        Compara o nome de forma normalizada e não permite
+        cadastrar outro fornecedor com o mesmo nome.
+    */
 
     const existe =
         db.fornecedores.find(f =>
@@ -667,9 +776,20 @@ window.salvarNovoFornecedor = function () {
     );
 };
 
-/* ========================= */
-/* EXCLUIR */
-/* ========================= */
+/* ========================================================= */
+/* 06. EXCLUIR FORNECEDOR                                   */
+/* ========================================================= */
+/*
+    excluirFornecedor(idx)
+
+    Solicita confirmação, remove o registro,
+    salva o banco e atualiza a tela.
+*/
+
+/* --------------------------------------------------------- */
+/* excluirFornecedor */
+/* Exclui um fornecedor após confirmação. */
+/* --------------------------------------------------------- */
 
 window.excluirFornecedor = function (idx) {
 
@@ -691,9 +811,20 @@ window.excluirFornecedor = function (idx) {
         'fornecedores'
     );
 };
-/* ========================= */
-/* VISUALIZAR */
-/* ========================= */
+/* ========================================================= */
+/* 07. VISUALIZAR FORNECEDOR                                */
+/* ========================================================= */
+/*
+    visualizarFornecedor(idx)
+
+    Reutiliza o formulário, bloqueia os campos
+    e transforma o botão principal em "Fechar".
+*/
+
+/* --------------------------------------------------------- */
+/* visualizarFornecedor */
+/* Abre o fornecedor em modo somente leitura. */
+/* --------------------------------------------------------- */
 
 window.visualizarFornecedor = function (idx) {
 
@@ -704,9 +835,9 @@ window.visualizarFornecedor = function (idx) {
         fornecedor
     );
 
-    /* ========================= */
-    /* ALTERAR TÍTULO */
-    /* ========================= */
+    /* ===================================================== */
+    /* 07.1 ALTERAR TÍTULO DO MODAL                          */
+    /* ===================================================== */
 
     const titulo =
         document.getElementById(
@@ -719,9 +850,9 @@ window.visualizarFornecedor = function (idx) {
             'Visualizar Fornecedor';
     }
 
-    /* ========================= */
-    /* DESABILITAR CAMPOS */
-    /* ========================= */
+    /* ===================================================== */
+    /* 07.2 BLOQUEAR CAMPOS DO FORMULÁRIO                    */
+    /* ===================================================== */
 
     const campos = [
 
@@ -750,9 +881,9 @@ window.visualizarFornecedor = function (idx) {
         }
     });
 
-    /* ========================= */
-    /* BOTÃO FECHAR */
-    /* ========================= */
+    /* ===================================================== */
+    /* 07.3 TRANSFORMAR BOTÃO EM FECHAR                      */
+    /* ===================================================== */
 
     const btn =
         document.getElementById(
@@ -769,9 +900,20 @@ window.visualizarFornecedor = function (idx) {
     }
 };
 
-/* ========================= */
-/* EDITAR */
-/* ========================= */
+/* ========================================================= */
+/* 08. EDITAR FORNECEDOR                                    */
+/* ========================================================= */
+/*
+    editarFornecedor(idx)
+
+    Reabre o formulário preenchido e atualiza o
+    registro existente após validação.
+*/
+
+/* --------------------------------------------------------- */
+/* editarFornecedor */
+/* Permite editar um fornecedor existente. */
+/* --------------------------------------------------------- */
 
 window.editarFornecedor = function (idx) {
 
@@ -807,9 +949,13 @@ window.editarFornecedor = function (idx) {
             return;
         }
 
-        /* ========================= */
-        /* DUPLICADO (EXCETO ELE) */
-        /* ========================= */
+        /* ===================================================== */
+        /* 08.1 VALIDAR DUPLICIDADE NA EDIÇÃO                    */
+        /* ===================================================== */
+        /*
+            Impede que o novo nome seja igual ao de outro
+            fornecedor, ignorando o próprio registro editado.
+        */
 
         const existe =
             db.fornecedores.find(
@@ -909,9 +1055,23 @@ window.editarFornecedor = function (idx) {
         );
     };
 };
-/* ========================= */
-/* CONSULTA */
-/* ========================= */
+/* ========================================================= */
+/* 09. CONSULTA DE FORNECEDORES                             */
+/* ========================================================= */
+/*
+    abrirConsultaFornecedor()
+
+    Abre um modal de consulta por:
+    - nome
+    - documento
+    - cidade
+    - UF
+*/
+
+/* --------------------------------------------------------- */
+/* abrirConsultaFornecedor */
+/* Abre a consulta de fornecedores. */
+/* --------------------------------------------------------- */
 
 window.abrirConsultaFornecedor =
 function () {
@@ -1027,9 +1187,20 @@ function () {
     });
 };
 
-/* ========================= */
-/* FILTRAR CONSULTA */
-/* ========================= */
+/* ========================================================= */
+/* 10. FILTRAR RESULTADOS DA CONSULTA                       */
+/* ========================================================= */
+/*
+    filtrarConsultaFornecedor()
+
+    Filtra db.fornecedores e monta a tabela de
+    resultados com ações de Visualizar / Editar / Excluir.
+*/
+
+/* --------------------------------------------------------- */
+/* filtrarConsultaFornecedor */
+/* Aplica os filtros e renderiza os resultados. */
+/* --------------------------------------------------------- */
 
 window.filtrarConsultaFornecedor =
 function () {
@@ -1279,9 +1450,14 @@ function () {
             html;
 };
 
-/* ========================= */
-/* REGISTRAR PÁGINA */
-/* ========================= */
+/* ========================================================= */
+/* 11. REGISTRAR PÁGINA NO SISTEMA                          */
+/* ========================================================= */
+/*
+    Registra a tela com o nome:
+
+        fornecedores
+*/
 
 registerPage(
     'fornecedores',

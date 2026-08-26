@@ -1,13 +1,234 @@
-/* ========================= */
-/* ORÇAMENTOS */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - ORCAMENTOS.JS                               */
+/* ========================================================= */
+/*
+    GESTÃO DE ORÇAMENTOS
+
+    Este arquivo controla a tela principal de Orçamentos
+    e o fluxo manual de criação, consulta, visualização,
+    edição, duplicação e impressão.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Renderizar a listagem de orçamentos
+    2. Filtrar por status
+    3. Consultar por código, cliente, período e status
+    4. Criar novos orçamentos
+    5. Preencher dados do cliente
+    6. Adicionar e calcular produtos/serviços
+    7. Aplicar a regra atual de orçamento sem nota
+    8. Visualizar orçamento completo
+    9. Imprimir / gerar versão para impressão
+    10. Editar orçamentos existentes
+    11. Duplicar orçamentos
+    12. Permitir cadastro de cliente durante o orçamento
+    13. Integrar o botão "Criar com IA"
+    14. Trabalhar somente com os status:
+        Aguardando, Aprovado, Cancelado e Recusado
+    15. Criar automaticamente uma OS ao aprovar o orçamento
+    16. Registrar a página "orcamentos"
+
+    REGRA DE APROVAÇÃO:
+    Sempre que um orçamento estiver com status Aprovado,
+    o sistema garante que exista uma OS vinculada a ele.
+    A criação é protegida contra duplicidade.
+*/
+
+
+/* ========================================================= */
+/* 00. STATUS E INTEGRAÇÃO COM ORDENS DE SERVIÇO            */
+/* ========================================================= */
+
+const STATUS_ORCAMENTOS = [
+    'Aguardando',
+    'Aprovado',
+    'Cancelado',
+    'Recusado'
+];
+
+
+/* --------------------------------------------------------- */
+/* normalizarStatusOrcamento                                 */
+/* Mantém somente os quatro status válidos do módulo.        */
+/* --------------------------------------------------------- */
+
+function normalizarStatusOrcamento(
+    status
+) {
+
+    const valor =
+        String(
+            status || ''
+        ).trim();
+
+    /*
+        Migração dos status antigos:
+        "Em Produção" e "Finalizado" pertencem agora ao fluxo
+        da OS. No orçamento, ambos representam orçamento
+        aprovado.
+    */
+
+    if (
+        valor === 'Em Produção'
+        ||
+        valor === 'Finalizado'
+    ) {
+
+        return 'Aprovado';
+    }
+
+    if (
+        STATUS_ORCAMENTOS.includes(
+            valor
+        )
+    ) {
+
+        return valor;
+    }
+
+    return 'Aguardando';
+}
+
+
+/* --------------------------------------------------------- */
+/* normalizarStatusOrcamentosExistentes                      */
+/* Corrige registros antigos sem alterar o restante dos dados.*/
+/* --------------------------------------------------------- */
+
+function normalizarStatusOrcamentosExistentes() {
+
+    if (
+        !Array.isArray(
+            db.orcamentos
+        )
+    ) {
+
+        return;
+    }
+
+    let alterou =
+        false;
+
+    db.orcamentos.forEach(
+        orcamento => {
+
+            const novoStatus =
+                normalizarStatusOrcamento(
+                    orcamento.status
+                );
+
+            if (
+                orcamento.status !==
+                novoStatus
+            ) {
+
+                orcamento.status =
+                    novoStatus;
+
+                alterou =
+                    true;
+            }
+        }
+    );
+
+    if (
+        alterou
+        &&
+        typeof save ===
+            'function'
+    ) {
+
+        Promise
+            .resolve(
+                save()
+            )
+            .catch(
+                erro =>
+                    console.error(
+                        'Erro ao normalizar status dos orçamentos:',
+                        erro
+                    )
+            );
+    }
+}
+
+
+/* --------------------------------------------------------- */
+/* garantirOSDoOrcamentoAprovado                             */
+/* Cria a OS somente se ainda não existir uma vinculada.     */
+/* --------------------------------------------------------- */
+
+async function garantirOSDoOrcamentoAprovado(
+    orcamento
+) {
+
+    if (
+        !orcamento
+        ||
+        normalizarStatusOrcamento(
+            orcamento.status
+        ) !==
+            'Aprovado'
+    ) {
+
+        return null;
+    }
+
+    if (
+        typeof window.criarOSAutomaticaOrcamento !==
+        'function'
+    ) {
+
+        console.error(
+            'Função de criação automática de OS não encontrada.'
+        );
+
+        alert(
+            'O orçamento foi aprovado, mas não foi possível criar a OS automaticamente.'
+        );
+
+        return null;
+    }
+
+    try {
+
+        return await window
+            .criarOSAutomaticaOrcamento(
+                orcamento
+            );
+
+    } catch (erro) {
+
+        console.error(
+            'Erro ao criar OS automática:',
+            erro
+        );
+
+        alert(
+            'O orçamento foi aprovado, mas ocorreu um erro ao criar a OS.'
+        );
+
+        return null;
+    }
+}
+
+
+/* ========================================================= */
+/* 01. TELA PRINCIPAL DE ORÇAMENTOS                        */
+/* ========================================================= */
 window.filtroStatusOrcamentoAtual = '';
+
+/* --------------------------------------------------------- */
+/* renderOrcamentos */
+/* Renderiza a listagem, filtro de status e ações dos orçamentos. */
+/* --------------------------------------------------------- */
 
 window.renderOrcamentos = function () {
 
     if (!db.orcamentos) {
         db.orcamentos = [];
     }
+
+    normalizarStatusOrcamentosExistentes();
 
   if (
     db.ultimoOrcamento === undefined ||
@@ -144,16 +365,6 @@ window.renderOrcamentos = function () {
                 Aprovado
             </option>
 
-            <option value="Em Produção"
-            ${
-                window.filtroStatusOrcamentoAtual === 'Em Produção'
-                ? 'selected'
-                : ''
-            }
-            >
-                Em Produção
-            </option>
-
             <option value="Recusado"
             ${
                 window.filtroStatusOrcamentoAtual === 'Recusado'
@@ -172,16 +383,6 @@ window.renderOrcamentos = function () {
             }
             >
                 Cancelado
-            </option>
-
-            <option value="Finalizado"
-            ${
-                window.filtroStatusOrcamentoAtual === 'Finalizado'
-                ? 'selected'
-                : ''
-            }
-            >
-                Finalizado
             </option>
 
         </select>
@@ -281,16 +482,6 @@ window.renderOrcamentos = function () {
         if (
             (orcamento.status || '')
             .toLowerCase() ===
-            'em produção'
-        ) {
-
-            corStatus =
-                '#ea580c';
-        }
-
-        if (
-            (orcamento.status || '')
-            .toLowerCase() ===
             'recusado'
         ) {
 
@@ -306,16 +497,6 @@ window.renderOrcamentos = function () {
 
             corStatus =
                 '#2563eb';
-        }
-
-        if (
-            (orcamento.status || '')
-            .toLowerCase() ===
-            'finalizado'
-        ) {
-
-            corStatus =
-                '#6b7280';
         }
 
         html += `
@@ -463,9 +644,14 @@ window.renderOrcamentos = function () {
     return html;
 };
 
-/* ========================= */
-/* FILTRO STATUS ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 02. FILTRO RÁPIDO POR STATUS                            */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* filtrarStatusOrcamento */
+/* Atualiza o filtro rápido de status e recarrega a tela. */
+/* --------------------------------------------------------- */
 
 window.filtrarStatusOrcamento = function(){
 
@@ -482,9 +668,14 @@ window.filtrarStatusOrcamento = function(){
     );
 };
 
-/* ========================= */
-/* EXCLUIR */
-/* ========================= */
+/* ========================================================= */
+/* 03. EXCLUIR ORÇAMENTO                                   */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* excluirOrcamento */
+/* Exclui um orçamento após confirmação. */
+/* --------------------------------------------------------- */
 
 window.excluirOrcamento = function (idx) {
 
@@ -507,9 +698,14 @@ window.excluirOrcamento = function (idx) {
     );
 };
 
-/* ========================= */
-/* CONSULTA ORÇAMENTOS */
-/* ========================= */
+/* ========================================================= */
+/* 04. CONSULTA AVANÇADA DE ORÇAMENTOS                     */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* abrirConsultaOrcamentos */
+/* Abre a consulta avançada de orçamentos. */
+/* --------------------------------------------------------- */
 
 window.abrirConsultaOrcamentos = function () {
 
@@ -598,19 +794,11 @@ window.abrirConsultaOrcamentos = function () {
                 </option>
 
                 <option>
-                    Em Produção
-                </option>
-
-                <option>
                     Recusado
                 </option>
 
                 <option>
                     Cancelado
-                </option>
-
-                <option>
-                    Finalizado
                 </option>
 
             </select>
@@ -662,9 +850,14 @@ window.abrirConsultaOrcamentos = function () {
     });
 };
 
-/* ========================= */
-/* FILTRAR CONSULTA */
-/* ========================= */
+/* ========================================================= */
+/* 05. PROCESSAR FILTROS DA CONSULTA                       */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* filtrarConsultaOrcamentos */
+/* Aplica os filtros e monta a tabela de resultados. */
+/* --------------------------------------------------------- */
 
 window.filtrarConsultaOrcamentos =
 function () {
@@ -710,9 +903,9 @@ function () {
     let orcamentos =
         [...db.orcamentos];
 
-    /* ========================= */
-    /* FILTRO CÓDIGO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 05.1 FILTRO POR CÓDIGO                                  */
+    /* ========================================================= */
 
     if (codigo) {
 
@@ -727,9 +920,9 @@ function () {
             );
     }
 
-    /* ========================= */
-    /* FILTRO CLIENTE */
-    /* ========================= */
+    /* ========================================================= */
+    /* 05.2 FILTRO POR CLIENTE                                 */
+    /* ========================================================= */
 
     if (cliente) {
 
@@ -742,9 +935,9 @@ function () {
             );
     }
 
-    /* ========================= */
-    /* FILTRO STATUS */
-    /* ========================= */
+    /* ========================================================= */
+    /* 05.3 FILTRO POR STATUS                                  */
+    /* ========================================================= */
 
     if (status) {
 
@@ -757,9 +950,9 @@ function () {
             );
     }
 
-    /* ========================= */
-    /* FILTRO DATA INICIAL */
-    /* ========================= */
+    /* ========================================================= */
+    /* 05.4 FILTRO POR DATA INICIAL                            */
+    /* ========================================================= */
 
     if (dataInicio) {
 
@@ -771,9 +964,9 @@ function () {
             );
     }
 
-    /* ========================= */
-    /* FILTRO DATA FINAL */
-    /* ========================= */
+    /* ========================================================= */
+    /* 05.5 FILTRO POR DATA FINAL                              */
+    /* ========================================================= */
 
     if (dataFim) {
 
@@ -785,9 +978,9 @@ function () {
             );
     }
 
-    /* ========================= */
-    /* RESULTADO */
-    /* ========================= */
+    /* ========================================================= */
+    /* 05.6 RESULTADOS DA CONSULTA                             */
+    /* ========================================================= */
 
     let html = `
 
@@ -865,16 +1058,6 @@ Nenhum orçamento encontrado
         if (
             (o.status || '')
             .toLowerCase() ===
-            'em produção'
-        ) {
-
-            corStatus =
-                '#3b82f6';
-        }
-
-        if (
-            (o.status || '')
-            .toLowerCase() ===
             'recusado'
         ) {
 
@@ -890,16 +1073,6 @@ Nenhum orçamento encontrado
 
             corStatus =
                 '#2563eb';
-        }
-
-        if (
-            (o.status || '')
-            .toLowerCase() ===
-            'finalizado'
-        ) {
-
-            corStatus =
-                '#6b7280';
         }
 
         html += `
@@ -1050,6 +1223,11 @@ Nenhum orçamento encontrado
             html;
 };
 
+/* --------------------------------------------------------- */
+/* obterProximoCodigoOrcamento */
+/* Calcula o próximo código disponível para orçamento. */
+/* --------------------------------------------------------- */
+
 window.obterProximoCodigoOrcamento = function () {
 
     const inicio = 3688;
@@ -1073,9 +1251,14 @@ window.obterProximoCodigoOrcamento = function () {
 
     return esperado;
 };
-/* ========================= */
-/* NOVO ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 06. NOVO ORÇAMENTO                                      */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* abrirModalOrcamento */
+/* Abre o formulário de criação de novo orçamento. */
+/* --------------------------------------------------------- */
 
 window.abrirModalOrcamento =
 function () {
@@ -1321,19 +1504,11 @@ function () {
                 </option>
 
                 <option>
-                    Em Produção
-                </option>
-
-                <option>
                     Recusado
                 </option>
 
                 <option>
                     Cancelado
-                </option>
-
-                <option>
-                    Finalizado
                 </option>
 
             </select>
@@ -1466,9 +1641,14 @@ function () {
     adicionarProdutoOrcamento();
 };
 
-/* ========================= */
-/* PREENCHER CLIENTE */
-/* ========================= */
+/* ========================================================= */
+/* 07. PREENCHER DADOS DO CLIENTE                          */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* preencherDadosClienteOrcamento */
+/* Preenche os dados auxiliares do cliente selecionado. */
+/* --------------------------------------------------------- */
 
 window.preencherDadosClienteOrcamento =
 function () {
@@ -1519,12 +1699,17 @@ function () {
             cliente.email || '';
 };
 
-/* ========================= */
-/* SALVAR ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 08. SALVAR NOVO ORÇAMENTO                               */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* salvarNovoOrcamento */
+/* Valida, calcula e salva um novo orçamento. */
+/* --------------------------------------------------------- */
 
 window.salvarNovoOrcamento =
-function () {
+async function () {
 
     const itens = [];
 
@@ -1685,6 +1870,11 @@ function () {
         total
     };
 
+    novoOrcamento.status =
+        normalizarStatusOrcamento(
+            novoOrcamento.status
+        );
+
     db.orcamentos.push(
         novoOrcamento
     );
@@ -1692,7 +1882,22 @@ function () {
     db.ultimoOrcamento =
         novoOrcamento.codigo;
 
-    save();
+    await save();
+
+    /*
+        Se o orçamento já for salvo como Aprovado,
+        a OS é criada automaticamente com status Aberta.
+    */
+
+    if (
+        novoOrcamento.status ===
+        'Aprovado'
+    ) {
+
+        await garantirOSDoOrcamentoAprovado(
+            novoOrcamento
+        );
+    }
 
     closeModal();
 
@@ -1701,9 +1906,14 @@ function () {
     );
 };
 
-/* ========================= */
-/* ADICIONAR PRODUTO */
-/* ========================= */
+/* ========================================================= */
+/* 09. ADICIONAR PRODUTO / SERVIÇO                         */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* adicionarProdutoOrcamento */
+/* Adiciona uma nova linha de item ao orçamento. */
+/* --------------------------------------------------------- */
 
 window.adicionarProdutoOrcamento =
 function (
@@ -1814,9 +2024,14 @@ function (
     calcularTotalOrcamento();
 };
 
-/* ========================= */
-/* AUTO RESIZE */
-/* ========================= */
+/* ========================================================= */
+/* 10. AUTO RESIZE DOS CAMPOS DE TEXTO                     */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* autoResize */
+/* Ajusta automaticamente a altura de campos de texto. */
+/* --------------------------------------------------------- */
 
 window.autoResize =
 function (el) {
@@ -1831,9 +2046,14 @@ function (el) {
         'px';
 };
 
-/* ========================= */
-/* CALCULAR TOTAL */
-/* ========================= */
+/* ========================================================= */
+/* 11. CALCULAR TOTAL DO ORÇAMENTO                         */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* calcularTotalOrcamento */
+/* Recalcula subtotal, regra de nota e total do orçamento. */
+/* --------------------------------------------------------- */
 
 window.calcularTotalOrcamento =
 function () {
@@ -1917,9 +2137,14 @@ function () {
     );
 };
 
-/* ========================= */
-/* TEXTO FIXO IMPOSTO */
-/* ========================= */
+/* ========================================================= */
+/* 12. TEXTO / REGRA VISUAL DE IMPOSTO                     */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* atualizarTextoImposto */
+/* Atualiza o texto visual relacionado à regra de nota. */
+/* --------------------------------------------------------- */
 
 window.atualizarTextoImposto =
 function (subtotal,totalFinal) {
@@ -1966,9 +2191,14 @@ function (subtotal,totalFinal) {
             texto;
     }
 };
-/* ========================= */
-/* VISUALIZAR ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 13. VISUALIZAR ORÇAMENTO                                */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* visualizarOrcamento */
+/* Abre o orçamento em modo de visualização. */
+/* --------------------------------------------------------- */
 
 window.visualizarOrcamento = async function(index){
 
@@ -1980,9 +2210,9 @@ window.visualizarOrcamento = async function(index){
     const logoPath =
         await window.api.getLogoPath();
 
-/* ========================= */
-/* CLIENTE COMPLETO */
-/* ========================= */
+/* ========================================================= */
+/* 13.1 DADOS COMPLETOS DO CLIENTE                         */
+/* ========================================================= */
 
 const clienteCompleto =
     db.clientes.find(c=>
@@ -2671,9 +2901,14 @@ WN COMUNICAÇÃO VISUAL
 
 };
 
-/* ========================= */
-/* IMPRIMIR / PDF */
-/* ========================= */
+/* ========================================================= */
+/* 14. IMPRESSÃO / PDF                                     */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* imprimirOrcamento */
+/* Monta e envia o orçamento para impressão. */
+/* --------------------------------------------------------- */
 
 window.imprimirOrcamento =
 async function(){
@@ -2841,9 +3076,14 @@ window.onload=()=>{
     }
 
 };
-/* ========================= */
-/* EDITAR ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 15. EDITAR ORÇAMENTO                                    */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* editarOrcamento */
+/* Abre um orçamento existente para edição. */
+/* --------------------------------------------------------- */
 
 window.editarOrcamento = function(index){
 
@@ -3087,18 +3327,6 @@ Aprovado
 
 <option
 ${
-o.status === 'Em Produção'
-? 'selected'
-: ''
-}
->
-
-Em Produção
-
-</option>
-
-<option
-${
 o.status === 'Recusado'
 ? 'selected'
 : ''
@@ -3118,18 +3346,6 @@ o.status === 'Cancelado'
 >
 
 Cancelado
-
-</option>
-
-<option
-${
-o.status === 'Finalizado'
-? 'selected'
-: ''
-}
->
-
-Finalizado
 
 </option>
 
@@ -3233,9 +3449,9 @@ o.total || 0
 `
     });
 
-    /* ========================= */
-    /* CARREGAR PRODUTOS */
-    /* ========================= */
+    /* ========================================================= */
+    /* 15.1 CARREGAR PRODUTOS NA EDIÇÃO                        */
+    /* ========================================================= */
 
     if (
         o.itens &&
@@ -3258,9 +3474,9 @@ o.total || 0
 
     }
 
-    /* ========================= */
-    /* AUTO RESIZE */
-    /* ========================= */
+    /* ========================================================= */
+    /* 16. AUTO RESIZE DOS CAMPOS NA EDIÇÃO                    */
+    /* ========================================================= */
 
     document
         .querySelectorAll(
@@ -3272,20 +3488,25 @@ o.total || 0
 
         });
 
-    /* ========================= */
-    /* RECALCULAR */
-    /* ========================= */
+    /* ========================================================= */
+    /* 17. RECALCULAR EDIÇÃO                                   */
+    /* ========================================================= */
 
     calcularTotalOrcamento();
 
 };
 
-/* ========================= */
-/* SALVAR EDIÇÃO ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 18. SALVAR EDIÇÃO DO ORÇAMENTO                          */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* salvarEdicaoOrcamento */
+/* Salva as alterações feitas em um orçamento existente. */
+/* --------------------------------------------------------- */
 
 window.salvarEdicaoOrcamento =
-function(index){
+async function(index){
 
     const itens = [];
 
@@ -3363,6 +3584,19 @@ function(index){
 
     }
 
+    const statusAnterior =
+        normalizarStatusOrcamento(
+            db.orcamentos[index]
+                ?.status
+        );
+
+    const novoStatus =
+        normalizarStatusOrcamento(
+            document.getElementById(
+                'orc-status'
+            ).value
+        );
+
     db.orcamentos[index] = {
 
         codigo:
@@ -3409,9 +3643,7 @@ function(index){
         temNota,
 
         status:
-            document.getElementById(
-                'orc-status'
-            ).value,
+            novoStatus,
 
         preContrato:
             document.getElementById(
@@ -3428,7 +3660,23 @@ function(index){
         total
     };
 
-    save();
+    await save();
+
+    /*
+        A OS é garantida sempre que o orçamento estiver Aprovado.
+        Se já existir uma OS para o mesmo número de orçamento,
+        nada é duplicado.
+    */
+
+    if (
+        novoStatus ===
+        'Aprovado'
+    ) {
+
+        await garantirOSDoOrcamentoAprovado(
+            db.orcamentos[index]
+        );
+    }
 
     closeModal();
 
@@ -3438,9 +3686,9 @@ function(index){
 
 };
 
-/* ========================= */
-/* IA ORÇAMENTO EM ARQUIVO SEPARADO */
-/* ========================= */
+/* ========================================================= */
+/* 19. INTEGRAÇÃO COM ASSISTENTE DE ORÇAMENTOS             */
+/* ========================================================= */
 
 /*
     A funcionalidade do botão
@@ -3455,9 +3703,14 @@ function(index){
     window.abrirAssistenteOrcamentoIA
 */
 
-/* ========================= */
-/* NOVO CLIENTE PELO ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 20. CADASTRAR CLIENTE DURANTE O ORÇAMENTO               */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* abrirCadastroClienteOrcamento */
+/* Abre o cadastro de cliente a partir do orçamento. */
+/* --------------------------------------------------------- */
 
 window.abrirCadastroClienteOrcamento = function(){
 
@@ -3467,9 +3720,14 @@ window.abrirCadastroClienteOrcamento = function(){
 
 };
 
-/* ========================= */
-/* DUPLICAR ORÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 21. DUPLICAR ORÇAMENTO                                  */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* duplicarOrcamento */
+/* Cria uma nova cópia de um orçamento existente. */
+/* --------------------------------------------------------- */
 
 window.duplicarOrcamento =
 function(index){
@@ -3564,9 +3822,9 @@ function(index){
 
 };
 
-/* ========================= */
-/* REGISTRAR PÁGINA */
-/* ========================= */
+/* ========================================================= */
+/* 22. REGISTRAR PÁGINA NO SISTEMA                         */
+/* ========================================================= */
 
 registerPage(
     'orcamentos',

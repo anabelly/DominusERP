@@ -1,6 +1,49 @@
-/* ========================= */
-/* BACKUP & RESTAURAÇÃO */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - BACKUP.JS                                   */
+/* ========================================================= */
+/*
+    BACKUP E RESTAURAÇÃO DOS DADOS DO SISTEMA
+
+    Este arquivo controla a tela de Backup & Restauração
+    e todo o fluxo de exportação e importação dos dados
+    armazenados em window.db.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Renderizar a tela de Backup & Restauração
+    2. Gerar um arquivo JSON com os dados atuais
+    3. Criar o nome do backup com a data atual
+    4. Permitir selecionar um arquivo .json
+    5. Ler o arquivo escolhido com FileReader
+    6. Validar a estrutura básica do backup
+    7. Pedir confirmação antes de substituir os dados
+    8. Normalizar o Centro de Custos restaurado
+    9. Reconstruir window.db com valores seguros
+    10. Restaurar os contadores do sistema
+    11. Salvar os dados restaurados no servidor
+    12. Retornar ao Dashboard após a restauração
+    13. Registrar a página "backup" no Dominus ERP
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma regra, campo, contador, valor ou lógica foi modificada.
+*/
+
+
+/* ========================================================= */
+/* 01. TELA DE BACKUP E RESTAURAÇÃO                         */
+/* ========================================================= */
+/*
+    renderBackup()
+
+    Monta a tela com duas funções principais:
+
+    - Fazer Backup
+        exporta window.db para um arquivo JSON.
+
+    - Restaurar Backup
+        permite selecionar um arquivo JSON e substituir
+        os dados atuais do sistema.
+*/
 
 window.renderBackup = function () {
 
@@ -139,13 +182,30 @@ flex-wrap:wrap;
 };
 
 
-/* ========================= */
-/* BAIXAR BACKUP */
-/* ========================= */
+/* ========================================================= */
+/* 02. GERAR E BAIXAR BACKUP                                */
+/* ========================================================= */
+/*
+    baixarBackup()
+
+    Fluxo:
+    1. transforma window.db em JSON formatado
+    2. cria um Blob do tipo application/json
+    3. gera uma URL temporária
+    4. cria um link de download
+    5. inclui a data atual no nome do arquivo
+    6. dispara o download
+    7. remove o link temporário
+    8. libera a URL criada
+*/
 
 window.baixarBackup = function () {
 
     try {
+
+        /* ================================================= */
+        /* 02.1 SERIALIZAR O BANCO ATUAL                      */
+        /* ================================================= */
 
         const dados =
 
@@ -154,6 +214,10 @@ window.baixarBackup = function () {
                 null,
                 2
             );
+
+        /* ================================================= */
+        /* 02.2 CRIAR ARQUIVO JSON EM MEMÓRIA                 */
+        /* ================================================= */
 
         const blob =
 
@@ -165,17 +229,29 @@ window.baixarBackup = function () {
                 }
             );
 
+        /* ================================================= */
+        /* 02.3 GERAR URL TEMPORÁRIA PARA DOWNLOAD            */
+        /* ================================================= */
+
         const url =
 
             URL.createObjectURL(
                 blob
             );
 
+        /* ================================================= */
+        /* 02.4 CRIAR LINK TEMPORÁRIO                         */
+        /* ================================================= */
+
         const link =
 
             document.createElement(
                 'a'
             );
+
+        /* ================================================= */
+        /* 02.5 GERAR DATA PARA O NOME DO ARQUIVO             */
+        /* ================================================= */
 
         const data =
 
@@ -225,9 +301,17 @@ window.baixarBackup = function () {
 };
 
 
-/* ========================= */
-/* RESTAURAR BACKUP */
-/* ========================= */
+/* ========================================================= */
+/* 03. RESTAURAR BACKUP                                     */
+/* ========================================================= */
+/*
+    restaurarBackup()
+
+    Lê o arquivo escolhido pelo usuário e, depois
+    de validar e confirmar a operação, reconstrói window.db.
+
+    A restauração substitui os dados atuais.
+*/
 
 window.restaurarBackup = function () {
 
@@ -253,15 +337,27 @@ window.restaurarBackup = function () {
     }
 
 
+    /* ===================================================== */
+    /* 03.0.1 ARQUIVO SELECIONADO                             */
+    /* ===================================================== */
+
     const arquivo =
 
         input.files[0];
 
 
+    /* ===================================================== */
+    /* 03.0.2 PREPARAR FILEREADER                             */
+    /* ===================================================== */
+
     const leitor =
 
         new FileReader();
 
+
+    /* ===================================================== */
+    /* 03.0.3 PROCESSAR CONTEÚDO LIDO                         */
+    /* ===================================================== */
 
     leitor.onload =
 
@@ -276,9 +372,15 @@ window.restaurarBackup = function () {
                 );
 
 
-            /* ========================= */
-            /* VALIDAR ESTRUTURA */
-            /* ========================= */
+            /* ===================================================== */
+            /* 03.1 VALIDAR ESTRUTURA DO ARQUIVO                    */
+            /* ===================================================== */
+            /*
+                O conteúdo precisa ser um objeto JSON válido.
+
+                Valores vazios, tipos incorretos ou arrays no nível
+                principal são rejeitados.
+            */
 
             if (
                 !dados ||
@@ -292,6 +394,14 @@ window.restaurarBackup = function () {
 
             }
 
+
+            /* ================================================= */
+            /* 03.1.1 CONFIRMAR SUBSTITUIÇÃO DOS DADOS            */
+            /* ================================================= */
+            /*
+                A restauração é destrutiva para o banco atual,
+                por isso exige confirmação explícita.
+            */
 
             const confirmar =
 
@@ -315,9 +425,14 @@ Deseja continuar?`
             }
 
 
-            /* ========================= */
-            /* CENTRO DE CUSTOS */
-            /* ========================= */
+            /* ===================================================== */
+            /* 03.2 NORMALIZAR CENTRO DE CUSTOS                     */
+            /* ===================================================== */
+            /*
+                Quando normalizarCentroCustos() estiver disponível,
+                utiliza a função para completar campos ausentes e
+                preservar compatibilidade com estruturas anteriores.
+            */
 
             let centroCustosRestaurado;
 
@@ -353,9 +468,15 @@ Deseja continuar?`
             }
 
 
-            /* ========================= */
-            /* SUBSTITUIR DB */
-            /* ========================= */
+            /* ===================================================== */
+            /* 03.3 RECONSTRUIR WINDOW.DB                            */
+            /* ===================================================== */
+            /*
+                Substitui o banco em memória pelos dados restaurados.
+
+                As coleções são validadas com Array.isArray()
+                antes de serem usadas.
+            */
 
             window.db = {
 
@@ -468,18 +589,37 @@ Deseja continuar?`
                     : [],
 
 
-                /* ========================= */
-                /* CENTRO DE CUSTOS */
-                /* ========================= */
+                /* ===================================================== */
+                /* 03.3.1 INSERIR CENTRO DE CUSTOS RESTAURADO           */
+                /* ===================================================== */
+                /*
+                    Usa o objeto centroCustosRestaurado que já passou
+                    pela normalização realizada anteriormente.
+                */
+                /* ===================================================== */
+                /*
+                    Quando normalizarCentroCustos() estiver disponível,
+                    utiliza a função para completar campos ausentes e
+                    preservar compatibilidade com estruturas anteriores.
+                */
 
                 centroCustos:
 
                     centroCustosRestaurado,
 
 
-                /* ========================= */
-                /* CONTADORES */
-                /* ========================= */
+                /* ===================================================== */
+                /* 03.4 RESTAURAR CONTADORES                            */
+                /* ===================================================== */
+                /*
+                    Recupera:
+                    - ultimoRecibo
+                    - ultimoOrcamento
+                    - ultimaOS
+
+                    Caso algum valor não seja numérico, utiliza o
+                    valor padrão definido no código original.
+                */
 
                 ultimoRecibo:
 
@@ -528,9 +668,13 @@ Deseja continuar?`
             };
 
 
-            /* ========================= */
-            /* SALVAR NO SERVIDOR */
-            /* ========================= */
+            /* ===================================================== */
+            /* 03.5 SALVAR RESTAURAÇÃO NO SERVIDOR                  */
+            /* ===================================================== */
+            /*
+                Depois de reconstruir window.db, chama save()
+                para persistir os dados restaurados.
+            */
 
             await save();
 
@@ -540,9 +684,13 @@ Deseja continuar?`
             );
 
 
-            /* ========================= */
-            /* VOLTAR AO DASHBOARD */
-            /* ========================= */
+            /* ===================================================== */
+            /* 03.6 VOLTAR AO DASHBOARD                             */
+            /* ===================================================== */
+            /*
+                Após a restauração bem-sucedida, navega para
+                a página principal sem recarregar o banco novamente.
+            */
 
             await navigate(
                 'dash',
@@ -566,9 +714,13 @@ Deseja continuar?`
     };
 
 
-    /* ========================= */
-    /* ERRO AO LER ARQUIVO */
-    /* ========================= */
+    /* ===================================================== */
+    /* 03.7 ERRO DE LEITURA DO ARQUIVO                      */
+    /* ===================================================== */
+    /*
+        Trata falhas do FileReader e informa que o arquivo
+        de backup não pôde ser lido.
+    */
 
     leitor.onerror =
 
@@ -585,6 +737,10 @@ Deseja continuar?`
         };
 
 
+    /* ===================================================== */
+    /* 03.8 INICIAR LEITURA DO ARQUIVO                       */
+    /* ===================================================== */
+
     leitor.readAsText(
         arquivo
     );
@@ -592,9 +748,17 @@ Deseja continuar?`
 };
 
 
-/* ========================= */
-/* REGISTRAR PÁGINA */
-/* ========================= */
+/* ========================================================= */
+/* 04. REGISTRAR PÁGINA NO SISTEMA                          */
+/* ========================================================= */
+/*
+    Registra a tela com o nome:
+
+        backup
+
+    Assim, navigate('backup') consegue renderizar
+    esta página dentro do view-port.
+*/
 
 registerPage(
     'backup',

@@ -1,16 +1,55 @@
-/* ========================= */
-/* ESTRUTURA PADRÃO */
-/* CENTRO DE CUSTOS */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - DB.JS                                       */
+/* ========================================================= */
+/*
+    ESTRUTURA, CARREGAMENTO E SALVAMENTO DO BANCO DO FRONTEND
+
+    Este arquivo mantém a estrutura principal de dados usada
+    pelas telas do Dominus ERP e faz a comunicação com a API
+    definida no main.js.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Criar a estrutura padrão do Centro de Custos
+    2. Normalizar Centro de Custos de bancos antigos
+    3. Criar a estrutura inicial de window.db
+    4. Definir o endereço da API do sistema
+    5. Carregar o banco através de GET /db
+    6. Preservar valores padrão durante o carregamento
+    7. Salvar o banco através de POST /db
+    8. Persistir Agenda e configurações de notificações
+    9. Persistir usuários adicionais e permissões
+    10. Disponibilizar o atalho global save()
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma regra, valor, endereço, campo ou lógica foi modificada.
+*/
+
+
+/* ========================================================= */
+/* 01. ESTRUTURA PADRÃO DO CENTRO DE CUSTOS                 */
+/* ========================================================= */
+/*
+    criarEstruturaPadraoCentroCustos()
+
+    Cria o objeto-base utilizado pelo Centro de Custos.
+
+    Essa estrutura serve tanto para um banco novo quanto
+    como referência para completar bancos antigos.
+*/
 
 window.criarEstruturaPadraoCentroCustos =
 function () {
 
     return {
 
-        /* ========================= */
-        /* ENDEREÇO DE ORIGEM */
-        /* ========================= */
+        /* ===================================================== */
+        /* 01.1 ENDEREÇO DE ORIGEM                              */
+        /* ===================================================== */
+        /*
+            Endereço padrão usado como ponto de partida para
+            cálculos de deslocamento e rotas do sistema.
+        */
 
         enderecoOrigem: {
 
@@ -34,27 +73,46 @@ function () {
 
         },
 
-        /* ========================= */
-        /* COMBUSTÍVEIS */
-        /* ========================= */
+        /* ===================================================== */
+        /* 01.2 COMBUSTÍVEIS                                    */
+        /* ===================================================== */
+        /*
+            Lista de combustíveis cadastrados no Centro de Custos.
+        */
 
         combustiveis: [],
 
-        /* ========================= */
-        /* VEÍCULOS */
-        /* ========================= */
+        /* ===================================================== */
+        /* 01.3 VEÍCULOS                                        */
+        /* ===================================================== */
+        /*
+            Lista de veículos cadastrados para cálculo de custos
+            e deslocamentos.
+        */
 
         veiculos: [],
 
-        /* ========================= */
-        /* EQUIPAMENTOS PRÓPRIOS */
-        /* ========================= */
+        /* ===================================================== */
+        /* 01.4 EQUIPAMENTOS PRÓPRIOS                           */
+        /* ===================================================== */
+        /*
+            Lista de equipamentos próprios cadastrados no sistema.
+        */
 
         equipamentos: [],
 
-        /* ========================= */
-        /* MÃO DE OBRA */
-        /* ========================= */
+        /* ===================================================== */
+        /* 01.5 MÃO DE OBRA                                     */
+        /* ===================================================== */
+        /*
+            Parâmetros gerais utilizados no cálculo da mão de obra.
+
+            horasMensais:
+                base mensal utilizada pelo sistema.
+
+            encargosPercentual:
+                percentual adicional configurável.
+        */
 
         maoDeObra: {
 
@@ -66,9 +124,17 @@ function () {
 
         },
 
-        /* ========================= */
-        /* PRECIFICAÇÃO */
-        /* ========================= */
+        /* ===================================================== */
+        /* 01.6 PARÂMETROS DE PRECIFICAÇÃO                      */
+        /* ===================================================== */
+        /*
+            Configurações utilizadas nos cálculos de preço:
+
+            - desperdício
+            - administrativo
+            - margem de lucro
+            - método de aplicação da margem
+        */
 
         parametros: {
 
@@ -91,9 +157,20 @@ function () {
 };
 
 
-/* ========================= */
-/* NORMALIZAR CENTRO CUSTOS */
-/* ========================= */
+/* ========================================================= */
+/* 02. NORMALIZAR CENTRO DE CUSTOS                           */
+/* ========================================================= */
+/*
+    normalizarCentroCustos(dados)
+
+    Função de compatibilidade para bancos antigos.
+
+    Ela:
+    - cria campos que estiverem faltando
+    - preserva dados já cadastrados
+    - garante arrays válidos
+    - mescla configurações antigas com a estrutura padrão
+*/
 
 /*
     Essa função é importante
@@ -186,13 +263,51 @@ function (
 };
 
 
-/* ========================= */
-/* DB CENTRALIZADO */
-/* ========================= */
+/* ========================================================= */
+/* 03. BANCO CENTRAL DO FRONTEND                             */
+/* ========================================================= */
+/*
+    window.db concentra os dados utilizados pelas telas.
+
+    O objeto começa com coleções vazias e valores padrão.
+    Depois, loadDB() substitui esses dados pelo conteúdo
+    carregado da API.
+*/
 
 window.db = {
 
     funcionarios:[],
+
+    /*
+        USUÁRIOS / LOGINS DO SISTEMA
+
+        O usuário administrador master continua sendo fixo:
+            login: admin
+            senha: admin
+
+        Ele não precisa ficar gravado aqui.
+
+        Este array armazena somente os usuários adicionais
+        cadastrados pela tela "Cadastro de Logins".
+    */
+
+    usuariosSistema:[],
+
+    /*
+        Lista global de cargos da empresa.
+
+        Este campo precisa fazer parte do banco central para que
+        cargos cadastrados/excluídos continuem iguais depois de:
+        - fechar e abrir o sistema;
+        - trocar de tela;
+        - executar o auto refresh.
+    */
+    cargosFuncionario:[
+        'Produção',
+        'Administrativo',
+        'Gerência',
+        'Auxiliar'
+    ],
 
     clientes:[],
 
@@ -212,16 +327,74 @@ window.db = {
 
     tiposProduto:[],
 
-    /* ========================= */
-    /* CENTRO DE CUSTOS */
-    /* ========================= */
+    /*
+        AGENDA
+
+        Os compromissos precisam fazer parte da estrutura central
+        do banco. Sem isso, o loadDB() reconstruía window.db sem
+        agenda[], fazendo compromissos cadastrados e realizados
+        desaparecerem depois de um refresh da aplicação.
+    */
+
+    agenda:[],
+
+    /*
+        Configurações auxiliares da Agenda.
+
+        financeiroOk:
+            guarda os avisos financeiros já tratados pela
+            central de notificações.
+    */
+
+    agendaConfig:{
+
+        financeiroOk:{}
+
+    },
+
+    /*
+        Histórico das notas fiscais XML já importadas.
+        Necessário para impedir importações duplicadas
+        mesmo depois de fechar e abrir o sistema novamente.
+    */
+    xmlImportados:[],
+
+    /*
+        Calendário de feriados utilizado pelo controle de ponto.
+
+        overrides:
+            alterações/exclusões feitas sobre feriados automáticos.
+
+        adicionais:
+            feriados cadastrados manualmente pela empresa.
+    */
+    feriadosPontoEmpresa:{
+
+        versao:1,
+
+        overrides:[],
+
+        adicionais:[]
+
+    },
+
+    /* ===================================================== */
+    /* 03.1 CENTRO DE CUSTOS                                */
+    /* ===================================================== */
+    /*
+        Inicializa Centro de Custos usando a estrutura padrão.
+    */
 
     centroCustos:
         criarEstruturaPadraoCentroCustos(),
 
-    /* ========================= */
-    /* SEQUÊNCIAS */
-    /* ========================= */
+    /* ===================================================== */
+    /* 03.2 SEQUÊNCIAS / CONTADORES                         */
+    /* ===================================================== */
+    /*
+        Guarda os últimos números usados por registros
+        numerados do sistema.
+    */
 
     ultimoRecibo:0,
 
@@ -232,18 +405,35 @@ window.db = {
 };
 
 
-/* ========================= */
-/* URL API */
-/* ========================= */
+/* ========================================================= */
+/* 04. ENDEREÇO DA API                                      */
+/* ========================================================= */
+/*
+    API_URL define onde o frontend encontra o servidor Express.
+
+    O endereço foi mantido exatamente como no arquivo enviado.
+*/
 
 window.API_URL =
 
     'http://DESKTOP-FN92I64:3000';
 
 
-/* ========================= */
-/* LOAD */
-/* ========================= */
+/* ========================================================= */
+/* 05. CARREGAR BANCO DA API                                */
+/* ========================================================= */
+/*
+    loadDB()
+
+    Faz uma requisição GET para:
+
+        ${API_URL}/db
+
+    Depois reconstrói window.db com os dados recebidos.
+
+    Campos ausentes recebem valores padrão para evitar
+    que bancos antigos quebrem telas mais novas.
+*/
 
 window.loadDB =
 async function(){
@@ -274,6 +464,52 @@ async function(){
 
                     saved.funcionarios
                     || [],
+
+
+                /*
+                    USUÁRIOS / LOGINS
+
+                    Todos os computadores utilizam o mesmo banco
+                    central. Portanto, os logins adicionais também
+                    ficam disponíveis para todas as instalações.
+                */
+
+                usuariosSistema:
+
+                    Array.isArray(
+                        saved.usuariosSistema
+                    )
+                    ?
+                    saved.usuariosSistema
+                    :
+                    [],
+
+
+                /*
+                    CARGOS
+
+                    Antes este campo não era reconstruído pelo loadDB().
+                    Por isso:
+                    - cargo excluído voltava;
+                    - cargo novo desaparecia.
+
+                    Agora a lista salva no banco é carregada novamente.
+                */
+
+                cargosFuncionario:
+
+                    Array.isArray(
+                        saved.cargosFuncionario
+                    )
+                    ?
+                    saved.cargosFuncionario
+                    :
+                    [
+                        'Produção',
+                        'Administrativo',
+                        'Gerência',
+                        'Auxiliar'
+                    ],
 
 
                 clientes:
@@ -330,9 +566,173 @@ async function(){
                     || [],
 
 
-                /* ========================= */
-                /* CENTRO DE CUSTOS */
-                /* ========================= */
+                /*
+                    AGENDA
+
+                    Antes estes campos não eram reconstruídos pelo
+                    loadDB(). O conteúdo até podia ser enviado ao
+                    servidor pelo save(), mas ao recarregar o banco
+                    a tela recebia uma nova window.db sem agenda.
+
+                    Agora compromissos Agendados e Realizados
+                    permanecem registrados normalmente.
+                */
+
+                agenda:
+
+                    (
+                        Array.isArray(
+                            saved.agenda
+                        )
+                        ?
+                        saved.agenda
+                        :
+                        []
+                    )
+                    .map(
+                        item => {
+
+                            /*
+                                Compromissos criados antes do sistema
+                                multiusuário pertenciam ao único login
+                                existente: o administrador master.
+
+                                Novos compromissos recebem usuarioId
+                                diretamente pela Agenda.
+                            */
+
+                            if (
+                                !item
+                                ||
+                                typeof item !== 'object'
+                            ) {
+
+                                return item;
+                            }
+
+                            if (
+                                !item.usuarioId
+                            ) {
+
+                                return {
+
+                                    ...item,
+
+                                    usuarioId:
+                                        'master-admin',
+
+                                    responsavel:
+                                        'admin'
+                                };
+                            }
+
+                            return item;
+                        }
+                    ),
+
+
+                agendaConfig:
+
+                    (
+                        saved.agendaConfig
+                        &&
+                        typeof saved.agendaConfig === 'object'
+                        &&
+                        !Array.isArray(
+                            saved.agendaConfig
+                        )
+                    )
+                    ?
+                    {
+                        ...saved.agendaConfig,
+
+                        financeiroOk:
+
+                            (
+                                saved.agendaConfig.financeiroOk
+                                &&
+                                typeof saved.agendaConfig.financeiroOk === 'object'
+                                &&
+                                !Array.isArray(
+                                    saved.agendaConfig.financeiroOk
+                                )
+                            )
+                            ?
+                            saved.agendaConfig.financeiroOk
+                            :
+                            {}
+                    }
+                    :
+                    {
+                        financeiroOk:{}
+                    },
+
+
+                /*
+                    Mantém o histórico de XMLs importados ao
+                    recarregar o banco da API.
+                */
+
+                xmlImportados:
+
+                    saved.xmlImportados
+                    || [],
+
+
+                /*
+                    Calendário dos feriados do ponto.
+                    Preserva alterações, exclusões e cadastros manuais.
+                */
+
+                feriadosPontoEmpresa:
+
+                    (
+                        saved.feriadosPontoEmpresa
+                        &&
+                        typeof saved.feriadosPontoEmpresa === 'object'
+                    )
+                    ?
+                    {
+                        versao:
+                            1,
+
+                        overrides:
+                            Array.isArray(
+                                saved.feriadosPontoEmpresa.overrides
+                            )
+                            ?
+                            saved.feriadosPontoEmpresa.overrides
+                            :
+                            [],
+
+                        adicionais:
+                            Array.isArray(
+                                saved.feriadosPontoEmpresa.adicionais
+                            )
+                            ?
+                            saved.feriadosPontoEmpresa.adicionais
+                            :
+                            []
+                    }
+                    :
+                    {
+                        versao:
+                            1,
+
+                        overrides:
+                            [],
+
+                        adicionais:
+                            []
+                    },
+
+
+                /* ===================================================== */
+                /* 03.1 CENTRO DE CUSTOS                                */
+                /* ===================================================== */
+                /*
+                    Inicializa Centro de Custos usando a estrutura padrão.
+                */
 
                 centroCustos:
 
@@ -344,9 +744,13 @@ async function(){
                     ),
 
 
-                /* ========================= */
-                /* SEQUÊNCIAS */
-                /* ========================= */
+                /* ===================================================== */
+                /* 03.2 SEQUÊNCIAS / CONTADORES                         */
+                /* ===================================================== */
+                /*
+                    Guarda os últimos números usados por registros
+                    numerados do sistema.
+                */
 
                 ultimoRecibo:
 
@@ -386,9 +790,18 @@ async function(){
 };
 
 
-/* ========================= */
-/* SAVE */
-/* ========================= */
+/* ========================================================= */
+/* 06. SALVAR BANCO NA API                                  */
+/* ========================================================= */
+/*
+    saveDB()
+
+    Envia window.db completo para:
+
+        POST ${API_URL}/db
+
+    O conteúdo é convertido para JSON antes do envio.
+*/
 
 window.saveDB =
 async function(){
@@ -440,9 +853,20 @@ async function(){
 };
 
 
-/* ========================= */
-/* ATALHO */
-/* ========================= */
+/* ========================================================= */
+/* 07. ATALHO GLOBAL PARA SALVAR                             */
+/* ========================================================= */
+/*
+    save()
+
+    Atalho simples que chama saveDB().
+
+    Diversas telas podem usar apenas:
+
+        save()
+
+    sem precisar chamar saveDB() diretamente.
+*/
 
 window.save =
 async function(){

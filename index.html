@@ -53,7 +53,7 @@ if(
 ){
 
     window.location.href =
-        'login.html';
+        'Dominus ERP.html';
 }
 
 </script>
@@ -134,6 +134,14 @@ if(
 
         <div
             class="nav-item"
+            onclick="navigate('agenda')">
+
+            📅 Agenda
+
+        </div>
+
+        <div
+            class="nav-item"
             onclick="navigate('orcamentos')">
 
             📄 Orçamentos
@@ -166,6 +174,14 @@ if(
 
         <div
             class="nav-item"
+            onclick="navigate('centro-custos')">
+
+            🧮 Centro de Custos
+
+        </div>
+
+        <div
+            class="nav-item"
             onclick="navigate('relatorios')">
 
             📊 Relatórios
@@ -176,6 +192,14 @@ if(
 
         <div class="nav-group">
             Sistema
+        </div>
+
+        <div
+            class="nav-item"
+            onclick="navigate('usuarios')">
+
+            🔐 Cadastro de Logins
+
         </div>
 
         <div
@@ -199,6 +223,74 @@ if(
     onclick="navigate('sobre')">
 
     ℹ️ Sobre
+
+</div>
+
+
+<div
+    id="usuario-logado-box"
+    style="
+        margin-top:auto;
+        padding:12px;
+        border-radius:12px;
+        background:#f8fafc;
+        border:1px solid #e2e8f0;
+    "
+>
+
+    <div style="
+        color:#94a3b8;
+        font-size:8px;
+        font-weight:900;
+        text-transform:uppercase;
+        letter-spacing:.08em;
+    ">
+        Login atual
+    </div>
+
+    <div
+        id="usuario-logado-nome"
+        style="
+            margin-top:4px;
+            color:#111827;
+            font-size:14px;
+            font-weight:950;
+            word-break:break-word;
+        "
+    >
+        -
+    </div>
+
+    <div
+        id="usuario-logado-tipo"
+        style="
+            margin-top:2px;
+            color:#64748b;
+            font-size:9px;
+            font-weight:800;
+        "
+    >
+        -
+    </div>
+
+    <button
+        type="button"
+        onclick="sairSistema()"
+        style="
+            width:100%;
+            margin-top:10px;
+            padding:8px 10px;
+            border:0;
+            border-radius:8px;
+            background:#111827;
+            color:#fff;
+            cursor:pointer;
+            font-size:10px;
+            font-weight:900;
+        "
+    >
+        🚪 Sair
+    </button>
 
 </div>
 
@@ -290,6 +382,8 @@ if(
 
 <!-- PÁGINAS -->
 
+<script src="js/usuarios.js"></script>
+
 <script src="js/dashboard.js"></script>
 
 <script src="js/clientes.js"></script>
@@ -302,9 +396,15 @@ if(
 
 <script src="js/financeiro.js"></script>
 
+<script src="js/agenda.js?v=20260826-login"></script>
+
 <script src="js/estoque.js"></script>
 
+<script src="js/centro-custos.js"></script>
+
 <script src="js/orcamentos.js"></script>
+
+<script src="js/assistente-orcamentos-local.js?v=20260821-1"></script>
 
 <script src="js/ordens-servico.js"></script>
 

@@ -1,24 +1,123 @@
-/* ===================================================== */
-/* ORDENS DE SERVIÇO - ERP EVOLUÍDO                     */
-/* ===================================================== */
+/* ========================================================= */
+/* DOMINUS ERP - ORDENS-SERVICO.JS                           */
+/* ========================================================= */
+/*
+    ORDENS DE SERVIÇO
+
+    Este arquivo controla a tela de Ordens de Serviço
+    e o fluxo de criação, edição, visualização e impressão.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Carregar e salvar as ordens de serviço
+    2. Exibir indicadores do módulo
+    3. Filtrar por status e busca
+    4. Renderizar a grade de ordens
+    5. Criar OS manualmente
+    6. Criar OS a partir de orçamento
+    7. Editar OS
+    8. Gerenciar itens da produção
+    9. Gerar código de OS
+    10. Visualizar OS
+    11. Imprimir OS
+    12. Excluir OS
+    13. Criar automaticamente OS vinda de orçamento aprovado
+    14. Trabalhar com os status:
+        Aberta, Em Produção, Concluída, Finalizada,
+        Cancelada e Atrasada
+    15. Registrar a página no Dominus ERP
+
+    IMPORTANTE:
+    A lógica visual, o formulário de criação, itens,
+    visualização e impressão da OS foram preservados.
+    A alteração desta versão está concentrada na base
+    dos status e na criação automática vinda de orçamento.
+*/
+
+
+/* ========================================================= */
+/* 01. ESTADO GLOBAL DAS ORDENS DE SERVIÇO                 */
+/* ========================================================= */
 
 let listaOS = [];
 let osEditando = null;
 let filtroOS = 'TODAS';
 let buscaOS = '';
 
-/* ===================================================== */
-/* CARREGAR                                             */
-/* ===================================================== */
+/* ========================================================= */
+/* 02. CARREGAR ORDENS DE SERVIÇO                          */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* carregarOS */
+/* Carrega as ordens do banco para a lista usada na tela. */
+/* --------------------------------------------------------- */
 
 function carregarOS() {
-    window.db.ordensServico = window.db.ordensServico || [];
-    listaOS = [...window.db.ordensServico];
+
+    window.db.ordensServico =
+        window.db.ordensServico
+        || [];
+
+    let alterou =
+        false;
+
+    window.db.ordensServico
+        .forEach(
+            os => {
+
+                const statusNovo =
+                    normalizarStatusOS(
+                        os.status
+                    );
+
+                if (
+                    os.status !==
+                    statusNovo
+                ) {
+
+                    os.status =
+                        statusNovo;
+
+                    alterou =
+                        true;
+                }
+            }
+        );
+
+    listaOS =
+        [
+            ...window.db.ordensServico
+        ];
+
+    if (
+        alterou
+        &&
+        typeof save ===
+            'function'
+    ) {
+
+        Promise
+            .resolve(
+                save()
+            )
+            .catch(
+                erro =>
+                    console.error(
+                        'Erro ao migrar status das OS:',
+                        erro
+                    )
+            );
+    }
 }
 
-/* ===================================================== */
-/* SALVAR                                               */
-/* ===================================================== */
+/* ========================================================= */
+/* 03. SALVAR ORDENS DE SERVIÇO                            */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* salvarOSStorage */
+/* Persiste a lista atual em db.ordensServico. */
+/* --------------------------------------------------------- */
 
 async function salvarOSStorage() {
 
@@ -31,9 +130,14 @@ async function salvarOSStorage() {
     }
 }
 
-/* ===================================================== */
-/* FORMATAR DATA BR                                     */
-/* ===================================================== */
+/* ========================================================= */
+/* 04. FORMATAR DATA                                       */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* formatarDataBR */
+/* Formata data ISO para o padrão brasileiro. */
+/* --------------------------------------------------------- */
 
 function formatarDataBR(data) {
 
@@ -46,9 +150,14 @@ function formatarDataBR(data) {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
-/* ===================================================== */
-/* STATUS CONFIG                                        */
-/* ===================================================== */
+/* ========================================================= */
+/* 05. CONFIGURAÇÃO VISUAL DOS STATUS                      */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* corStatus */
+/* Retorna a cor correspondente ao status da OS. */
+/* --------------------------------------------------------- */
 
 function corStatus(status) {
 
@@ -56,42 +165,173 @@ function corStatus(status) {
         'Aberta': '#f59e0b',
         'Em Produção': '#3b82f6',
         'Concluída': '#10b981',
-        'Entregue': '#22c55e',
-        'Cancelada': '#ef4444'
+        'Finalizada': '#22c55e',
+        'Cancelada': '#ef4444',
+        'Atrasada': '#dc2626'
     };
 
     return map[status] || '#6b7280';
 }
 
-/* ===================================================== */
-/* DASHBOARD                                            */
-/* ===================================================== */
+
+/* --------------------------------------------------------- */
+/* normalizarStatusOS                                        */
+/* Migra o antigo status "Entregue" para "Finalizada".       */
+/* --------------------------------------------------------- */
+
+function normalizarStatusOS(
+    status
+) {
+
+    const valor =
+        String(
+            status || ''
+        ).trim();
+
+    if (
+        valor ===
+        'Entregue'
+    ) {
+
+        return 'Finalizada';
+    }
+
+    const validos = [
+        'Aberta',
+        'Em Produção',
+        'Concluída',
+        'Finalizada',
+        'Cancelada'
+    ];
+
+    if (
+        validos.includes(
+            valor
+        )
+    ) {
+
+        return valor;
+    }
+
+    return 'Aberta';
+}
+
+
+/* --------------------------------------------------------- */
+/* osEstaAtrasada                                            */
+/* Mantém a mesma lógica de atraso já existente no módulo.   */
+/* --------------------------------------------------------- */
+
+function osEstaAtrasada(
+    os
+) {
+
+    if (
+        !os?.dataEntrega
+    ) {
+
+        return false;
+    }
+
+    const hoje =
+        new Date()
+            .toISOString()
+            .split('T')[0];
+
+    return (
+        os.dataEntrega < hoje
+        &&
+        os.status !==
+            'Finalizada'
+        &&
+        os.status !==
+            'Cancelada'
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* statusExibicaoOS                                          */
+/* "Atrasada" é automático conforme a data de entrega.       */
+/* --------------------------------------------------------- */
+
+function statusExibicaoOS(
+    os
+) {
+
+    if (
+        osEstaAtrasada(
+            os
+        )
+    ) {
+
+        return 'Atrasada';
+    }
+
+    return normalizarStatusOS(
+        os?.status
+    );
+}
+
+/* ========================================================= */
+/* 06. DASHBOARD DAS ORDENS DE SERVIÇO                     */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderDashboardOS */
+/* Calcula e renderiza os indicadores do módulo. */
+/* --------------------------------------------------------- */
 
 function renderDashboardOS() {
 
     const total = listaOS.length;
 
     const abertas =
-        listaOS.filter(o => o.status === 'Aberta').length;
+        listaOS.filter(
+            o =>
+                statusExibicaoOS(o)
+                ===
+                'Aberta'
+        ).length;
 
     const producao =
-        listaOS.filter(o => o.status === 'Em Produção').length;
+        listaOS.filter(
+            o =>
+                statusExibicaoOS(o)
+                ===
+                'Em Produção'
+        ).length;
 
     const concluidas =
-        listaOS.filter(o => o.status === 'Concluída').length;
+        listaOS.filter(
+            o =>
+                statusExibicaoOS(o)
+                ===
+                'Concluída'
+        ).length;
 
-    const entregues =
-        listaOS.filter(o => o.status === 'Entregue').length;
+    const finalizadas =
+        listaOS.filter(
+            o =>
+                statusExibicaoOS(o)
+                ===
+                'Finalizada'
+        ).length;
 
     const canceladas =
-        listaOS.filter(o => o.status === 'Cancelada').length;
+        listaOS.filter(
+            o =>
+                statusExibicaoOS(o)
+                ===
+                'Cancelada'
+        ).length;
 
     const atrasadas =
-        listaOS.filter(o =>
-            o.dataEntrega &&
-            new Date(o.dataEntrega) < new Date() &&
-            o.status !== 'Entregue' &&
-            o.status !== 'Cancelada'
+        listaOS.filter(
+            o =>
+                statusExibicaoOS(o)
+                ===
+                'Atrasada'
         ).length;
 
     return `
@@ -117,7 +357,7 @@ function renderDashboardOS() {
             </div>
 
             <div class="card">
-                🚚 Entregues: ${entregues}
+                ✅ Finalizadas: ${finalizadas}
             </div>
 
             <div class="card">
@@ -132,9 +372,14 @@ function renderDashboardOS() {
     `;
 }
 
-/* ===================================================== */
-/* RENDER PRINCIPAL                                     */
-/* ===================================================== */
+/* ========================================================= */
+/* 07. RENDERIZAÇÃO PRINCIPAL                              */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderOrdensServico */
+/* Monta a tela principal de Ordens de Serviço. */
+/* --------------------------------------------------------- */
 
 function renderOrdensServico() {
 
@@ -179,9 +424,14 @@ function renderOrdensServico() {
     `;
 }
 
-/* ===================================================== */
-/* FILTROS                                              */
-/* ===================================================== */
+/* ========================================================= */
+/* 08. FILTROS                                             */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderFiltrosOS */
+/* Monta busca e filtro de status. */
+/* --------------------------------------------------------- */
 
 function renderFiltrosOS() {
 
@@ -196,6 +446,7 @@ function renderFiltrosOS() {
             <input
                 id="busca-os"
                 placeholder="Buscar cliente ou código"
+                value="${String(buscaOS || '').replace(/"/g, '&quot;')}"
                 oninput="
                     buscaOS = this.value;
                     document.getElementById('grid-os').innerHTML = renderGridOS();
@@ -239,10 +490,10 @@ function renderFiltrosOS() {
                 </option>
 
                 <option
-                    value="Entregue"
-                    ${filtroOS === 'Entregue' ? 'selected' : ''}
+                    value="Finalizada"
+                    ${filtroOS === 'Finalizada' ? 'selected' : ''}
                 >
-                    Entregues
+                    Finalizadas
                 </option>
 
                 <option
@@ -252,11 +503,23 @@ function renderFiltrosOS() {
                     Canceladas
                 </option>
 
+                <option
+                    value="Atrasada"
+                    ${filtroOS === 'Atrasada' ? 'selected' : ''}
+                >
+                    Atrasadas
+                </option>
+
             </select>
 
         </div>
     `;
 }
+
+/* --------------------------------------------------------- */
+/* atualizarGridOS */
+/* Atualiza somente a grade de ordens. */
+/* --------------------------------------------------------- */
 
 function atualizarGridOS() {
 
@@ -272,9 +535,69 @@ function atualizarGridOS() {
 
 }
 
-/* ===================================================== */
-/* GRID                                                 */
-/* ===================================================== */
+/* --------------------------------------------------------- */
+/* atualizarTelaOSImediatamente                              */
+/* Atualiza toda a tela sem precisar sair e voltar.          */
+/* --------------------------------------------------------- */
+
+function atualizarTelaOSImediatamente() {
+
+    window.db.ordensServico =
+        listaOS;
+
+    carregarOS();
+
+    const viewPort =
+        document.getElementById(
+            'view-port'
+        );
+
+    if (
+        viewPort
+        &&
+        window.currentPage ===
+            'ordens-servico'
+    ) {
+
+        viewPort.innerHTML =
+            renderOrdensServico();
+
+        const campoBusca =
+            document.getElementById(
+                'busca-os'
+            );
+
+        if (campoBusca) {
+
+            campoBusca.value =
+                buscaOS
+                ||
+                '';
+        }
+
+        return;
+    }
+
+    if (
+        typeof window.navigate ===
+            'function'
+    ) {
+
+        window.navigate(
+            'ordens-servico',
+            false
+        );
+    }
+}
+
+/* ========================================================= */
+/* 09. GRADE / TABELA DAS ORDENS                           */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderGridOS */
+/* Filtra e renderiza a tabela de ordens. */
+/* --------------------------------------------------------- */
 
 function renderGridOS() {
 
@@ -287,7 +610,12 @@ function renderGridOS() {
     if (filtroOS !== 'TODAS') {
 
         dados = dados.filter(
-            o => o.status === filtroOS
+            o =>
+                statusExibicaoOS(
+                    o
+                )
+                ===
+                filtroOS
         );
 
     }
@@ -391,11 +719,14 @@ function renderGridOS() {
                             x => x.codigo === os.codigo
                         );
 
+                    const statusTela =
+                        statusExibicaoOS(
+                            os
+                        );
+
                     const atrasada =
-                        os.dataEntrega &&
-                        new Date(os.dataEntrega) < new Date() &&
-                        os.status !== 'Entregue' &&
-                        os.status !== 'Cancelada';
+                        statusTela ===
+                        'Atrasada';
 
                     return `
 
@@ -443,12 +774,12 @@ function renderGridOS() {
                                     display:inline-block;
                                     padding:3px 8px;
                                     border-radius:8px;
-                                    background:${corStatus(os.status)};
+                                    background:${corStatus(statusTela)};
                                     color:white;
                                     font-size:12px;
                                     white-space:nowrap;
                                 ">
-                                    ${os.status}
+                                    ${statusTela}
                                 </span>
 
                             </td>
@@ -552,9 +883,14 @@ function renderGridOS() {
 
 }
 
-/* ===================================================== */
-/* NOVA OS                                              */
-/* ===================================================== */
+/* ========================================================= */
+/* 10. NOVA ORDEM DE SERVIÇO                               */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* abrirNovaOS */
+/* Abre o formulário de uma nova ordem. */
+/* --------------------------------------------------------- */
 
 function abrirNovaOS() {
 
@@ -568,9 +904,14 @@ function abrirNovaOS() {
     });
 }
 
-/* ===================================================== */
-/* EDITAR OS                                            */
-/* ===================================================== */
+/* ========================================================= */
+/* 11. EDITAR ORDEM DE SERVIÇO                             */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* editarOS */
+/* Carrega uma ordem existente no formulário de edição. */
+/* --------------------------------------------------------- */
 
 function editarOS(index) {
 
@@ -588,27 +929,63 @@ function editarOS(index) {
     setTimeout(() => {
 
         document.getElementById('os-cliente').value =
-            os.cliente;
+            os.cliente || '';
 
         document.getElementById('os-data-entrega').value =
-            os.dataEntrega;
+            os.dataEntrega || '';
 
         document.getElementById('os-status').value =
-            os.status;
+            normalizarStatusOS(os.status);
 
-        document.getElementById('os-itens').innerHTML =
-            '';
+        document.getElementById('os-numero-orcamento').value =
+            os.numeroOrcamento || os.orcamentoCodigo || '';
 
-        os.itens.forEach(i =>
+        document.getElementById('os-observacao').value =
+            os.observacao || '';
+
+        const tipoOriginal =
+            os.tipoCriacao === 'orcamento'
+            ? 'orcamento'
+            : 'manual';
+
+        const radioTipo =
+            document.querySelector(
+                `input[name="tipo-os"][value="${tipoOriginal}"]`
+            );
+
+        if (radioTipo) {
+            radioTipo.checked = true;
+            alternarTipoOS();
+        }
+
+        if (tipoOriginal === 'orcamento') {
+
+            const seletorOrcamento =
+                document.getElementById('os-orcamento');
+
+            if (seletorOrcamento) {
+                seletorOrcamento.value =
+                    os.numeroOrcamento || os.orcamentoCodigo || '';
+            }
+        }
+
+        document.getElementById('os-itens').innerHTML = '';
+
+        (os.itens || []).forEach(i =>
             addItemOS(i)
         );
 
     }, 100);
 }
 
-/* ===================================================== */
-/* FORM                                                 */
-/* ===================================================== */
+/* ========================================================= */
+/* 12. FORMULÁRIO DA ORDEM DE SERVIÇO                      */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderFormOS */
+/* Monta o formulário manual ou baseado em orçamento. */
+/* --------------------------------------------------------- */
 
 function renderFormOS() {
 
@@ -747,7 +1124,7 @@ function renderFormOS() {
         <option>Aberta</option>
         <option>Em Produção</option>
         <option>Concluída</option>
-        <option>Entregue</option>
+        <option>Finalizada</option>
         <option>Cancelada</option>
 
     </select>
@@ -819,9 +1196,14 @@ function renderFormOS() {
     `;
 }
 
-/* ===================================================== */
-/* ITENS                                                */
-/* ===================================================== */
+/* ========================================================= */
+/* 13. ITENS DA ORDEM DE SERVIÇO                           */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* addItemOS */
+/* Adiciona uma linha de item à ordem de serviço. */
+/* --------------------------------------------------------- */
 
 function addItemOS(data = {}) {
 
@@ -907,6 +1289,11 @@ function addItemOS(data = {}) {
         .appendChild(div);
 }
 
+/* --------------------------------------------------------- */
+/* alternarTipoOS */
+/* Alterna entre OS manual e OS a partir de orçamento. */
+/* --------------------------------------------------------- */
+
 function alternarTipoOS() {
 
     const tipo =
@@ -921,6 +1308,11 @@ function alternarTipoOS() {
             ? 'block'
             : 'none';
 }
+
+/* --------------------------------------------------------- */
+/* carregarOrcamentoOS */
+/* Carrega dados do orçamento selecionado para a OS. */
+/* --------------------------------------------------------- */
 
 function carregarOrcamentoOS() {
 
@@ -993,11 +1385,146 @@ function carregarOrcamentoOS() {
 
 }
 
-/* ===================================================== */
-/* SALVAR OS                                            */
-/* ===================================================== */
+/* ========================================================= */
+/* 13.1 CRIAÇÃO AUTOMÁTICA A PARTIR DE ORÇAMENTO APROVADO  */
+/* ========================================================= */
 
-function salvarOS() {
+/* --------------------------------------------------------- */
+/* criarOSAutomaticaOrcamento                                */
+/* Replica a mesma base da criação "A partir do orçamento".  */
+/* --------------------------------------------------------- */
+
+window.criarOSAutomaticaOrcamento =
+async function (
+    orcamento
+) {
+
+    if (!orcamento) {
+        return null;
+    }
+
+    carregarOS();
+
+    /*
+        Proteção contra duplicidade:
+        um mesmo orçamento pode possuir somente uma OS criada
+        automaticamente / vinculada pelo número do orçamento.
+    */
+
+    const existente =
+        listaOS.find(
+            os =>
+                String(
+                    os.numeroOrcamento || ''
+                ).trim()
+                ===
+                String(
+                    orcamento.codigo || ''
+                ).trim()
+        );
+
+    if (existente) {
+
+        return existente;
+    }
+
+    const novaOS = {
+
+        codigo:
+            gerarCodigoOS(),
+
+        tipoCriacao:
+            'orcamento',
+
+        cliente:
+            orcamento.cliente
+            ||
+            '',
+
+        numeroOrcamento:
+            String(
+                orcamento.codigo
+                ||
+                ''
+            ),
+
+        observacao:
+            '',
+
+        dataEmissao:
+            new Date()
+                .toLocaleDateString(),
+
+        /*
+            Mantém a lógica atual da criação "A partir do orçamento":
+            a data de entrega continua sendo definida dentro da OS.
+        */
+
+        dataEntrega:
+            '',
+
+        status:
+            'Aberta',
+
+        itens:
+            (orcamento.itens || [])
+                .map(
+                    item => ({
+
+                        produto:
+                            item.produto
+                            ||
+                            item.descricao
+                            ||
+                            '',
+
+                        quantidade:
+                            item.quantidade
+                            ||
+                            item.qtd
+                            ||
+                            '',
+
+                        altura:
+                            item.altura
+                            ||
+                            '',
+
+                        largura:
+                            item.largura
+                            ||
+                            '',
+
+                        comprimento:
+                            item.comprimento
+                            ||
+                            ''
+                    })
+                )
+    };
+
+    listaOS.push(
+        novaOS
+    );
+
+    await salvarOSStorage();
+
+    carregarOS();
+
+    return novaOS;
+};
+
+
+/* ========================================================= */
+/* 14. SALVAR ORDEM DE SERVIÇO                             */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* salvarOS */
+/* Valida e salva uma ordem nova ou editada. */
+/* --------------------------------------------------------- */
+
+async function salvarOS() {
 
     const itens = [];
 
@@ -1034,6 +1561,16 @@ function salvarOS() {
 
         });
 
+    const statusAnterior =
+        osEditando !== null
+            ?
+            normalizarStatusOS(
+                listaOS[osEditando]
+                    ?.status
+            )
+            :
+            null;
+
     const os = {
 
         codigo:
@@ -1042,9 +1579,19 @@ function salvarOS() {
             : gerarCodigoOS(),
 
         tipoCriacao:
-            document.querySelector(
-                'input[name="tipo-os"]:checked'
-            )?.value || 'manual',
+            (
+                document.querySelector(
+                    'input[name="tipo-os"]:checked'
+                )?.value
+                ||
+                (
+                    osEditando !== null
+                    ? listaOS[osEditando]?.tipoCriacao
+                    : ''
+                )
+                ||
+                'manual'
+            ),
 
         cliente:
             document.getElementById(
@@ -1052,9 +1599,25 @@ function salvarOS() {
             ).value,
 
         numeroOrcamento:
-            document.getElementById(
-                'os-numero-orcamento'
-            ).value,
+            (
+                document.getElementById(
+                    'os-numero-orcamento'
+                ).value
+                ||
+                (
+                    osEditando !== null
+                    ? listaOS[osEditando]?.numeroOrcamento
+                    : ''
+                )
+                ||
+                (
+                    osEditando !== null
+                    ? listaOS[osEditando]?.orcamentoCodigo
+                    : ''
+                )
+                ||
+                ''
+            ),
 
         observacao:
             document.getElementById(
@@ -1072,9 +1635,11 @@ function salvarOS() {
             ).value,
 
         status:
-            document.getElementById(
-                'os-status'
-            ).value,
+            normalizarStatusOS(
+                document.getElementById(
+                    'os-status'
+                ).value
+            ),
 
         itens
 
@@ -1090,42 +1655,54 @@ function salvarOS() {
 
     }
 
-    salvarOSStorage();
+    await salvarOSStorage();
 
-    carregarOS();
+    /*
+        Quando a OS muda para Concluída, cria automaticamente
+        o Termo de Recebimento na tela de Recibos/Comprovantes.
+
+        A criação acontece apenas na transição para Concluída.
+        Assim, editar novamente uma OS já concluída não cria
+        termos duplicados.
+    */
+
+    if(
+        os.status === 'Concluída'
+        &&
+        statusAnterior !== 'Concluída'
+    ){
+
+        if(
+            typeof window.criarTermoServicoDaOS ===
+                'function'
+        ){
+
+            await window
+                .criarTermoServicoDaOS(
+                    os
+                );
+
+        }else{
+
+            console.error(
+                'Função criarTermoServicoDaOS não encontrada.'
+            );
+        }
+    }
 
     closeModal();
 
-    setTimeout(() => {
-
-        if (
-            typeof renderPage ===
-            'function'
-        ) {
-
-            renderPage();
-
-        }
-
-    }, 100);
-
-    window.db.ordensServico =
-        listaOS;
-
-    carregarOS();
-
-    setTimeout(() => {
-
-        renderOrdensServico();
-
-        renderPage?.();
-
-    }, 50);
+    atualizarTelaOSImediatamente();
 }
 
-/* ===================================================== */
-/* GERAR CÓDIGO                                         */
-/* ===================================================== */
+/* ========================================================= */
+/* 15. GERAR CÓDIGO DA OS                                  */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarCodigoOS */
+/* Gera o próximo código da ordem de serviço. */
+/* --------------------------------------------------------- */
 
 function gerarCodigoOS() {
 
@@ -1171,9 +1748,14 @@ function gerarCodigoOS() {
     return `OS-${String(proximo).padStart(4, '0')}`;
 }
 
-/* ===================================================== */
-/* VISUALIZAR OS                                        */
-/* ===================================================== */
+/* ========================================================= */
+/* 16. VISUALIZAR ORDEM DE SERVIÇO                         */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* visualizarOS */
+/* Abre a visualização completa da OS. */
+/* --------------------------------------------------------- */
 
 function visualizarOS(index) {
 
@@ -1577,9 +2159,14 @@ function visualizarOS(index) {
 
 }
 
-/* ===================================================== */
-/* IMPRESSÃO                                            */
-/* ===================================================== */
+/* ========================================================= */
+/* 17. IMPRESSÃO DA ORDEM DE SERVIÇO                       */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* imprimirOS */
+/* Monta e envia a ordem de serviço para impressão. */
+/* --------------------------------------------------------- */
 
 async function imprimirOS(index) {
 
@@ -2098,14 +2685,21 @@ window.onload = () => {
 
 }
 
-/* ===================================================== */
-/* EXCLUIR OS                                           */
-/* ===================================================== */
+/* ========================================================= */
+/* 18. EXCLUIR ORDEM DE SERVIÇO                            */
+/* ========================================================= */
 
-function excluirOS(index) {
+/* --------------------------------------------------------- */
+/* excluirOS */
+/* Exclui uma ordem de serviço após confirmação. */
+/* --------------------------------------------------------- */
+
+async function excluirOS(index) {
 
     const os =
         listaOS[index];
+
+    if (!os) return;
 
     const confirmar =
         confirm(
@@ -2128,16 +2722,14 @@ Deseja continuar?`
     window.db.ordensServico =
         listaOS;
 
-    salvarOSStorage();
+    await salvarOSStorage();
 
-    carregarOS();
-
-    renderPage?.();
+    atualizarTelaOSImediatamente();
 }
 
-/* ===================================================== */
-/* REGISTRO                                             */
-/* ===================================================== */
+/* ========================================================= */
+/* 19. REGISTRAR PÁGINA NO SISTEMA                         */
+/* ========================================================= */
 
 registerPage(
     'ordens-servico',

@@ -1,6 +1,42 @@
-/* ========================= */
-/* RELATÓRIOS */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - RELATORIOS.JS                               */
+/* ========================================================= */
+/*
+    RELATÓRIOS GERENCIAIS
+
+    Este arquivo reúne os relatórios administrativos,
+    financeiros, de estoque, orçamentos e DRE.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Renderizar o menu de relatórios
+    2. Abrir filtros por relatório
+    3. Gerar relatórios de fluxo financeiro
+    4. Gerar contas a pagar / receber / pagas / recebidas
+    5. Gerar relatórios de estoque e tipo de produto
+    6. Gerar relatório por tipo de conta
+    7. Gerar relatório de orçamentos
+    8. Calcular e renderizar a DRE
+    9. Comparar períodos
+    10. Montar cabeçalhos, KPIs, tabelas e rodapés
+    11. Controlar impressão profissional
+    12. Aplicar o CSS dos relatórios
+    13. Registrar a página "relatorios"
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma classificação da DRE, conta, filtro, valor,
+    status, cálculo ou comportamento foi modificado.
+*/
+
+
+/* ========================================================= */
+/* 01. TELA PRINCIPAL DE RELATÓRIOS                        */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderRelatorios */
+/* Renderiza o menu com todos os relatórios disponíveis. */
+/* --------------------------------------------------------- */
 
 window.renderRelatorios = function () {
 
@@ -129,9 +165,14 @@ ${cardRelatorio(
     return html;
 };
 
-/* ========================= */
-/* CARD */
-/* ========================= */
+/* ========================================================= */
+/* 02. CARD DO MENU DE RELATÓRIOS                          */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* cardRelatorio */
+/* Monta um card clicável do menu de relatórios. */
+/* --------------------------------------------------------- */
 
 window.cardRelatorio = function (
     emoji,
@@ -173,9 +214,14 @@ window.cardRelatorio = function (
 `;
 };
 
-/* ========================= */
-/* ABRIR RELATÓRIO */
-/* ========================= */
+/* ========================================================= */
+/* 03. ABRIR E CONFIGURAR RELATÓRIO                        */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* abrirRelatorio */
+/* Abre os filtros necessários ao relatório selecionado. */
+/* --------------------------------------------------------- */
 
 window.abrirRelatorio = function(tipo){
 
@@ -508,6 +554,11 @@ ${t}
 
 };
 
+/* --------------------------------------------------------- */
+/* gerarRelatorioOrcamentos */
+/* Gera o relatório de orçamentos. */
+/* --------------------------------------------------------- */
+
 window.gerarRelatorioOrcamentos = function(){
 
     let dados =
@@ -663,6 +714,11 @@ formatarMoeda(total),
         'resultado-relatorio'
     ).innerHTML = html;
 };
+
+/* --------------------------------------------------------- */
+/* gerarRelatorioTipoProduto */
+/* Gera o relatório por tipo de produto. */
+/* --------------------------------------------------------- */
 
 window.gerarRelatorioTipoProduto =
 function(){
@@ -827,9 +883,14 @@ formatarMoeda(total),
     ).innerHTML = html;
 };
 
-/* ========================= */
-/* CABEÇALHO IMPRESSÃO */
-/* ========================= */
+/* ========================================================= */
+/* 04. CABEÇALHO DE IMPRESSÃO                              */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* getCabecalhoRelatorio */
+/* Monta o cabeçalho utilizado no relatório correspondente. */
+/* --------------------------------------------------------- */
 
 window.getCabecalhoRelatorio = function (
 
@@ -880,9 +941,14 @@ window.getCabecalhoRelatorio = function (
 
 };
 
-/* ========================= */
-/* CARD KPI RELATÓRIOS */
-/* ========================= */
+/* ========================================================= */
+/* 05. CARD DE INDICADOR / KPI                             */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* cardIndicadorRelatorio */
+/* Monta um card de indicador para os relatórios. */
+/* --------------------------------------------------------- */
 
 window.cardIndicadorRelatorio =
 function(
@@ -922,9 +988,14 @@ function(
 `;
 };
 
-/* ========================= */
-/* TABELA PADRÃO */
-/* ========================= */
+/* ========================================================= */
+/* 06. TABELA PADRÃO DOS RELATÓRIOS                        */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* tabelaProfissionalRelatorio */
+/* Monta a tabela padrão dos relatórios. */
+/* --------------------------------------------------------- */
 
 window.tabelaProfissionalRelatorio =
 function(
@@ -972,9 +1043,14 @@ ${linhas}
 `;
 };
 
-/* ========================= */
-/* GERAR RELATÓRIO */
-/* ========================= */
+/* ========================================================= */
+/* 07. ROTEADOR DE GERAÇÃO DE RELATÓRIOS                   */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarRelatorio */
+/* Direciona para a função correspondente ao tipo escolhido. */
+/* --------------------------------------------------------- */
 
 window.gerarRelatorio = function(tipo){
 
@@ -1022,9 +1098,14 @@ window.gerarRelatorio = function(tipo){
     }
 };
 
-/* ========================= */
-/* FILTRO PERÍODO */
-/* ========================= */
+/* ========================================================= */
+/* 08. FILTRO DE PERÍODO                                   */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* filtrarPeriodoRelatorio */
+/* Filtra uma lista usando o período informado. */
+/* --------------------------------------------------------- */
 
 window.filtrarPeriodoRelatorio = function(
 
@@ -1068,9 +1149,14 @@ window.filtrarPeriodoRelatorio = function(
     });
 };
 
-/* ========================= */
-/* FLUXO DE CAIXA PREMIUM */
-/* ========================= */
+/* ========================================================= */
+/* 09. RELATÓRIO DE FLUXO DE CAIXA                         */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarFluxoCaixa */
+/* Gera o relatório de entradas, saídas e saldo. */
+/* --------------------------------------------------------- */
 
 window.gerarFluxoCaixa =
 function(){
@@ -1249,6 +1335,11 @@ onclick="imprimirRelatorio()">
         'resultado-relatorio'
     ).innerHTML = html;
 };
+/* --------------------------------------------------------- */
+/* gerarContasPagar */
+/* Gera o relatório de contas a pagar. */
+/* --------------------------------------------------------- */
+
 window.gerarContasPagar = function(){
 
     let dados =
@@ -1275,9 +1366,14 @@ window.gerarContasPagar = function(){
     );
 };
 
-/* ========================= */
-/* CONTAS A RECEBER */
-/* ========================= */
+/* ========================================================= */
+/* 10. RELATÓRIO DE CONTAS A RECEBER                       */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarContasReceber */
+/* Gera o relatório de contas a receber. */
+/* --------------------------------------------------------- */
 
 window.gerarContasReceber = function(){
 
@@ -1306,9 +1402,14 @@ window.gerarContasReceber = function(){
     );
 };
 
-/* ========================= */
-/* TABELA FINANCEIRO PREMIUM */
-/* ========================= */
+/* ========================================================= */
+/* 11. TABELA FINANCEIRA PROFISSIONAL                      */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderTabelaRelatorioFinanceiro */
+/* Renderiza a tabela utilizada nos relatórios financeiros. */
+/* --------------------------------------------------------- */
 
 window.renderTabelaRelatorioFinanceiro =
 function (
@@ -1499,9 +1600,14 @@ onclick="imprimirRelatorio()">
     ).innerHTML = html;
 };
 
-/* ========================= */
-/* CONTAS PAGAS */
-/* ========================= */
+/* ========================================================= */
+/* 12. RELATÓRIO DE CONTAS PAGAS                           */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarContasPagas */
+/* Gera o relatório de pagamentos realizados. */
+/* --------------------------------------------------------- */
 
 window.gerarContasPagas = function(){
 
@@ -1524,9 +1630,14 @@ window.gerarContasPagas = function(){
     );
 };
 
-/* ========================= */
-/* CONTAS RECEBIDAS */
-/* ========================= */
+/* ========================================================= */
+/* 13. RELATÓRIO DE CONTAS RECEBIDAS                       */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarContasRecebidas */
+/* Gera o relatório de recebimentos realizados. */
+/* --------------------------------------------------------- */
 
 window.gerarContasRecebidas = function(){
 
@@ -1549,9 +1660,14 @@ window.gerarContasRecebidas = function(){
     );
 };
 
-/* ========================= */
-/* ESTOQUE PREMIUM */
-/* ========================= */
+/* ========================================================= */
+/* 14. RELATÓRIO DE ESTOQUE                                */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarGiroEstoque */
+/* Gera o relatório de estoque. */
+/* --------------------------------------------------------- */
 
 window.gerarGiroEstoque =
 function(){
@@ -1722,9 +1838,14 @@ onclick="imprimirRelatorio()">
         'resultado-relatorio'
     ).innerHTML = html;
 };
-/* ========================= */
-/* TIPO CONTA PREMIUM */
-/* ========================= */
+/* ========================================================= */
+/* 15. RELATÓRIO POR TIPO DE CONTA                         */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarTipoConta */
+/* Gera o relatório filtrado por tipo de conta. */
+/* --------------------------------------------------------- */
 
 window.gerarTipoConta =
 function(){
@@ -1901,9 +2022,14 @@ onclick="imprimirRelatorio()">
     document.getElementById(
         'resultado-relatorio'
     ).innerHTML = html;
-};/* ========================= */
-/* DRE PROFISSIONAL NOVO */
-/* ========================= */
+};/* ========================================================= */
+/* 16. DRE PROFISSIONAL                                    */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* gerarDRE */
+/* Executa a geração completa da DRE. */
+/* --------------------------------------------------------- */
 
 window.gerarDRE = function(){
 
@@ -1959,9 +2085,14 @@ window.gerarDRE = function(){
         });
 
 
-    /* ========================= */
-    /* AUXILIARES                */
-    /* ========================= */
+    /* ========================================================= */
+    /* 16.1 FUNÇÕES AUXILIARES DA DRE                          */
+    /* ========================================================= */
+
+    /* --------------------------------------------------------- */
+    /* numDRE */
+    /* Converte valores numéricos usados nos cálculos da DRE. */
+    /* --------------------------------------------------------- */
 
     function numDRE(valor){
 
@@ -2010,6 +2141,11 @@ window.gerarDRE = function(){
             : 0;
     }
 
+    /* --------------------------------------------------------- */
+    /* escDRE */
+    /* Escapa textos exibidos na DRE. */
+    /* --------------------------------------------------------- */
+
     function escDRE(valor){
         return String(valor ?? '')
             .replace(/&/g,'&amp;')
@@ -2018,6 +2154,11 @@ window.gerarDRE = function(){
             .replace(/"/g,'&quot;')
             .replace(/'/g,'&#039;');
     }
+
+    /* --------------------------------------------------------- */
+    /* percentualDRE */
+    /* Calcula percentuais utilizados nos indicadores da DRE. */
+    /* --------------------------------------------------------- */
 
     function percentualDRE(valor, base){
         if(!(base > 0)) return '0,0%';
@@ -2034,6 +2175,11 @@ window.gerarDRE = function(){
         ) + '%';
     }
 
+    /* --------------------------------------------------------- */
+    /* dataBRDRE */
+    /* Formata data para exibição na DRE. */
+    /* --------------------------------------------------------- */
+
     function dataBRDRE(data){
         if(!data) return '-';
 
@@ -2047,11 +2193,21 @@ window.gerarDRE = function(){
         return `${partes[2]}/${partes[1]}/${partes[0]}`;
     }
 
+    /* --------------------------------------------------------- */
+    /* dataISODRE */
+    /* Normaliza uma data para formato ISO. */
+    /* --------------------------------------------------------- */
+
     function dataISODRE(data){
         return new Date(
             `${data}T12:00:00`
         );
     }
+
+    /* --------------------------------------------------------- */
+    /* isoDRE */
+    /* Converte Date para data ISO usada na DRE. */
+    /* --------------------------------------------------------- */
 
     function isoDRE(data){
         return [
@@ -2060,6 +2216,11 @@ window.gerarDRE = function(){
             String(data.getDate()).padStart(2,'0')
         ].join('-');
     }
+
+    /* --------------------------------------------------------- */
+    /* normalizarTipoContaDRE */
+    /* Normaliza o texto do tipo de conta para classificação. */
+    /* --------------------------------------------------------- */
 
     function normalizarTipoContaDRE(valor){
         return String(valor || '')
@@ -2122,6 +2283,11 @@ window.gerarDRE = function(){
             ])
     };
 
+    /* --------------------------------------------------------- */
+    /* categoriaDespesaDRE */
+    /* Classifica o tipo de conta na categoria correspondente da DRE. */
+    /* --------------------------------------------------------- */
+
     function categoriaDespesaDRE(item){
 
         const tipo =
@@ -2162,6 +2328,11 @@ window.gerarDRE = function(){
         return 'Outras despesas';
     }
 
+    /* --------------------------------------------------------- */
+    /* somarItensDRE */
+    /* Soma valores de um conjunto de itens da DRE. */
+    /* --------------------------------------------------------- */
+
     function somarItensDRE(lista){
         return (lista || [])
             .reduce(
@@ -2170,6 +2341,11 @@ window.gerarDRE = function(){
                 0
             );
     }
+
+    /* --------------------------------------------------------- */
+    /* calcularResumoDRE */
+    /* Calcula o resumo financeiro do período da DRE. */
+    /* --------------------------------------------------------- */
 
     function calcularResumoDRE(lista){
 
@@ -2444,9 +2620,9 @@ window.gerarDRE = function(){
         ? '#f0fdf4'
         : '#fef2f2';
 
-    /* ========================= */
-    /* COMPARATIVO ANTERIOR      */
-    /* ========================= */
+    /* ========================================================= */
+    /* 16.2 COMPARATIVO COM PERÍODO ANTERIOR                   */
+    /* ========================================================= */
 
     let comparativo = null;
 
@@ -2541,6 +2717,11 @@ window.gerarDRE = function(){
         };
     }
 
+    /* --------------------------------------------------------- */
+    /* variacaoDRE */
+    /* Calcula a variação entre período atual e anterior. */
+    /* --------------------------------------------------------- */
+
     function variacaoDRE(
         atual,
         anterior,
@@ -2589,6 +2770,11 @@ window.gerarDRE = function(){
                 : '•'
         };
     }
+
+    /* --------------------------------------------------------- */
+    /* cardKPIDRE */
+    /* Monta um KPI da DRE. */
+    /* --------------------------------------------------------- */
 
     function cardKPIDRE(
         titulo,
@@ -2661,6 +2847,11 @@ window.gerarDRE = function(){
         `;
     }
 
+    /* --------------------------------------------------------- */
+    /* linhaDRE */
+    /* Monta uma linha detalhada do demonstrativo. */
+    /* --------------------------------------------------------- */
+
     function linhaDRE(
         titulo,
         valor,
@@ -2717,6 +2908,11 @@ window.gerarDRE = function(){
         `;
     }
 
+    /* --------------------------------------------------------- */
+    /* barraIndicadorDRE */
+    /* Monta a barra visual de indicador da DRE. */
+    /* --------------------------------------------------------- */
+
     function barraIndicadorDRE(
         titulo,
         valor,
@@ -2766,6 +2962,11 @@ window.gerarDRE = function(){
         </div>
         `;
     }
+
+    /* --------------------------------------------------------- */
+    /* cardComparativoDRE */
+    /* Monta um card do comparativo de períodos. */
+    /* --------------------------------------------------------- */
 
     function cardComparativoDRE(
         titulo,
@@ -3508,9 +3709,14 @@ window.gerarDRE = function(){
 };
 
 
-/* ========================= */
-/* LOGO EMPRESA */
-/* ========================= */
+/* ========================================================= */
+/* 17. LOGO DO RELATÓRIO                                   */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* logoRelatorio */
+/* Retorna o bloco da logo utilizado nos relatórios. */
+/* --------------------------------------------------------- */
 
 window.logoRelatorio = function(){
 
@@ -3528,9 +3734,9 @@ window.logoRelatorio = function(){
 `;
 
 };
-/* ========================= */
-/* CABEÇALHO PROFISSIONAL */
-/* ========================= */
+/* ========================================================= */
+/* 18. CABEÇALHO PROFISSIONAL                              */
+/* ========================================================= */
 
 window.getCabecalhoRelatorio =
 function(titulo){
@@ -3597,9 +3803,14 @@ function(titulo){
 `;
 };
 
-/* ========================= */
-/* RODAPÉ PROFISSIONAL */
-/* ========================= */
+/* ========================================================= */
+/* 19. RODAPÉ PROFISSIONAL                                 */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* getRodapeRelatorio */
+/* Monta o rodapé profissional dos relatórios. */
+/* --------------------------------------------------------- */
 
 window.getRodapeRelatorio =
 function(){
@@ -3639,9 +3850,14 @@ function(){
 </div>
 `;
 };
-/* ========================= */
-/* IMPRIMIR PROFISSIONAL */
-/* ========================= */
+/* ========================================================= */
+/* 20. IMPRESSÃO PROFISSIONAL                              */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* imprimirRelatorio */
+/* Imprime o relatório gerado. */
+/* --------------------------------------------------------- */
 
 window.imprimirRelatorio =
 async function(){
@@ -3674,9 +3890,9 @@ async function(){
 
 const conteudoCorrigido =
     conteudo;
-    /* ========================= */
-    /* HTML FINAL */
-    /* ========================= */
+    /* ========================================================= */
+    /* 21. FINALIZAÇÃO DO HTML DOS RELATÓRIOS                  */
+    /* ========================================================= */
 
     const html = `
 
@@ -3848,9 +4064,9 @@ window.onload=()=>{
     }
 
 };
-/* ========================= */
-/* CSS GLOBAL RELATÓRIOS */
-/* ========================= */
+/* ========================================================= */
+/* 22. CSS GLOBAL DOS RELATÓRIOS                           */
+/* ========================================================= */
 
 window.addEventListener(
 'load',
@@ -3872,9 +4088,9 @@ window.addEventListener(
 
     style.innerHTML = `
 
-/* ========================= */
-/* BASE */
-/* ========================= */
+/* ========================================================= */
+/* 22.1 BASE DO CSS                                        */
+/* ========================================================= */
 
 body{
 
@@ -3892,9 +4108,9 @@ body{
     print-color-adjust:exact !important;
 }
 
-/* ========================= */
-/* AREA RELATORIO */
-/* ========================= */
+/* ========================================================= */
+/* 22.2 ÁREA DO RELATÓRIO                                  */
+/* ========================================================= */
 
 .report-container{
 
@@ -3916,9 +4132,9 @@ body{
     overflow:hidden;
 }
 
-/* ========================= */
-/* HEADER */
-/* ========================= */
+/* ========================================================= */
+/* 22.3 CABEÇALHO VISUAL                                   */
+/* ========================================================= */
 
 .report-header{
 
@@ -3963,9 +4179,9 @@ body{
     font-size:14px;
 }
 
-/* ========================= */
-/* TARJAS / SEÇÕES */
-/* ========================= */
+/* ========================================================= */
+/* 22.4 TARJAS E SEÇÕES                                    */
+/* ========================================================= */
 
 .report-section-title{
 
@@ -3984,9 +4200,9 @@ body{
     margin-bottom:24px;
 }
 
-/* ========================= */
-/* TABELA */
-/* ========================= */
+/* ========================================================= */
+/* 22.5 TABELAS                                            */
+/* ========================================================= */
 
 #print-area table{
 
@@ -4043,9 +4259,9 @@ body{
     background:#eef2ff;
 }
 
-/* ========================= */
-/* CARDS */
-/* ========================= */
+/* ========================================================= */
+/* 22.6 CARDS                                              */
+/* ========================================================= */
 
 .report-card{
 
@@ -4068,9 +4284,9 @@ body{
         );
 }
 
-/* ========================= */
-/* TOTAL */
-/* ========================= */
+/* ========================================================= */
+/* 22.7 TOTAIS                                             */
+/* ========================================================= */
 
 .report-total{
 
@@ -4091,9 +4307,9 @@ body{
     margin-top:30px;
 }
 
-/* ========================= */
-/* FOOTER */
-/* ========================= */
+/* ========================================================= */
+/* 22.8 RODAPÉ                                             */
+/* ========================================================= */
 
 .report-footer{
 
@@ -4129,9 +4345,9 @@ body{
     color:#4b5563;
 }
 
-/* ========================= */
-/* BOTÃO */
-/* ========================= */
+/* ========================================================= */
+/* 22.9 BOTÕES                                             */
+/* ========================================================= */
 
 .report-print-btn{
 
@@ -4150,9 +4366,9 @@ body{
     cursor:pointer;
 }
 
-/* ========================= */
-/* IMPRESSÃO */
-/* ========================= */
+/* ========================================================= */
+/* 22.10 REGRAS DE IMPRESSÃO                               */
+/* ========================================================= */
 
 @media print{
 
@@ -4223,9 +4439,9 @@ body{
 
 });
 
-/* ========================= */
-/* MENU */
-/* ========================= */
+/* ========================================================= */
+/* 23. MENU / ATALHO DE RELATÓRIOS                         */
+/* ========================================================= */
 
 if(
 
@@ -4241,9 +4457,14 @@ if(
     );
 }
 
-/* ========================= */
-/* NAVEGAÇÃO MENU */
-/* ========================= */
+/* ========================================================= */
+/* 24. NAVEGAÇÃO DO MENU                                   */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* irRelatorios */
+/* Retorna para a tela principal de relatórios. */
+/* --------------------------------------------------------- */
 
 window.irRelatorios = function(){
 
@@ -4252,9 +4473,9 @@ window.irRelatorios = function(){
     );
 };
 
-/* ========================= */
-/* REGISTRAR */
-/* ========================= */
+/* ========================================================= */
+/* 25. REGISTRAR PÁGINA NO SISTEMA                         */
+/* ========================================================= */
 
 registerPage(
     'relatorios',

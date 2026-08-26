@@ -1,13 +1,66 @@
-/* ========================= */
-/* PAGINAÇÃO CLIENTES */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - CLIENTES.JS                                 */
+/* ========================================================= */
+/*
+    CADASTRO, CONSULTA E GERENCIAMENTO DE CLIENTES
+
+    Este arquivo controla toda a tela de Clientes do Dominus ERP.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Controlar a paginação da listagem
+    2. Renderizar a tabela de clientes
+    3. Cadastrar novos clientes
+    4. Salvar novos registros no banco
+    5. Visualizar dados em modo somente leitura
+    6. Editar clientes existentes
+    7. Excluir clientes
+    8. Abrir a consulta avançada
+    9. Filtrar clientes na consulta
+    10. Integrar novo cliente ao fluxo de Orçamentos
+    11. Registrar a página "clientes" no sistema
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma regra, campo, índice, filtro ou lógica foi modificada.
+*/
+
+
+/* ========================================================= */
+/* 01. CONTROLE DE PAGINAÇÃO DOS CLIENTES                   */
+/* ========================================================= */
+/*
+    paginaClientes:
+        página atualmente exibida.
+
+    limiteClientes:
+        quantidade máxima de registros por página.
+
+    Esses valores são usados tanto na renderização quanto
+    nos botões Próxima / Voltar.
+*/
 
 window.paginaClientes = 1;
 window.limiteClientes = 15;
 
-/* ========================= */
-/* CLIENTES */
-/* ========================= */
+/* ========================================================= */
+/* 02. RENDERIZAÇÃO DA PÁGINA DE CLIENTES                   */
+/* ========================================================= */
+/*
+    renderClientes()
+
+    Monta a tela principal com:
+    - título
+    - botão Consultar Cliente
+    - botão Novo Cliente
+    - tabela de registros
+    - ações Visualizar / Editar / Excluir
+    - controles de paginação
+*/
+
+/* --------------------------------------------------------- */
+/* renderClientes */
+/* Renderiza a tabela da página atual e os controles de navegação. */
+/* --------------------------------------------------------- */
 
 window.renderClientes = function () {
 
@@ -37,7 +90,7 @@ const clientesTela =
     gap:20px;
 ">
 
-    <!-- TOPO -->
+    <!-- 02.1 CABEÇALHO E AÇÕES DA PÁGINA -->
 
     <div style="
         display:flex;
@@ -92,7 +145,7 @@ const clientesTela =
 
     </div>
 
-    <!-- TABELA -->
+    <!-- 02.2 TABELA PRINCIPAL DE CLIENTES -->
 
     <div style="
         overflow:auto;
@@ -243,7 +296,7 @@ const clientesTela =
         </table>
 
     </div>
-<!-- PAGINAÇÃO -->
+<!-- 02.3 CONTROLES DE PAGINAÇÃO -->
 
 <div style="
     display:flex;
@@ -294,10 +347,22 @@ Próxima ➡
 };
 
 
-/* ========================= */
-/* PAGINAÇÃO CLIENTES */
-/* ========================= */
+/* ========================================================= */
+/* 03. FUNÇÕES DE NAVEGAÇÃO DA PAGINAÇÃO                    */
+/* ========================================================= */
+/*
+    proximaPaginaClientes()
+        avança uma página quando ainda existem registros.
 
+    paginaAnteriorClientes()
+        retorna uma página quando a página atual é maior que 1.
+*/
+
+
+/* --------------------------------------------------------- */
+/* proximaPaginaClientes */
+/* Calcula o total de páginas e avança quando houver próxima página. */
+/* --------------------------------------------------------- */
 
 window.proximaPaginaClientes = function(){
 
@@ -326,6 +391,11 @@ window.proximaPaginaClientes = function(){
 
 
 
+/* --------------------------------------------------------- */
+/* paginaAnteriorClientes */
+/* Volta uma página quando a página atual for maior que 1. */
+/* --------------------------------------------------------- */
+
 window.paginaAnteriorClientes = function(){
 
 
@@ -345,9 +415,35 @@ window.paginaAnteriorClientes = function(){
 
 };
 
-/* ========================= */
-/* NOVO CLIENTE */
-/* ========================= */
+/* ========================================================= */
+/* 04. CADASTRO DE NOVO CLIENTE                             */
+/* ========================================================= */
+/*
+    abrirNovoCliente(dados)
+
+    Abre o formulário reutilizado para cadastro,
+    visualização e edição.
+
+    Campos disponíveis:
+    - código
+    - nome / razão social
+    - CPF / CNPJ
+    - RG / IE
+    - telefone
+    - e-mail
+    - CEP
+    - endereço
+    - número
+    - bairro
+    - cidade
+    - estado
+    - observações
+*/
+
+/* --------------------------------------------------------- */
+/* abrirNovoCliente */
+/* Monta o formulário usado para cadastro de cliente. */
+/* --------------------------------------------------------- */
 
 window.abrirNovoCliente = function (
     dados = {}
@@ -375,7 +471,7 @@ window.abrirNovoCliente = function (
         gap:15px;
     ">
 
-        <!-- CÓDIGO -->
+        <!-- 04.1 CÓDIGO -->
 
         <div>
 
@@ -390,7 +486,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- NOME -->
+        <!-- 04.2 NOME / RAZÃO SOCIAL -->
 
         <div>
 
@@ -404,7 +500,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- CPF CNPJ -->
+        <!-- 04.3 CPF / CNPJ -->
 
         <div>
 
@@ -418,7 +514,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- RG IE -->
+        <!-- 04.4 RG / IE -->
 
         <div>
 
@@ -432,7 +528,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- TELEFONE -->
+        <!-- 04.5 TELEFONE -->
 
         <div>
 
@@ -446,7 +542,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- EMAIL -->
+        <!-- 04.6 E-MAIL -->
 
         <div>
 
@@ -459,7 +555,7 @@ window.abrirNovoCliente = function (
                 value="${dados.email || ''}">
 
         </div>
-                <!-- CEP -->
+                <!-- 04.7 CEP -->
 
         <div>
 
@@ -473,7 +569,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- ENDEREÇO -->
+        <!-- 04.8 ENDEREÇO -->
 
         <div>
 
@@ -487,7 +583,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- NÚMERO -->
+        <!-- 04.9 NÚMERO -->
 
         <div>
 
@@ -501,7 +597,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- BAIRRO -->
+        <!-- 04.10 BAIRRO -->
 
         <div>
 
@@ -515,7 +611,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- CIDADE -->
+        <!-- 04.11 CIDADE -->
 
         <div>
 
@@ -529,7 +625,7 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- ESTADO -->
+        <!-- 04.12 ESTADO -->
 
         <div>
 
@@ -545,7 +641,7 @@ window.abrirNovoCliente = function (
 
     </div>
 
-    <!-- OBS -->
+    <!-- 04.13 OBSERVAÇÕES -->
 
     <div>
 
@@ -584,9 +680,23 @@ window.abrirNovoCliente = function (
     });
 };
 
-/* ========================= */
-/* SALVAR CLIENTE */
-/* ========================= */
+/* ========================================================= */
+/* 05. SALVAR NOVO CLIENTE                                  */
+/* ========================================================= */
+/*
+    salvarNovoCliente()
+
+    Valida o nome, monta o objeto cliente,
+    adiciona em db.clientes e salva o banco.
+
+    Também preserva a integração existente com o fluxo
+    de Orçamentos quando window.voltarParaOrcamento estiver ativo.
+*/
+
+/* --------------------------------------------------------- */
+/* salvarNovoCliente */
+/* Valida, cria e adiciona um novo cliente em db.clientes. */
+/* --------------------------------------------------------- */
 
 window.salvarNovoCliente = function () {
 
@@ -709,7 +819,14 @@ if(window.voltarParaOrcamento){
     window.voltarParaOrcamento = false;
 
 
-    // reabre o orçamento
+    /* ===================================================== */
+    /* 05.1 RETORNAR AO ORÇAMENTO EM ANDAMENTO              */
+    /* ===================================================== */
+    /*
+        Quando o cliente foi criado a partir do orçamento,
+        reabre o modal e preenche automaticamente o cliente
+        recém-cadastrado.
+    */
     abrirModalOrcamento();
 
 
@@ -741,9 +858,20 @@ else{
 }
 };
 
-/* ========================= */
-/* VISUALIZAR */
-/* ========================= */
+/* ========================================================= */
+/* 06. VISUALIZAR CLIENTE                                   */
+/* ========================================================= */
+/*
+    visualizarCliente(idx)
+
+    Reutiliza o formulário de cliente, bloqueia os campos
+    e transforma o botão principal em "Fechar".
+*/
+
+/* --------------------------------------------------------- */
+/* visualizarCliente */
+/* Abre os dados em modo somente leitura. */
+/* --------------------------------------------------------- */
 
 window.visualizarCliente = function (idx) {
 
@@ -790,9 +918,20 @@ window.visualizarCliente = function (idx) {
     }
 };
 
-/* ========================= */
-/* EDITAR */
-/* ========================= */
+/* ========================================================= */
+/* 07. EDITAR CLIENTE                                       */
+/* ========================================================= */
+/*
+    editarCliente(idx)
+
+    Reabre o formulário preenchido e substitui a ação
+    do botão de confirmação para atualizar o registro.
+*/
+
+/* --------------------------------------------------------- */
+/* editarCliente */
+/* Permite alterar os dados do cliente selecionado. */
+/* --------------------------------------------------------- */
 
 window.editarCliente = function (idx) {
 
@@ -880,9 +1019,20 @@ window.editarCliente = function (idx) {
     };
 };
 
-/* ========================= */
-/* EXCLUIR */
-/* ========================= */
+/* ========================================================= */
+/* 08. EXCLUIR CLIENTE                                      */
+/* ========================================================= */
+/*
+    excluirCliente(idx)
+
+    Solicita confirmação, remove o registro do array,
+    salva o banco e atualiza a tela.
+*/
+
+/* --------------------------------------------------------- */
+/* excluirCliente */
+/* Remove o cliente selecionado após confirmação. */
+/* --------------------------------------------------------- */
 
 window.excluirCliente = function (
     idx
@@ -907,9 +1057,20 @@ window.excluirCliente = function (
     );
 };
 
-/* ========================= */
-/* CONSULTA */
-/* ========================= */
+/* ========================================================= */
+/* 09. CONSULTA DE CLIENTES                                 */
+/* ========================================================= */
+/*
+    abrirConsultaCliente()
+
+    Abre um modal de consulta com campos de filtro e
+    uma área própria para exibir os resultados.
+*/
+
+/* --------------------------------------------------------- */
+/* abrirConsultaCliente */
+/* Abre o modal de pesquisa de clientes. */
+/* --------------------------------------------------------- */
 
 window.abrirConsultaCliente =
 function () {
@@ -1028,9 +1189,21 @@ function () {
     });
 };
 
-/* ========================= */
-/* FILTRAR */
-/* ========================= */
+/* ========================================================= */
+/* 10. FILTRAR RESULTADOS DA CONSULTA                      */
+/* ========================================================= */
+/*
+    filtrarClientesConsulta()
+
+    Filtra os registros conforme os campos usados
+    pela lógica atual e monta a tabela de resultados
+    com ações de Visualizar, Editar e Excluir.
+*/
+
+/* --------------------------------------------------------- */
+/* filtrarClientesConsulta */
+/* Aplica os filtros da consulta e renderiza os resultados. */
+/* --------------------------------------------------------- */
 
 window.filtrarClientesConsulta =
 function () {
@@ -1258,9 +1431,17 @@ document.getElementById(
 ).innerHTML = html;
 };
 
-/* ========================= */
-/* REGISTRAR */
-/* ========================= */
+/* ========================================================= */
+/* 11. REGISTRAR PÁGINA NO SISTEMA                         */
+/* ========================================================= */
+/*
+    Registra a tela com o nome:
+
+        clientes
+
+    Assim, navigate('clientes') consegue renderizar
+    esta página dentro do view-port.
+*/
 
 registerPage(
     'clientes',

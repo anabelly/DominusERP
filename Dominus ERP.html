@@ -254,48 +254,161 @@
 
     <script>
 
-        /* ========================= */
-        /* SE JA ESTIVER LOGADO */
-        /* ========================= */
+        /* =================================================== */
+        /* DOMINUS ERP - LOGIN MULTIUSUÁRIO                    */
+        /* =================================================== */
+
+        const API_URL_LOGIN =
+            'http://DESKTOP-FN92I64:3000';
+
+        const MASTER_DOMINUS = {
+
+            id:
+                'master-admin',
+
+            usuario:
+                'admin',
+
+            tipo:
+                'administrador',
+
+            permissoes:
+                [],
+
+            master:
+                true
+        };
+
+
+        /* =================================================== */
+        /* SALVAR SESSÃO                                       */
+        /* =================================================== */
+
+        function salvarSessaoDominus(
+            usuario
+        ){
+
+            const sessao = {
+
+                id:
+                    usuario.id,
+
+                usuario:
+                    usuario.usuario,
+
+                tipo:
+                    usuario.tipo,
+
+                permissoes:
+                    Array.isArray(
+                        usuario.permissoes
+                    )
+                    ?
+                    usuario.permissoes
+                    :
+                    [],
+
+                master:
+                    usuario.master ===
+                    true
+            };
+
+            sessionStorage.setItem(
+                'dominus_logado',
+                'true'
+            );
+
+            sessionStorage.setItem(
+                'dominus_usuario',
+                JSON.stringify(
+                    sessao
+                )
+            );
+        }
+
+
+        /* =================================================== */
+        /* SESSÃO ANTIGA                                       */
+        /* =================================================== */
+        /*
+            Compatibilidade com a versão anterior do sistema.
+
+            Se existia apenas dominus_logado=true sem o objeto
+            do usuário, trata a sessão antiga como o master.
+        */
 
         if(
-
             sessionStorage.getItem(
                 'dominus_logado'
             )
-
             ===
-
             'true'
-
         ){
+
+            const usuarioSessao =
+                sessionStorage.getItem(
+                    'dominus_usuario'
+                );
+
+            if(
+                !usuarioSessao
+            ){
+
+                salvarSessaoDominus(
+                    MASTER_DOMINUS
+                );
+            }
 
             window.location.href =
                 'index.html';
         }
 
-        /* ========================= */
-        /* LOGIN */
-        /* ========================= */
 
-        function logar(){
+        /* =================================================== */
+        /* EXIBIR ERRO                                         */
+        /* =================================================== */
 
-            const usuario =
-
-                document
-                .getElementById('user')
-                .value
-                .trim();
-
-            const senha =
-
-                document
-                .getElementById('pass')
-                .value
-                .trim();
+        function mostrarErroLogin(
+            mensagem
+        ){
 
             const erro =
+                document.getElementById(
+                    'erroLogin'
+                );
 
+            erro.innerText =
+                mensagem
+                ||
+                'Usuário ou senha inválidos.';
+
+            erro.style.display =
+                'block';
+        }
+
+
+        /* =================================================== */
+        /* LOGIN                                               */
+        /* =================================================== */
+
+        async function logar(){
+
+            const usuarioDigitado =
+                document
+                .getElementById(
+                    'user'
+                )
+                .value
+                .trim();
+
+            const senhaDigitada =
+                document
+                .getElementById(
+                    'pass'
+                )
+                .value;
+
+            const erro =
                 document.getElementById(
                     'erroLogin'
                 );
@@ -303,26 +416,40 @@
             erro.style.display =
                 'none';
 
-            /* ========================= */
-            /* CREDENCIAIS */
-            /* ========================= */
-
             if(
-
-                usuario === 'admin'
-
-                &&
-
-                senha === 'admin'
-
+                !usuarioDigitado
+                ||
+                !senhaDigitada
             ){
 
-                sessionStorage.setItem(
+                mostrarErroLogin(
+                    'Informe o usuário e a senha.'
+                );
 
-                    'dominus_logado',
+                return;
+            }
 
-                    'true'
 
+            /* =============================================== */
+            /* ADMINISTRADOR MASTER                            */
+            /* =============================================== */
+            /*
+                O login padrão atual continua existindo e não
+                depende dos usuários adicionais cadastrados.
+            */
+
+            if(
+                usuarioDigitado
+                    .toLowerCase()
+                ===
+                'admin'
+                &&
+                senhaDigitada ===
+                'admin'
+            ){
+
+                salvarSessaoDominus(
+                    MASTER_DOMINUS
                 );
 
                 window.location.href =
@@ -331,8 +458,122 @@
                 return;
             }
 
-            erro.style.display =
-                'block';
+
+            /* =============================================== */
+            /* USUÁRIOS CADASTRADOS NO BANCO                  */
+            /* =============================================== */
+
+            try{
+
+                const response =
+                    await fetch(
+                        `${API_URL_LOGIN}/db`
+                    );
+
+                if(
+                    !response.ok
+                ){
+
+                    throw new Error(
+                        `HTTP ${response.status}`
+                    );
+                }
+
+                const banco =
+                    await response.json();
+
+                const usuarios =
+                    Array.isArray(
+                        banco.usuariosSistema
+                    )
+                    ?
+                    banco.usuariosSistema
+                    :
+                    [];
+
+                const encontrado =
+                    usuarios.find(
+                        item =>
+                            String(
+                                item?.usuario || ''
+                            )
+                            .trim()
+                            .toLowerCase()
+                            ===
+                            usuarioDigitado
+                                .toLowerCase()
+                            &&
+                            String(
+                                item?.senha || ''
+                            )
+                            ===
+                            String(
+                                senhaDigitada
+                            )
+                    );
+
+                if(
+                    !encontrado
+                ){
+
+                    mostrarErroLogin(
+                        'Usuário ou senha inválidos.'
+                    );
+
+                    return;
+                }
+
+                salvarSessaoDominus({
+
+                    id:
+                        encontrado.id,
+
+                    usuario:
+                        encontrado.usuario,
+
+                    tipo:
+                        encontrado.tipo ===
+                            'administrador'
+                            ?
+                            'administrador'
+                            :
+                            'funcionario',
+
+                    permissoes:
+                        encontrado.tipo ===
+                            'administrador'
+                            ?
+                            []
+                            :
+                            (
+                                Array.isArray(
+                                    encontrado.permissoes
+                                )
+                                ?
+                                encontrado.permissoes
+                                :
+                                []
+                            ),
+
+                    master:
+                        false
+                });
+
+                window.location.href =
+                    'index.html';
+
+            }
+            catch(erroLogin){
+
+                console.error(
+                    'Erro ao consultar usuários:',
+                    erroLogin
+                );
+
+                mostrarErroLogin(
+                    'Não foi possível acessar o banco do sistema.'
+                );
+            }
         }
 
     </script>

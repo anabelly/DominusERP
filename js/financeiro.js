@@ -1,6 +1,47 @@
-/* ========================= */
-/* FINANCEIRO */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - FINANCEIRO.JS                               */
+/* ========================================================= */
+/*
+    FLUXO FINANCEIRO - CONTAS A PAGAR E A RECEBER
+
+    Este arquivo controla toda a tela de Fluxo Financeiro
+    do Dominus ERP.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Renderizar contas a pagar e a receber por semana
+    2. Controlar navegação entre semanas
+    3. Exibir status Pendente / Vencido / Pago / Recebido
+    4. Cadastrar contas a pagar
+    5. Cadastrar contas a receber
+    6. Trabalhar com recorrências de contas a pagar
+    7. Dar baixa em pagamentos e recebimentos
+    8. Editar e excluir lançamentos
+    9. Consultar e filtrar lançamentos
+    10. Operar baixa/edição/exclusão dentro da consulta
+    11. Salvar alterações no banco
+    12. Registrar a página "financeiro" no sistema
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma regra, valor, categoria, recorrência, filtro,
+    status ou lógica foi modificada.
+*/
+
+
+/* ========================================================= */
+/* 01. RENDERIZAÇÃO DO FLUXO FINANCEIRO                     */
+/* ========================================================= */
+/*
+    renderFinanceiro()
+
+    Monta a tela principal com as contas a pagar e receber
+    da semana selecionada.
+*/
+
+/* --------------------------------------------------------- */
+/* renderFinanceiro */
+/* Renderiza o fluxo financeiro semanal. */
+/* --------------------------------------------------------- */
 
 window.renderFinanceiro = function () {
 
@@ -15,6 +56,10 @@ window.renderFinanceiro = function () {
 if (window.financeiroSemanaOffsetReceber === undefined) {
     window.financeiroSemanaOffsetReceber = 0;
 }
+    /* ===================================================== */
+    /* 01.2 GERAR PERÍODO DA SEMANA                       */
+    /* ===================================================== */
+
 function gerarPeriodoSemana(offset){
 
     const hoje =
@@ -107,6 +152,10 @@ const periodoReceber =
         window.financeiroSemanaOffsetReceber
     );
 
+    /* ===================================================== */
+    /* 01.3 CONTAS A PAGAR DA SEMANA                      */
+    /* ===================================================== */
+
     const contasPagar =
 
     db.financeiro
@@ -150,6 +199,10 @@ const periodoReceber =
         )
 
     );
+
+    /* ===================================================== */
+    /* 01.4 CONTAS A RECEBER DA SEMANA                    */
+    /* ===================================================== */
 
     const contasReceber =
 
@@ -203,7 +256,7 @@ const periodoReceber =
     gap:25px;
 ">
 
-    <!-- TOPO -->
+    <!-- 01.5 CABEÇALHO E AÇÕES DO FINANCEIRO -->
 
     <div style="
         display:flex;
@@ -285,9 +338,19 @@ const periodoReceber =
     return html;
 };
 
-/* ========================= */
-/* TABELA */
-/* ========================= */
+/* ========================================================= */
+/* 02. TABELA FINANCEIRA                                    */
+/* ========================================================= */
+/*
+    renderTabelaFinanceiro()
+
+    Exibe lançamentos, status, ações e navegação semanal.
+*/
+
+/* --------------------------------------------------------- */
+/* renderTabelaFinanceiro */
+/* Monta a tabela e as ações de cada lançamento. */
+/* --------------------------------------------------------- */
 
 window.renderTabelaFinanceiro = function (
     titulo,
@@ -367,6 +430,10 @@ window.renderTabelaFinanceiro = function (
 
         const indexReal =
             db.financeiro.indexOf(lanc);
+
+        /* ================================================= */
+        /* 02.1 STATUS VISUAL DO LANÇAMENTO                 */
+        /* ================================================= */
 
         let status =
             lanc.status || 'Pendente';
@@ -570,9 +637,17 @@ window.renderTabelaFinanceiro = function (
     return html;
 };
 
-/* ========================= */
-/* ALTERAR SEMANA */
-/* ========================= */
+/* ========================================================= */
+/* 03. NAVEGAÇÃO ENTRE SEMANAS                              */
+/* ========================================================= */
+/*
+    Mantém offsets independentes para Pagar e Receber.
+*/
+
+/* --------------------------------------------------------- */
+/* alterarSemanaFinanceiro */
+/* Avança ou retrocede a semana do tipo selecionado. */
+/* --------------------------------------------------------- */
 
 window.alterarSemanaFinanceiro = function (
     tipo,
@@ -593,13 +668,26 @@ window.alterarSemanaFinanceiro = function (
     navigate('financeiro');
 };
 
-/* ========================= */
-/* ABRIR CONTA PAGAR */
-/* ========================= */
+/* ========================================================= */
+/* 04. NOVA CONTA A PAGAR                                   */
+/* ========================================================= */
+/*
+    Formulário de despesa com fornecedor, tipo de conta,
+    vencimento e recorrência.
+*/
+
+/* --------------------------------------------------------- */
+/* abrirContaPagar */
+/* Abre o cadastro de nova conta a pagar. */
+/* --------------------------------------------------------- */
 
 window.abrirContaPagar = function (
     dados = {}
 ) {
+
+    /* ===================================================== */
+    /* 04.1 TIPOS DE CONTA DISPONÍVEIS                    */
+    /* ===================================================== */
 
     const tiposConta = [
 
@@ -812,9 +900,18 @@ window.abrirContaPagar = function (
     });
 };
 
-/* ========================= */
-/* DAR BAIXA */
-/* ========================= */
+/* ========================================================= */
+/* 05. DAR BAIXA EM LANÇAMENTO                              */
+/* ========================================================= */
+/*
+    Registra a data real e altera o status para Pago
+    ou Recebido.
+*/
+
+/* --------------------------------------------------------- */
+/* darBaixaFinanceiro */
+/* Registra pagamento ou recebimento. */
+/* --------------------------------------------------------- */
 
 window.darBaixaFinanceiro = async function(idx){
 
@@ -914,9 +1011,14 @@ navigate('financeiro', false);
         }
     });
 };
-/* ========================= */
-/* EXCLUIR */
-/* ========================= */
+/* ========================================================= */
+/* 06. EXCLUIR LANÇAMENTO                                   */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* excluirLancamento */
+/* Exclui um lançamento após confirmação. */
+/* --------------------------------------------------------- */
 
 window.excluirLancamento = async function(idx){
 
@@ -934,9 +1036,17 @@ window.excluirLancamento = async function(idx){
 navigate('financeiro', false);
 };
 
-/* ========================= */
-/* EDITAR LANÇAMENTO */
-/* ========================= */
+/* ========================================================= */
+/* 07. EDITAR LANÇAMENTO                                    */
+/* ========================================================= */
+/*
+    Usa fornecedor para Pagar e cliente para Receber.
+*/
+
+/* --------------------------------------------------------- */
+/* editarLancamento */
+/* Abre a edição do lançamento. */
+/* --------------------------------------------------------- */
 
 window.editarLancamento = function(idx){
 
@@ -1119,9 +1229,17 @@ onConfirm: async function(){
 
 
 };
-/* ========================= */
-/* SALVAR CONTA PAGAR */
-/* ========================= */
+/* ========================================================= */
+/* 08. SALVAR CONTA A PAGAR                                 */
+/* ========================================================= */
+/*
+    Cria uma ou várias contas conforme a recorrência.
+*/
+
+/* --------------------------------------------------------- */
+/* salvarContaPagar */
+/* Salva contas a pagar e suas recorrências. */
+/* --------------------------------------------------------- */
 
 window.salvarContaPagar = async function () {
 
@@ -1156,9 +1274,9 @@ window.salvarContaPagar = async function () {
 
     const dataBase = new Date(vencimento + 'T00:00:00');
 
-    /* ========================= */
-    /* RECORRÊNCIA ÚNICA */
-    /* ========================= */
+    /* ===================================================== */
+    /* 08.1 RECORRÊNCIA ÚNICA                                */
+    /* ===================================================== */
     if (recorrencia === 'Unica') {
         db.financeiro.push({
             tipo: 'Pagar',
@@ -1171,12 +1289,12 @@ window.salvarContaPagar = async function () {
         });
     }
 
-    /* ========================= */
-    /* RECORRÊNCIA SEMANAL */
-    /* ========================= */
+    /* ===================================================== */
+    /* 08.2 RECORRÊNCIA SEMANAL                             */
+    /* ===================================================== */
     if (recorrencia === 'Semanal') {
 
-        // Ajusta a primeira data para o dia da semana escolhido
+        /* Ajusta a primeira data para o dia da semana escolhido. */
         let primeiraData = new Date(dataBase);
         while (primeiraData.getDay() !== diaSemana) {
             primeiraData.setDate(primeiraData.getDate() + 1);
@@ -1198,9 +1316,9 @@ window.salvarContaPagar = async function () {
         }
     }
 
-    /* ========================= */
-    /* RECORRÊNCIA QUINZENAL */
-    /* ========================= */
+    /* ===================================================== */
+    /* 08.3 RECORRÊNCIA QUINZENAL                           */
+    /* ===================================================== */
     if (recorrencia === 'Quinzenal') {
         for (let i = 0; i < quantidade; i++) {
             const data = new Date(dataBase);
@@ -1218,9 +1336,9 @@ window.salvarContaPagar = async function () {
         }
     }
 
-    /* ========================= */
-    /* RECORRÊNCIA MENSAL */
-    /* ========================= */
+    /* ===================================================== */
+    /* 08.4 RECORRÊNCIA MENSAL                              */
+    /* ===================================================== */
     if (recorrencia === 'Mensal') {
         for (let i = 0; i < quantidade; i++) {
             const data = new Date(dataBase);
@@ -1245,9 +1363,14 @@ closeModal();
 navigate('financeiro', false);
 };
 
-/* ========================= */
-/* CONTA RECEBER */
-/* ========================= */
+/* ========================================================= */
+/* 09. NOVA CONTA A RECEBER                               */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* abrirContaReceber */
+/* Abre o cadastro de nova conta a receber. */
+/* --------------------------------------------------------- */
 
 window.abrirContaReceber = function (
     dados = {}
@@ -1341,9 +1464,14 @@ window.abrirContaReceber = function (
     });
 };
 
-/* ========================= */
-/* SALVAR CONTA RECEBER */
-/* ========================= */
+/* ========================================================= */
+/* 10. SALVAR CONTA A RECEBER                              */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* salvarContaReceber */
+/* Salva uma nova conta a receber. */
+/* --------------------------------------------------------- */
 
 window.salvarContaReceber = async function () {
 
@@ -1392,9 +1520,17 @@ closeModal();
 navigate('financeiro', false);
 };
 
-/* ========================= */
-/* TOGGLE RECORRÊNCIA */
-/* ========================= */
+/* ========================================================= */
+/* 11. CAMPOS DE RECORRÊNCIA                              */
+/* ========================================================= */
+/*
+    Mostra quantidade e, no modo semanal, dia da semana.
+*/
+
+/* --------------------------------------------------------- */
+/* toggleRecorrenciaFinanceiro */
+/* Controla campos extras da recorrência. */
+/* --------------------------------------------------------- */
 
 window.toggleRecorrenciaFinanceiro = function () {
 
@@ -1438,13 +1574,18 @@ window.toggleRecorrenciaFinanceiro = function () {
         }
     }
 };
-/* ========================= */
-/* CONSULTA FINANCEIRO - MODAL FIXA */
-/* ========================= */
+/* ========================================================= */
+/* 12. CONSULTA FINANCEIRA EM MODAL                         */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* abrirConsultaFinanceiro */
+/* Abre a consulta financeira em modal. */
+/* --------------------------------------------------------- */
 
 window.abrirConsultaFinanceiro = function () {
 
-    // Guardar resultados da última consulta
+    /* Guarda os resultados da última consulta. */
     window.dadosConsultaFinanceiro = [];
 
     const html = `
@@ -1493,14 +1634,19 @@ window.abrirConsultaFinanceiro = function () {
         size: 'large',
         confirmText: 'Consultar',
         onConfirm() {
-            consultarFinanceiro(); // Atualiza tabela dentro da modal
+            consultarFinanceiro(); /* Atualiza a tabela dentro da modal. */
         }
     });
 };
 
-/* ========================= */
-/* TOGGLE CONSULTA (Fornecedor/Cliente) */
-/* ========================= */
+/* ========================================================= */
+/* 13. ALTERNAR FORNECEDOR / CLIENTE                        */
+/* ========================================================= */
+/* --------------------------------------------------------- */
+/* toggleConsultaFinanceiro */
+/* Alterna fornecedor e cliente na consulta. */
+/* --------------------------------------------------------- */
+
 window.toggleConsultaFinanceiro = function () {
     const tipo = document.getElementById('consulta-tipo').value;
     const box = document.getElementById('consulta-pessoa-box');
@@ -1522,9 +1668,14 @@ window.toggleConsultaFinanceiro = function () {
     }
 };
 
-/* ========================= */
-/* CONSULTAR E RENDERIZAR TABELA */
-/* ========================= */
+/* ========================================================= */
+/* 14. FILTRAR CONSULTA FINANCEIRA                          */
+/* ========================================================= */
+/* --------------------------------------------------------- */
+/* consultarFinanceiro */
+/* Filtra os lançamentos da consulta. */
+/* --------------------------------------------------------- */
+
 window.consultarFinanceiro = function () {
 
     const tipo = document.getElementById('consulta-tipo').value;
@@ -1532,7 +1683,7 @@ window.consultarFinanceiro = function () {
     const fim = document.getElementById('consulta-fim').value;
     const pessoa = document.getElementById('consulta-pessoa').value;
 
-    // Filtrar resultados
+    /* Filtra os resultados conforme os campos da consulta. */
     window.dadosConsultaFinanceiro = db.financeiro.filter(l => {
         if (l.tipo !== tipo) return false;
         if (inicio && l.vencimento < inicio) return false;
@@ -1541,12 +1692,17 @@ window.consultarFinanceiro = function () {
         return true;
     });
 
-    renderTabelaConsultaFinanceiro(); // Renderiza tabela
+    renderTabelaConsultaFinanceiro(); /* Renderiza a tabela. */
 };
 
-/* ========================= */
-/* RENDERIZAR TABELA CONSULTA (SEM FECHAR MODAL) */
-/* ========================= */
+/* ========================================================= */
+/* 15. RENDERIZAR RESULTADOS DA CONSULTA                    */
+/* ========================================================= */
+/* --------------------------------------------------------- */
+/* renderTabelaConsultaFinanceiro */
+/* Renderiza resultados sem fechar a modal. */
+/* --------------------------------------------------------- */
+
 window.renderTabelaConsultaFinanceiro = function() {
 
     const tipo = document.getElementById('consulta-tipo').value;
@@ -1598,9 +1754,14 @@ window.renderTabelaConsultaFinanceiro = function() {
 
 
    
-/* ========================= */
-/* EXCLUIR CONSULTA */
-/* ========================= */
+/* ========================================================= */
+/* 16. EXCLUIR PELA CONSULTA                                */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* excluirLancamentoConsulta */
+/* Exclui um item da consulta. */
+/* --------------------------------------------------------- */
 
 window.excluirLancamentoConsulta = async function(idx){
 
@@ -1647,9 +1808,14 @@ window.excluirLancamentoConsulta = async function(idx){
 
 
 };
-/* ========================= */
-/* BAIXA CONSULTA */
-/* ========================= */
+/* ========================================================= */
+/* 17. DAR BAIXA PELA CONSULTA                              */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* darBaixaFinanceiroConsulta */
+/* Dá baixa em um item da consulta. */
+/* --------------------------------------------------------- */
 
 window.darBaixaFinanceiroConsulta =
 function(idx){
@@ -1755,9 +1921,14 @@ abrirConsultaFinanceiro();
 
 
 };
-/* ========================= */
-/* EDITAR CONSULTA */
-/* ========================= */
+/* ========================================================= */
+/* 18. EDITAR PELA CONSULTA                                 */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* editarLancamentoConsulta */
+/* Encaminha um item filtrado para edição. */
+/* --------------------------------------------------------- */
 
 window.editarLancamentoConsulta =
 function(idx){
@@ -1786,9 +1957,9 @@ editarLancamento(indexReal);
 
 
 };
-/* ========================= */
-/* REGISTRAR PÁGINA */
-/* ========================= */
+/* ========================================================= */
+/* 19. REGISTRAR PÁGINA NO SISTEMA                          */
+/* ========================================================= */
 
 registerPage(
     'financeiro',

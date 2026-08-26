@@ -1,3 +1,54 @@
+/* ========================================================= */
+/* DOMINUS ERP - AGENDA.JS                                   */
+/* ========================================================= */
+/*
+    AGENDA + CENTRAL GLOBAL DE NOTIFICAÇÕES
+
+    Este arquivo controla toda a tela de Agenda e também
+    a central de notificações exibida nas demais telas do ERP.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Manter estado e prioridades da Agenda
+    2. Normalizar os dados da Agenda no banco
+    3. Disponibilizar funções auxiliares
+    4. Instalar os estilos próprios da Agenda
+    5. Renderizar KPIs, calendário e tabela
+    6. Controlar filtros e navegação mensal
+    7. Cadastrar e editar compromissos
+    8. Visualizar compromissos
+    9. Marcar como realizado, reagendar e excluir
+    10. Montar a central global de notificações
+    11. Gerar avisos da Agenda e do Financeiro
+    12. Registrar a página no sistema
+    13. Exibir alerta obrigatório para compromissos de Alta Prioridade
+    14. Restringir reagendamento de Alta Prioridade ao mesmo dia
+    15. Inicializar e atualizar as notificações periodicamente
+
+    ALERTA DE ALTA PRIORIDADE:
+    Quando chega o horário de um compromisso de Alta Prioridade
+    DO LOGIN ATUAL, é exibida uma notificação grande sobre qualquer
+    tela do ERP.
+
+    A notificação é obrigatória:
+    - não possui botão X;
+    - não fecha clicando fora;
+    - permanece aberta até uma ação válida.
+
+    As únicas ações principais são:
+    - Concluir;
+    - Reagendar.
+
+    REAGENDAMENTO:
+    Compromissos de Alta Prioridade podem alterar somente o horário.
+    A data permanece obrigatoriamente no mesmo dia.
+    Se o compromisso estiver atrasado de um dia anterior,
+    o único reagendamento permitido é para hoje.
+
+    PRIVACIDADE:
+    O alerta aparece somente para o login proprietário do compromisso.
+*/
+
+
 /* ===================================================== */
 /* DOMINUS ERP - AGENDA + CENTRAL DE NOTIFICAÇÕES       */
 /* ===================================================== */
@@ -6,9 +57,19 @@
 
     'use strict';
 
-    /* ================================================= */
-    /* ESTADO                                            */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 01. ESTADO GLOBAL DA AGENDA                               */
+    /* ========================================================= */
+    /*
+        Define:
+        - cores e nomes das prioridades
+        - mês atualmente exibido
+        - filtros ativos
+        - estado do painel de notificações
+        - assinatura das últimas notificações
+
+        Esses valores ficam disponíveis durante toda a sessão.
+    */
 
     const PRIORIDADES = {
         baixa: {
@@ -45,9 +106,33 @@
     window.agendaPainelAberto = false;
     window.agendaUltimaAssinaturaNotificacoes = '';
 
-    /* ================================================= */
-    /* NORMALIZAÇÃO DO DB                                */
-    /* ================================================= */
+    /*
+        Controle do alerta obrigatório de Alta Prioridade.
+        Um alerta é exibido por vez.
+    */
+    window.agendaAltaPrioridadeAbertaId =
+        window.agendaAltaPrioridadeAbertaId
+        ||
+        null;
+
+    /* ========================================================= */
+    /* 02. NORMALIZAÇÃO DOS DADOS DA AGENDA                     */
+    /* ========================================================= */
+    /*
+        Garante que window.db possua toda a estrutura esperada
+        pela Agenda e pela central de notificações.
+
+        Também normaliza compromissos antigos para evitar
+        erros quando novos campos são adicionados.
+    */
+
+    /* ===================================================== */
+    /* 02.1 GARANTIR E NORMALIZAR ESTRUTURA DO DB           */
+    /* ===================================================== */
+    /*
+        Garante agenda[], agendaConfig e financeiroOk.
+        Depois normaliza cada compromisso existente.
+    */
 
     function garantirAgendaDB(){
 
@@ -75,25 +160,266 @@
             window.db.agendaConfig.financeiroOk = {};
         }
 
-        window.db.agenda = window.db.agenda.map(item=>({
-            id: String(item?.id || gerarIdAgenda()),
-            titulo: String(item?.titulo || '').trim(),
-            data: String(item?.data || ''),
-            hora: String(item?.hora || ''),
-            horaFim: String(item?.horaFim || ''),
-            local: String(item?.local || ''),
-            prioridade: normalizarPrioridade(item?.prioridade),
-            descricao: String(item?.descricao || ''),
-            status: normalizarStatusAgenda(item?.status),
-            criadoEm: item?.criadoEm || new Date().toISOString(),
-            atualizadoEm: item?.atualizadoEm || null,
-            realizadoEm: item?.realizadoEm || null,
-            historicoReagendamentos:
-                Array.isArray(item?.historicoReagendamentos)
-                ? item.historicoReagendamentos
-                : []
-        }));
+        window.db.agenda = window.db.agenda.map(item=>{
+
+            /*
+                Compromissos antigos pertencem ao administrador
+                master, que era o único login existente.
+            */
+
+            const usuarioId =
+                String(
+                    item?.usuarioId
+                    ||
+                    'master-admin'
+                );
+
+            const loginResponsavel =
+                loginPorUsuarioIdAgenda(
+                    usuarioId,
+                    item?.responsavel
+                );
+
+            return {
+
+                id:
+                    String(
+                        item?.id
+                        ||
+                        gerarIdAgenda()
+                    ),
+
+                usuarioId,
+
+                titulo:
+                    String(
+                        item?.titulo || ''
+                    ).trim(),
+
+                data:
+                    String(
+                        item?.data || ''
+                    ),
+
+                hora:
+                    String(
+                        item?.hora || ''
+                    ),
+
+                horaFim:
+                    String(
+                        item?.horaFim || ''
+                    ),
+
+                local:
+                    String(
+                        item?.local || ''
+                    ),
+
+                /*
+                    O responsável não é mais digitado manualmente.
+                    Ele sempre corresponde ao login proprietário.
+                */
+
+                responsavel:
+                    loginResponsavel,
+
+                prioridade:
+                    normalizarPrioridade(
+                        item?.prioridade
+                    ),
+
+                descricao:
+                    String(
+                        item?.descricao || ''
+                    ),
+
+                status:
+                    normalizarStatusAgenda(
+                        item?.status
+                    ),
+
+                criadoEm:
+                    item?.criadoEm
+                    ||
+                    new Date()
+                        .toISOString(),
+
+                atualizadoEm:
+                    item?.atualizadoEm
+                    ||
+                    null,
+
+                realizadoEm:
+                    item?.realizadoEm
+                    ||
+                    null,
+
+                historicoReagendamentos:
+                    Array.isArray(
+                        item?.historicoReagendamentos
+                    )
+                    ?
+                    item.historicoReagendamentos
+                    :
+                    []
+            };
+        });
     }
+
+    /* ===================================================== */
+    /* 02.1.1 USUÁRIO ATUAL DA AGENDA                       */
+    /* ===================================================== */
+
+    function usuarioAtualAgenda(){
+
+        if(
+            typeof window.usuarioAtualSistema ===
+                'function'
+        ){
+
+            return window
+                .usuarioAtualSistema();
+        }
+
+        return null;
+    }
+
+
+    /* ===================================================== */
+    /* 02.1.2 LOGIN PELO ID DO USUÁRIO                      */
+    /* ===================================================== */
+
+    function loginPorUsuarioIdAgenda(
+        usuarioId,
+        fallback = ''
+    ){
+
+        if(
+            String(
+                usuarioId
+            )
+            ===
+            'master-admin'
+        ){
+
+            return 'admin';
+        }
+
+        const usuario =
+            (window.db?.usuariosSistema || [])
+                .find(
+                    item =>
+                        String(
+                            item.id || ''
+                        )
+                        ===
+                        String(
+                            usuarioId || ''
+                        )
+                );
+
+        return (
+            usuario?.usuario
+            ||
+            fallback
+            ||
+            'Usuário'
+        );
+    }
+
+
+    /* ===================================================== */
+    /* 02.1.3 VERIFICAR PROPRIETÁRIO                        */
+    /* ===================================================== */
+
+    function compromissoPertenceUsuarioAtualAgenda(
+        item
+    ){
+
+        const usuario =
+            usuarioAtualAgenda();
+
+        if(
+            !usuario
+            ||
+            !item
+        ){
+
+            return false;
+        }
+
+        return (
+            String(
+                item.usuarioId || ''
+            )
+            ===
+            String(
+                usuario.id || ''
+            )
+        );
+    }
+
+
+    /* ===================================================== */
+    /* 02.1.4 AGENDA DO LOGIN ATUAL                          */
+    /* ===================================================== */
+    /*
+        Cada login possui uma agenda completamente particular.
+
+        Nem Administradores veem compromissos de outros logins.
+        O Administrador possui acesso à tela Agenda, mas vê
+        somente os compromissos do próprio login.
+    */
+
+    function agendaDoUsuarioAtual(){
+
+        garantirAgendaDB();
+
+        return window.db.agenda
+            .filter(
+                compromissoPertenceUsuarioAtualAgenda
+            );
+    }
+
+
+    /* ===================================================== */
+    /* 02.1.5 PODE VER AGENDA                               */
+    /* ===================================================== */
+
+    function usuarioAtualPodeVerAgenda(){
+
+        return (
+            typeof window.usuarioPodeAcessarPagina !==
+                'function'
+            ||
+            window.usuarioPodeAcessarPagina(
+                'agenda'
+            )
+        );
+    }
+
+
+    /* ===================================================== */
+    /* 02.1.6 PODE VER FINANCEIRO                           */
+    /* ===================================================== */
+
+    function usuarioAtualPodeVerFinanceiro(){
+
+        return (
+            typeof window.usuarioPodeAcessarPagina !==
+                'function'
+            ||
+            window.usuarioPodeAcessarPagina(
+                'financeiro'
+            )
+        );
+    }
+
+
+    /* ===================================================== */
+    /* 02.2 NORMALIZAR PRIORIDADE                            */
+    /* ===================================================== */
 
     function normalizarPrioridade(valor){
         const v = String(valor || '').toLowerCase();
@@ -103,18 +429,45 @@
         return 'media';
     }
 
+    /* ===================================================== */
+    /* 02.3 NORMALIZAR STATUS                                */
+    /* ===================================================== */
+
     function normalizarStatusAgenda(valor){
         const v = String(valor || '').toLowerCase();
         return v === 'realizado' ? 'realizado' : 'agendado';
     }
 
+    /* ===================================================== */
+    /* 02.4 GERAR ID DO COMPROMISSO                          */
+    /* ===================================================== */
+
     function gerarIdAgenda(){
         return `${Date.now()}${Math.floor(Math.random() * 10000)}`;
     }
 
-    /* ================================================= */
-    /* HELPERS                                           */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 03. FUNÇÕES AUXILIARES / HELPERS                         */
+    /* ========================================================= */
+    /*
+        Pequenas funções reutilizadas em várias partes da Agenda:
+        - proteção de HTML
+        - datas
+        - moeda
+        - nomes dos meses
+        - prioridade
+        - ordenação
+        - busca de compromissos
+        - horários
+    */
+
+    /* ===================================================== */
+    /* 03.1 PROTEGER TEXTO INSERIDO NO HTML                  */
+    /* ===================================================== */
+    /*
+        Converte caracteres especiais antes de exibir
+        conteúdos digitados pelo usuário.
+    */
 
     function escapeHTML(valor){
         return String(valor ?? '')
@@ -125,6 +478,10 @@
             .replace(/'/g, '&#039;');
     }
 
+    /* ===================================================== */
+    /* 03.2 DATA LOCAL NO FORMATO YYYY-MM-DD                 */
+    /* ===================================================== */
+
     function dataLocalISO(data = new Date()){
         return [
             data.getFullYear(),
@@ -133,12 +490,20 @@
         ].join('-');
     }
 
+    /* ===================================================== */
+    /* 03.3 DATA PARA O FORMATO BRASILEIRO                   */
+    /* ===================================================== */
+
     function dataBR(data){
         if(!data) return '-';
         const p = String(data).split('-');
         if(p.length !== 3) return escapeHTML(data);
         return `${p[2]}/${p[1]}/${p[0]}`;
     }
+
+    /* ===================================================== */
+    /* 03.4 FORMATAÇÃO DE MOEDA                              */
+    /* ===================================================== */
 
     function moeda(valor){
         return Number(valor || 0).toLocaleString(
@@ -149,6 +514,10 @@
             }
         );
     }
+
+    /* ===================================================== */
+    /* 03.5 NOME DO MÊS                                      */
+    /* ===================================================== */
 
     function nomeMes(mes){
         return [
@@ -167,13 +536,30 @@
         ][mes] || '';
     }
 
+    /* ===================================================== */
+    /* 03.6 DADOS VISUAIS DA PRIORIDADE                      */
+    /* ===================================================== */
+
     function prioridadeInfo(valor){
         return PRIORIDADES[normalizarPrioridade(valor)] || PRIORIDADES.media;
     }
 
+    /* ===================================================== */
+    /* 03.7 CHAVE DE ORDENAÇÃO POR DATA E HORA              */
+    /* ===================================================== */
+
     function chaveDataHora(item){
         return `${item.data || '9999-12-31'} ${item.hora || '23:59'}`;
     }
+
+    /* ===================================================== */
+    /* 03.8 ORDENAR COMPROMISSOS                             */
+    /* ===================================================== */
+    /*
+        Mantém agendados antes dos realizados.
+        Agendados ficam em ordem crescente.
+        Realizados ficam em ordem decrescente.
+    */
 
     function compararCompromissos(a, b){
         const aRealizado = a.status === 'realizado';
@@ -190,15 +576,55 @@
         return chaveDataHora(a).localeCompare(chaveDataHora(b));
     }
 
+    /* ===================================================== */
+    /* 03.9 LOCALIZAR COMPROMISSO PELO ID                    */
+    /* ===================================================== */
+
     function encontrarCompromisso(id){
+
         garantirAgendaDB();
-        return window.db.agenda.find(item => String(item.id) === String(id));
+
+        return agendaDoUsuarioAtual()
+            .find(
+                item =>
+                    String(
+                        item.id
+                    )
+                    ===
+                    String(
+                        id
+                    )
+            );
     }
 
+    /* ===================================================== */
+    /* 03.10 LOCALIZAR ÍNDICE DO COMPROMISSO                 */
+    /* ===================================================== */
+
     function indexCompromisso(id){
+
         garantirAgendaDB();
-        return window.db.agenda.findIndex(item => String(item.id) === String(id));
+
+        return window.db.agenda
+            .findIndex(
+                item =>
+                    String(
+                        item.id
+                    )
+                    ===
+                    String(
+                        id
+                    )
+                &&
+                    compromissoPertenceUsuarioAtualAgenda(
+                        item
+                    )
+            );
     }
+
+    /* ===================================================== */
+    /* 03.11 ATUALIZAR TELA DA AGENDA SE ESTIVER ABERTA     */
+    /* ===================================================== */
 
     function atualizarPaginaAgendaSeAberta(){
         if(window.currentPage === 'agenda'){
@@ -206,10 +632,18 @@
         }
     }
 
+    /* ===================================================== */
+    /* 03.12 HORÁRIO ATUAL                                   */
+    /* ===================================================== */
+
     function agoraHora(){
         const d = new Date();
         return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     }
+
+    /* ===================================================== */
+    /* 03.13 DIFERENÇA DE DIAS EM RELAÇÃO A HOJE            */
+    /* ===================================================== */
 
     function diasEntreHoje(dataISO){
         if(!dataISO) return 0;
@@ -219,9 +653,163 @@
         return Math.round((b - a) / 86400000);
     }
 
-    /* ================================================= */
-    /* CSS                                               */
-    /* ================================================= */
+    /* ===================================================== */
+    /* 03.14 DATA PERMITIDA PARA ALTA PRIORIDADE              */
+    /* ===================================================== */
+    /*
+        Alta prioridade não pode ser empurrada para outro dia.
+
+        - compromisso de hoje: mantém a própria data;
+        - compromisso atrasado: só pode ser reagendado para hoje.
+
+        Isso evita deixar um alerta vencido preso a uma data passada.
+    */
+
+    function dataPermitidaReagendamentoAltaAgenda(
+        item
+    ){
+
+        const hoje =
+            dataLocalISO();
+
+        if(
+            item?.data
+            &&
+            item.data >= hoje
+        ){
+
+            return item.data;
+        }
+
+        return hoje;
+    }
+
+
+    /* ===================================================== */
+    /* 03.15 ALTA PRIORIDADE JÁ DEVE ALERTAR                 */
+    /* ===================================================== */
+    /*
+        O alerta de tela cheia aparece:
+        - se o compromisso de alta prioridade está atrasado;
+        - ou quando chega o horário do compromisso de hoje.
+
+        Compromissos futuros continuam visíveis apenas no sino
+        até o horário programado.
+    */
+
+    function compromissoAltaPrioridadeDeveAlertarAgenda(
+        item
+    ){
+
+        if(
+            !item
+            ||
+            item.status !== 'agendado'
+            ||
+            item.prioridade !== 'alta'
+            ||
+            !item.data
+        ){
+
+            return false;
+        }
+
+        const hoje =
+            dataLocalISO();
+
+        if(
+            item.data < hoje
+        ){
+
+            return true;
+        }
+
+        if(
+            item.data > hoje
+        ){
+
+            return false;
+        }
+
+        /*
+            Se não houver horário, considera o compromisso
+            imediatamente pendente no dia.
+        */
+
+        if(
+            !item.hora
+        ){
+
+            return true;
+        }
+
+        return (
+            String(
+                item.hora
+            )
+            .slice(
+                0,
+                5
+            )
+            <=
+            agoraHora()
+        );
+    }
+
+
+    /* ===================================================== */
+    /* 03.16 PRÓXIMO ALERTA DE ALTA PRIORIDADE               */
+    /* ===================================================== */
+
+    function proximoCompromissoAltaPrioridadeAgenda(){
+
+        garantirAgendaDB();
+
+        if(
+            !usuarioAtualPodeVerAgenda()
+        ){
+
+            return null;
+        }
+
+        return (
+            agendaDoUsuarioAtual()
+                .filter(
+                    compromissoAltaPrioridadeDeveAlertarAgenda
+                )
+                .sort(
+                    compararCompromissos
+                )[0]
+            ||
+            null
+        );
+    }
+
+
+    /* ========================================================= */
+    /* 04. ESTILOS PRÓPRIOS DA AGENDA                           */
+    /* ========================================================= */
+    /*
+        A Agenda injeta seu próprio bloco <style> no documento.
+
+        Isso evita depender de alterações adicionais no style.css.
+
+        O CSS inclui:
+        - KPIs
+        - calendário
+        - painel lateral
+        - filtros
+        - central de notificações
+        - responsividade
+        - ajustes de impressão
+    */
+
+    /* ===================================================== */
+    /* 04.1 INSTALAR CSS DA AGENDA                           */
+    /* ===================================================== */
+    /*
+        Evita duplicação verificando primeiro #agenda-estilos.
+    */
 
     function instalarEstilosAgenda(){
 
@@ -514,6 +1102,156 @@
                 font-weight:800;
             }
 
+            /* ============================================= */
+            /* ALERTA OBRIGATÓRIO - ALTA PRIORIDADE         */
+            /* ============================================= */
+
+            #agenda-alerta-alta-root{
+                position:fixed;
+                inset:0;
+                z-index:90000;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                padding:24px;
+                background:rgba(15,23,42,.68);
+                backdrop-filter:blur(5px);
+                font-family:'Segoe UI',sans-serif;
+            }
+
+            .agenda-alerta-alta-card{
+                width:min(560px,calc(100vw - 32px));
+                overflow:hidden;
+                border-radius:22px;
+                background:#fff;
+                border:1px solid #fecaca;
+                box-shadow:0 30px 90px rgba(15,23,42,.38);
+                animation:agendaAltaEntrada .18s ease-out;
+            }
+
+            @keyframes agendaAltaEntrada{
+                from{
+                    opacity:0;
+                    transform:translateY(12px) scale(.98);
+                }
+                to{
+                    opacity:1;
+                    transform:translateY(0) scale(1);
+                }
+            }
+
+            .agenda-alerta-alta-responsavel{
+                padding:22px 20px 18px;
+                text-align:center;
+                background:#fff;
+                border-bottom:1px solid #fee2e2;
+            }
+
+            .agenda-alerta-alta-responsavel-label{
+                color:#991b1b;
+                font-size:10px;
+                font-weight:950;
+                letter-spacing:.12em;
+                text-transform:uppercase;
+            }
+
+            .agenda-alerta-alta-responsavel-nome{
+                margin-top:5px;
+                color:#991b1b;
+                font-size:34px;
+                font-weight:950;
+                line-height:1.02;
+                letter-spacing:.02em;
+                text-transform:uppercase;
+                word-break:break-word;
+            }
+
+            .agenda-alerta-alta-topo{
+                display:flex;
+                align-items:center;
+                gap:14px;
+                padding:18px 20px;
+                color:#fff;
+                background:
+                    linear-gradient(
+                        135deg,
+                        #b91c1c,
+                        #ef4444
+                    );
+            }
+
+            .agenda-alerta-alta-icone{
+                width:48px;
+                height:48px;
+                flex:0 0 48px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                border-radius:15px;
+                background:rgba(255,255,255,.15);
+                font-size:24px;
+            }
+
+            .agenda-alerta-alta-corpo{
+                padding:20px;
+            }
+
+            .agenda-alerta-alta-dados{
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:10px;
+                margin-top:14px;
+            }
+
+            .agenda-alerta-alta-dado{
+                padding:11px 12px;
+                border:1px solid #e5e7eb;
+                border-radius:11px;
+                background:#f8fafc;
+            }
+
+            .agenda-alerta-alta-rotulo{
+                display:block;
+                margin-bottom:4px;
+                color:#64748b;
+                font-size:9px;
+                font-weight:900;
+                letter-spacing:.07em;
+                text-transform:uppercase;
+            }
+
+            .agenda-alerta-alta-acoes{
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:10px;
+                margin-top:18px;
+            }
+
+            .agenda-alerta-alta-acoes button{
+                min-height:46px;
+                border:0;
+                border-radius:11px;
+                cursor:pointer;
+                color:#fff;
+                font-size:12px;
+                font-weight:900;
+            }
+
+            .agenda-alerta-alta-concluir{
+                background:#16a34a;
+            }
+
+            .agenda-alerta-alta-reagendar{
+                background:#7c3aed;
+            }
+
+            @media(max-width:560px){
+                .agenda-alerta-alta-dados,
+                .agenda-alerta-alta-acoes{
+                    grid-template-columns:1fr;
+                }
+            }
+
             @media(max-width:1050px){
                 .agenda-layout{
                     grid-template-columns:1fr;
@@ -536,7 +1274,8 @@
             }
 
             @media print{
-                #agenda-notificacao-root{
+                #agenda-notificacao-root,
+                #agenda-alerta-alta-root{
                     display:none!important;
                 }
             }
@@ -545,9 +1284,29 @@
         document.head.appendChild(style);
     }
 
-    /* ================================================= */
-    /* RENDER DA TELA                                    */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 05. RENDERIZAÇÃO DA TELA DE AGENDA                       */
+    /* ========================================================= */
+    /*
+        Monta a tela principal da Agenda.
+
+        A renderização inclui:
+        - cabeçalho
+        - botão Novo compromisso
+        - indicadores
+        - calendário mensal
+        - próximos compromissos
+        - filtros
+        - tabela completa
+    */
+
+    /* ===================================================== */
+    /* 05.1 RENDER PRINCIPAL DA AGENDA                       */
+    /* ===================================================== */
+    /*
+        Calcula KPIs, aplica filtros e monta todo o HTML
+        principal da página.
+    */
 
     window.renderAgenda = function(){
 
@@ -559,7 +1318,16 @@
         fim7.setDate(fim7.getDate() + 7);
         const fim7ISO = dataLocalISO(fim7);
 
-        const agendados = window.db.agenda.filter(item => item.status === 'agendado');
+        const agendaUsuario =
+            agendaDoUsuarioAtual();
+
+        const agendados =
+            agendaUsuario.filter(
+                item =>
+                    item.status ===
+                    'agendado'
+            );
+
         const hojeQtd = agendados.filter(item => item.data === hoje).length;
         const proximos7 = agendados.filter(item => item.data >= hoje && item.data <= fim7ISO).length;
         const altaQtd = agendados.filter(item => item.prioridade === 'alta' && item.data >= hoje).length;
@@ -567,12 +1335,15 @@
 
         const filtros = window.agendaFiltros;
 
-        let lista = [...window.db.agenda];
+        let lista = [
+            ...agendaUsuario
+        ];
 
         if(filtros.texto){
             const t = filtros.texto.toLowerCase();
             lista = lista.filter(item =>
                 String(item.titulo || '').toLowerCase().includes(t)
+                || String(item.responsavel || '').toLowerCase().includes(t)
                 || String(item.local || '').toLowerCase().includes(t)
                 || String(item.descricao || '').toLowerCase().includes(t)
             );
@@ -603,7 +1374,7 @@
                         📅 Agenda
                     </div>
                     <div style="color:#64748b;margin-top:5px;font-size:13px;">
-                        Compromissos, prioridades e lembretes do dia
+                        Sua agenda particular • ${escapeHTML(usuarioAtualAgenda()?.usuario || '')}
                     </div>
                 </div>
 
@@ -688,6 +1459,10 @@
         `;
     };
 
+    /* ===================================================== */
+    /* 05.2 CARD DE INDICADOR / KPI                          */
+    /* ===================================================== */
+
     function kpiAgenda(titulo, valor, cor, subtitulo){
         return `
         <div class="agenda-kpi" style="--kpi-cor:${cor};">
@@ -698,6 +1473,14 @@
         </div>
         `;
     }
+
+    /* ===================================================== */
+    /* 05.3 CALENDÁRIO MENSAL                                */
+    /* ===================================================== */
+    /*
+        Monta a grade semanal e exibe até três compromissos
+        diretamente em cada dia.
+    */
 
     function renderCalendarioAgenda(){
 
@@ -717,9 +1500,16 @@
         for(let dia = 1; dia <= totalDias; dia++){
 
             const data = `${ano}-${String(mes + 1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-            const itens = window.db.agenda
-                .filter(item => item.data === data)
-                .sort(compararCompromissos);
+            const itens =
+                agendaDoUsuarioAtual()
+                .filter(
+                    item =>
+                        item.data ===
+                        data
+                )
+                .sort(
+                    compararCompromissos
+                );
 
             const eventos = itens.slice(0,3).map(item => {
                 const p = prioridadeInfo(item.prioridade);
@@ -727,7 +1517,7 @@
                     <button
                         class="agenda-mini-evento ${item.status === 'realizado' ? 'realizado' : ''}"
                         style="--agenda-cor:${p.cor};--agenda-fundo:${p.fundo};"
-                        title="${escapeHTML(item.titulo)}"
+                        title="${escapeHTML(item.responsavel ? item.responsavel + ' — ' + item.titulo : item.titulo)}"
                         onclick="event.stopPropagation();visualizarCompromissoAgenda('${item.id}')">
                         ${item.hora ? escapeHTML(item.hora) + ' · ' : ''}${escapeHTML(item.titulo)}
                     </button>
@@ -779,13 +1569,33 @@
         `;
     }
 
+    /* ===================================================== */
+    /* 05.4 PRÓXIMOS COMPROMISSOS                            */
+    /* ===================================================== */
+    /*
+        Mostra os oito próximos compromissos agendados.
+    */
+
     function renderProximosAgenda(){
 
         const hoje = dataLocalISO();
-        const itens = window.db.agenda
-            .filter(item => item.status === 'agendado' && item.data >= hoje)
-            .sort(compararCompromissos)
-            .slice(0,8);
+        const itens =
+            agendaDoUsuarioAtual()
+            .filter(
+                item =>
+                    item.status ===
+                        'agendado'
+                &&
+                    item.data >=
+                        hoje
+            )
+            .sort(
+                compararCompromissos
+            )
+            .slice(
+                0,
+                8
+            );
 
         const corpo = itens.length
             ? itens.map(item => {
@@ -799,6 +1609,24 @@
                 <div class="agenda-proximo-item" onclick="visualizarCompromissoAgenda('${item.id}')">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
                         <div style="min-width:0;">
+                            ${
+                                item.responsavel
+                                    ?
+                                    `
+                                        <div style="
+                                            margin-bottom:4px;
+                                            color:${p.cor};
+                                            font-size:10px;
+                                            font-weight:900;
+                                            text-transform:uppercase;
+                                            letter-spacing:.06em;
+                                        ">
+                                            👤 ${escapeHTML(item.responsavel)}
+                                        </div>
+                                    `
+                                    :
+                                    ''
+                            }
                             <div style="font-size:12px;font-weight:900;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                                 ${escapeHTML(item.titulo)}
                             </div>
@@ -826,6 +1654,14 @@
         </div>
         `;
     }
+
+    /* ===================================================== */
+    /* 05.5 TABELA DE COMPROMISSOS                           */
+    /* ===================================================== */
+    /*
+        Monta a listagem completa com status, prioridade
+        e botões de ação.
+    */
 
     function renderTabelaAgenda(lista){
 
@@ -857,6 +1693,23 @@
                     </div>
                 </td>
                 <td>
+                    ${item.responsavel ? `
+                        <div style="
+                            display:inline-flex;
+                            align-items:center;
+                            gap:4px;
+                            margin-bottom:4px;
+                            padding:3px 7px;
+                            border-radius:999px;
+                            background:${p.fundo};
+                            color:${p.cor};
+                            border:1px solid ${p.borda};
+                            font-size:9px;
+                            font-weight:900;
+                        ">
+                            👤 ${escapeHTML(item.responsavel)}
+                        </div>
+                    ` : ''}
                     <div style="font-weight:800;color:#111827;">${escapeHTML(item.titulo)}</div>
                     ${item.local ? `<div style="font-size:10px;color:#94a3b8;margin-top:3px;">📍 ${escapeHTML(item.local)}</div>` : ''}
                 </td>
@@ -904,9 +1757,22 @@
         `;
     }
 
-    /* ================================================= */
-    /* NAVEGAÇÃO / FILTROS                               */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 06. NAVEGAÇÃO DO CALENDÁRIO E FILTROS                    */
+    /* ========================================================= */
+    /*
+        Controla:
+        - mês anterior
+        - mês seguinte
+        - retorno ao mês atual
+        - pesquisa por texto
+        - filtro de status
+        - filtro de prioridade
+    */
+
+    /* ===================================================== */
+    /* 06.1 ALTERAR MÊS DO CALENDÁRIO                        */
+    /* ===================================================== */
 
     window.mudarMesAgenda = function(delta){
         const d = new Date(
@@ -921,6 +1787,10 @@
         navigate('agenda', false);
     };
 
+    /* ===================================================== */
+    /* 06.2 VOLTAR PARA O MÊS ATUAL                          */
+    /* ===================================================== */
+
     window.irMesAtualAgenda = function(){
         const d = new Date();
         window.agendaMesVisual = {
@@ -932,6 +1802,13 @@
 
     let timerFiltroAgenda = null;
 
+    /* ===================================================== */
+    /* 06.3 ALTERAR FILTROS                                  */
+    /* ===================================================== */
+    /*
+        A pesquisa textual usa pequeno debounce de 280 ms.
+    */
+
     window.alterarFiltroAgenda = function(campo, valor){
         window.agendaFiltros[campo] = valor || '';
 
@@ -941,17 +1818,41 @@
         }, campo === 'texto' ? 280 : 0);
     };
 
-    /* ================================================= */
-    /* CADASTRO / EDIÇÃO                                 */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 07. CADASTRO E EDIÇÃO DE COMPROMISSOS                    */
+    /* ========================================================= */
+    /*
+        Responsável por:
+        - abrir formulário de novo compromisso
+        - abrir formulário de edição
+        - validar campos
+        - criar registro
+        - atualizar registro existente
+        - salvar alterações no banco
+    */
+
+    /* ===================================================== */
+    /* 07.1 NOVO COMPROMISSO                                 */
+    /* ===================================================== */
 
     window.abrirNovoCompromissoAgenda = function(){
         abrirFormularioCompromissoAgenda(null);
     };
 
+    /* ===================================================== */
+    /* 07.2 EDITAR COMPROMISSO                               */
+    /* ===================================================== */
+
     window.editarCompromissoAgenda = function(id){
         abrirFormularioCompromissoAgenda(encontrarCompromisso(id));
     };
+
+    /* ===================================================== */
+    /* 07.3 MONTAR FORMULÁRIO                                */
+    /* ===================================================== */
+    /*
+        O mesmo formulário atende cadastro e edição.
+    */
 
     function abrirFormularioCompromissoAgenda(item){
 
@@ -1041,11 +1942,43 @@
         });
     }
 
+    /* ===================================================== */
+    /* 07.4 VALIDAR E SALVAR COMPROMISSO                     */
+    /* ===================================================== */
+    /*
+        Exige título, data e hora.
+        Também valida a hora final quando informada.
+    */
+
     window.salvarCompromissoAgenda = async function(id = null){
 
         garantirAgendaDB();
 
+        const usuario =
+            usuarioAtualAgenda();
+
+        if(
+            !usuario
+        ){
+
+            alert(
+                'Não foi possível identificar o login atual.'
+            );
+
+            return;
+        }
+
         const titulo = document.getElementById('agenda-titulo')?.value.trim() || '';
+
+        /*
+            O responsável é sempre o próprio login.
+        */
+
+        const responsavel =
+            String(
+                usuario.usuario || ''
+            ).trim();
+
         const data = document.getElementById('agenda-data')?.value || '';
         const hora = document.getElementById('agenda-hora')?.value || '';
         const horaFim = document.getElementById('agenda-hora-fim')?.value || '';
@@ -1075,7 +2008,14 @@
             const atual = window.db.agenda[idx];
             window.db.agenda[idx] = {
                 ...atual,
+
+                usuarioId:
+                    usuario.id,
+
                 titulo,
+
+                responsavel,
+
                 data,
                 hora,
                 horaFim,
@@ -1093,7 +2033,14 @@
         else{
             window.db.agenda.push({
                 id: gerarIdAgenda(),
+
+                usuarioId:
+                    usuario.id,
+
                 titulo,
+
+                responsavel,
+
                 data,
                 hora,
                 horaFim,
@@ -1114,9 +2061,27 @@
         atualizarCentralNotificacoesAgenda(true);
     };
 
-    /* ================================================= */
-    /* VISUALIZAR                                        */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 08. VISUALIZAÇÃO DE COMPROMISSO                           */
+    /* ========================================================= */
+    /*
+        Abre o compromisso em modo de visualização.
+
+        Mostra:
+        - título
+        - data e horário
+        - prioridade
+        - responsável
+        - local
+        - status
+        - descrição
+        - histórico de reagendamentos
+        - ações disponíveis
+    */
+
+    /* ===================================================== */
+    /* 08.1 ABRIR VISUALIZAÇÃO DO COMPROMISSO                */
+    /* ===================================================== */
 
     window.visualizarCompromissoAgenda = function(id){
 
@@ -1165,6 +2130,32 @@
                 </div>
             </div>
 
+            <div style="
+                padding:14px 16px;
+                border-radius:13px;
+                background:#111827;
+                color:#fff;
+            ">
+                <div style="
+                    color:#94a3b8;
+                    font-size:9px;
+                    font-weight:900;
+                    text-transform:uppercase;
+                    letter-spacing:.08em;
+                ">
+                    Responsável
+                </div>
+
+                <div style="
+                    margin-top:4px;
+                    font-size:22px;
+                    font-weight:950;
+                    line-height:1.15;
+                ">
+                    ${escapeHTML(item.responsavel || 'Não informado')}
+                </div>
+            </div>
+
             ${item.local ? `
             <div>
                 <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:800;">Local</div>
@@ -1205,9 +2196,20 @@
         });
     };
 
-    /* ================================================= */
-    /* REALIZADO / REAGENDAR / EXCLUIR                   */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 09. AÇÕES SOBRE COMPROMISSOS                              */
+    /* ========================================================= */
+    /*
+        Agrupa as ações que alteram o estado de um compromisso:
+        - marcar como realizado
+        - abrir reagendamento
+        - confirmar reagendamento
+        - excluir compromisso
+    */
+
+    /* ===================================================== */
+    /* 09.1 MARCAR COMO REALIZADO                            */
+    /* ===================================================== */
 
     window.marcarCompromissoRealizadoAgenda = async function(id){
 
@@ -1223,40 +2225,159 @@
         atualizarCentralNotificacoesAgenda(false);
     };
 
+    /* ===================================================== */
+    /* 09.2 ABRIR REAGENDAMENTO                              */
+    /* ===================================================== */
+
     window.reagendarCompromissoAgenda = function(id){
 
-        const item = encontrarCompromisso(id);
+        const item =
+            encontrarCompromisso(
+                id
+            );
+
         if(!item) return;
+
+        const altaPrioridade =
+            item.prioridade ===
+            'alta';
+
+        const dataPermitida =
+            altaPrioridade
+                ?
+                dataPermitidaReagendamentoAltaAgenda(
+                    item
+                )
+                :
+                item.data;
+
+        const campoData =
+            altaPrioridade
+                ?
+                `
+                    <div>
+                        <label>Data</label>
+
+                        <div style="
+                            min-height:42px;
+                            display:flex;
+                            align-items:center;
+                            padding:10px 12px;
+                            border:1px solid #fecaca;
+                            border-radius:9px;
+                            background:#fef2f2;
+                            color:#b91c1c;
+                            font-size:12px;
+                            font-weight:900;
+                        ">
+                            ${dataBR(dataPermitida)}
+                        </div>
+
+                        <input
+                            type="hidden"
+                            id="agenda-reagendar-data"
+                            value="${escapeHTML(dataPermitida)}">
+                    </div>
+                `
+                :
+                `
+                    <div>
+                        <label>Nova data *</label>
+                        <input
+                            type="date"
+                            id="agenda-reagendar-data"
+                            value="${escapeHTML(item.data)}">
+                    </div>
+                `;
+
+        const avisoAlta =
+            altaPrioridade
+                ?
+                `
+                    <div style="
+                        padding:11px 13px;
+                        border-radius:10px;
+                        background:#fff7ed;
+                        border:1px solid #fed7aa;
+                        color:#9a3412;
+                        font-size:11px;
+                        line-height:1.5;
+                    ">
+                        <strong>Alta Prioridade:</strong>
+                        este compromisso só pode ser reagendado
+                        para o mesmo dia. Você pode alterar apenas
+                        o horário.
+                    </div>
+                `
+                :
+                '';
 
         const html = `
         <div style="display:flex;flex-direction:column;gap:14px;">
+
             <div style="padding:12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;">
-                <div style="font-size:12px;font-weight:900;color:#111827;">${escapeHTML(item.titulo)}</div>
-                <div style="font-size:10.5px;color:#64748b;margin-top:4px;">
-                    Atual: ${dataBR(item.data)} às ${escapeHTML(item.hora)}
+
+                <div style="font-size:12px;font-weight:900;color:#111827;">
+                    ${escapeHTML(item.titulo)}
                 </div>
+
+                <div style="font-size:10.5px;color:#64748b;margin-top:4px;">
+                    Atual:
+                    ${dataBR(item.data)}
+                    ${item.hora ? `às ${escapeHTML(item.hora)}` : ''}
+                </div>
+
             </div>
 
+            ${avisoAlta}
+
             <div class="form-row">
-                <div>
-                    <label>Nova data *</label>
-                    <input type="date" id="agenda-reagendar-data" value="${escapeHTML(item.data)}">
-                </div>
+
+                ${campoData}
+
                 <div>
                     <label>Nova hora *</label>
-                    <input type="time" id="agenda-reagendar-hora" value="${escapeHTML(item.hora)}">
+                    <input
+                        type="time"
+                        id="agenda-reagendar-hora"
+                        value="${escapeHTML(item.hora)}">
                 </div>
+
             </div>
+
         </div>
         `;
 
         configModal({
-            title: 'Reagendar compromisso',
-            body: html,
-            confirmText: 'Confirmar reagendamento',
-            onConfirm: ()=> confirmarReagendamentoAgenda(id)
+            title:
+                altaPrioridade
+                    ?
+                    'Reagendar Alta Prioridade'
+                    :
+                    'Reagendar compromisso',
+
+            body:
+                html,
+
+            confirmText:
+                'Confirmar reagendamento',
+
+            onConfirm:
+                () =>
+                    confirmarReagendamentoAgenda(
+                        id
+                    )
         });
     };
+
+
+    /* ===================================================== */
+    /* 09.3 CONFIRMAR REAGENDAMENTO                          */
+    /* ===================================================== */
+    /*
+        Salva o histórico da data/hora anterior antes
+        de atualizar o compromisso.
+    */
 
     window.confirmarReagendamentoAgenda = async function(id){
 
@@ -1272,6 +2393,33 @@
         }
 
         const item = window.db.agenda[idx];
+
+        /*
+            Regra obrigatória:
+            Alta Prioridade não pode ser reagendada para outro dia.
+        */
+
+        if(
+            item.prioridade === 'alta'
+        ){
+
+            const dataPermitida =
+                dataPermitidaReagendamentoAltaAgenda(
+                    item
+                );
+
+            if(
+                novaData !==
+                dataPermitida
+            ){
+
+                alert(
+                    'Compromissos de Alta Prioridade só podem ser reagendados para o mesmo dia.'
+                );
+
+                return;
+            }
+        }
 
         if(!Array.isArray(item.historicoReagendamentos)){
             item.historicoReagendamentos = [];
@@ -1295,7 +2443,17 @@
         closeModal();
         atualizarPaginaAgendaSeAberta();
         atualizarCentralNotificacoesAgenda(false);
+
+        /*
+            Se foi reagendado para um horário futuro do mesmo dia,
+            o alerta desaparece e só volta quando chegar o novo horário.
+        */
+        atualizarAlertaAltaPrioridadeAgenda();
     };
+
+    /* ===================================================== */
+    /* 09.4 EXCLUIR COMPROMISSO                              */
+    /* ===================================================== */
 
     window.excluirCompromissoAgenda = async function(id){
 
@@ -1316,9 +2474,326 @@
         atualizarCentralNotificacoesAgenda(false);
     };
 
-    /* ================================================= */
-    /* CENTRAL DE NOTIFICAÇÕES                           */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 09.5 ALERTA OBRIGATÓRIO DE ALTA PRIORIDADE               */
+    /* ========================================================= */
+    /*
+        Exibe uma camada sobre qualquer tela do ERP quando
+        chega o horário de um compromisso de Alta Prioridade.
+
+        O alerta não possui botão X e não fecha ao clicar fora.
+        As únicas ações são:
+        - Concluir
+        - Reagendar
+    */
+
+    function removerAlertaAltaPrioridadeAgenda(){
+
+        const root =
+            document.getElementById(
+                'agenda-alerta-alta-root'
+            );
+
+        if(root){
+            root.remove();
+        }
+
+        window.agendaAltaPrioridadeAbertaId =
+            null;
+    }
+
+
+    function renderAlertaAltaPrioridadeAgenda(
+        item
+    ){
+
+        const atrasado =
+            item.data <
+            dataLocalISO();
+
+        const dataExibicao =
+            atrasado
+                ?
+                `${dataBR(item.data)} · ATRASADO`
+                :
+                dataBR(item.data);
+
+        return `
+
+            <div class="agenda-alerta-alta-card">
+
+                <div class="agenda-alerta-alta-responsavel">
+
+                    <div class="agenda-alerta-alta-responsavel-label">
+                        Responsável
+                    </div>
+
+                    <div class="agenda-alerta-alta-responsavel-nome">
+                        ${escapeHTML(
+                            item.responsavel
+                            ||
+                            'Responsável não informado'
+                        )}
+                    </div>
+
+                </div>
+
+                <div class="agenda-alerta-alta-topo">
+
+                    <div class="agenda-alerta-alta-icone">
+                        ⚠
+                    </div>
+
+                    <div style="min-width:0;">
+
+                        <div style="
+                            font-size:10px;
+                            font-weight:900;
+                            letter-spacing:.09em;
+                            text-transform:uppercase;
+                            opacity:.9;
+                        ">
+                            Compromisso de Alta Prioridade
+                        </div>
+
+                        <div style="
+                            margin-top:3px;
+                            font-size:18px;
+                            font-weight:900;
+                            line-height:1.2;
+                        ">
+                            ${escapeHTML(item.titulo)}
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="agenda-alerta-alta-corpo">
+
+                    <div style="
+                        color:#475569;
+                        font-size:12px;
+                        line-height:1.55;
+                    ">
+                        Este compromisso de Alta Prioridade exige uma ação.
+                        Esta notificação permanecerá na tela até você
+                        concluir o compromisso ou reagendar o horário.
+                    </div>
+
+
+                    <div class="agenda-alerta-alta-dados">
+
+                        <div class="agenda-alerta-alta-dado">
+
+                            <span class="agenda-alerta-alta-rotulo">
+                                Data
+                            </span>
+
+                            <strong style="
+                                color:${atrasado ? '#b91c1c' : '#111827'};
+                                font-size:12px;
+                            ">
+                                ${dataExibicao}
+                            </strong>
+
+                        </div>
+
+                        <div class="agenda-alerta-alta-dado">
+
+                            <span class="agenda-alerta-alta-rotulo">
+                                Horário
+                            </span>
+
+                            <strong style="
+                                color:#111827;
+                                font-size:12px;
+                            ">
+                                ${escapeHTML(item.hora || '-')}
+                            </strong>
+
+                        </div>
+
+                        ${
+                            item.local
+                                ?
+                                `
+                                    <div
+                                        class="agenda-alerta-alta-dado"
+                                        style="grid-column:1 / -1;"
+                                    >
+
+                                        <span class="agenda-alerta-alta-rotulo">
+                                            Local
+                                        </span>
+
+                                        <strong style="
+                                            color:#111827;
+                                            font-size:12px;
+                                        ">
+                                            ${escapeHTML(item.local)}
+                                        </strong>
+
+                                    </div>
+                                `
+                                :
+                                ''
+                        }
+
+                    </div>
+
+
+                    ${
+                        item.descricao
+                            ?
+                            `
+                                <div style="
+                                    margin-top:12px;
+                                    padding:11px 12px;
+                                    border-radius:10px;
+                                    background:#f8fafc;
+                                    border:1px solid #e2e8f0;
+                                    color:#475569;
+                                    font-size:11px;
+                                    line-height:1.5;
+                                ">
+                                    ${escapeHTML(item.descricao)}
+                                </div>
+                            `
+                            :
+                            ''
+                    }
+
+
+                    <div class="agenda-alerta-alta-acoes">
+
+                        <button
+                            type="button"
+                            class="agenda-alerta-alta-concluir"
+                            onclick="concluirAlertaAltaPrioridadeAgenda('${item.id}')"
+                        >
+                            ✔ Concluir
+                        </button>
+
+                        <button
+                            type="button"
+                            class="agenda-alerta-alta-reagendar"
+                            onclick="reagendarCompromissoAgenda('${item.id}')"
+                        >
+                            ↻ Reagendar
+                        </button>
+
+                    </div>
+
+                    <div style="
+                        margin-top:10px;
+                        text-align:center;
+                        color:#94a3b8;
+                        font-size:9.5px;
+                    ">
+                        Alta Prioridade só pode ser reagendada
+                        para o mesmo dia.
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+    }
+
+
+    window.concluirAlertaAltaPrioridadeAgenda =
+    async function(
+        id
+    ){
+
+        removerAlertaAltaPrioridadeAgenda();
+
+        await marcarCompromissoRealizadoAgenda(
+            id
+        );
+    };
+
+
+    function atualizarAlertaAltaPrioridadeAgenda(){
+
+        instalarEstilosAgenda();
+        garantirAgendaDB();
+
+        const item =
+            proximoCompromissoAltaPrioridadeAgenda();
+
+        if(!item){
+
+            removerAlertaAltaPrioridadeAgenda();
+
+            return;
+        }
+
+        const rootAtual =
+            document.getElementById(
+                'agenda-alerta-alta-root'
+            );
+
+        /*
+            Se o alerta correto já está aberto, não recria.
+        */
+
+        if(
+            rootAtual
+            &&
+            window.agendaAltaPrioridadeAbertaId ===
+                item.id
+        ){
+
+            return;
+        }
+
+        if(rootAtual){
+            rootAtual.remove();
+        }
+
+        const root =
+            document.createElement(
+                'div'
+            );
+
+        root.id =
+            'agenda-alerta-alta-root';
+
+        root.innerHTML =
+            renderAlertaAltaPrioridadeAgenda(
+                item
+            );
+
+        document.body.appendChild(
+            root
+        );
+
+        window.agendaAltaPrioridadeAbertaId =
+            item.id;
+    }
+
+
+    /* ========================================================= */
+    /* 10. CENTRAL GLOBAL DE NOTIFICAÇÕES                        */
+    /* ========================================================= */
+    /*
+        Monta e atualiza o sino de notificações exibido
+        sobre as telas do ERP.
+
+        A central combina:
+        - compromissos de hoje
+        - compromissos atrasados
+        - pagamentos vencendo hoje
+        - valores a receber hoje
+    */
+
+    /* ===================================================== */
+    /* 10.1 MONTAR SINO E PAINEL DE NOTIFICAÇÕES            */
+    /* ===================================================== */
 
     function montarCentralNotificacoesAgenda(){
 
@@ -1339,6 +2814,14 @@
         document.body.appendChild(root);
     }
 
+    /* ===================================================== */
+    /* 10.2 ASSINATURA DE ITEM FINANCEIRO                    */
+    /* ===================================================== */
+    /*
+        Cria uma assinatura simples para identificar
+        lançamentos já reconhecidos pelo usuário.
+    */
+
     function assinaturaItemFinanceiro(item){
         const base = [
             item.tipo || '',
@@ -1355,6 +2838,10 @@
         }
         return String(hash);
     }
+
+    /* ===================================================== */
+    /* 10.3 FILTRAR LANÇAMENTOS FINANCEIROS DE HOJE          */
+    /* ===================================================== */
 
     function itensFinanceirosHoje(tipo){
 
@@ -1376,13 +2863,21 @@
         });
     }
 
+    /* ===================================================== */
+    /* 10.4 VERIFICAR AVISO FINANCEIRO PENDENTE              */
+    /* ===================================================== */
+
     function avisoFinanceiroPendente(tipo){
 
         const itens = itensFinanceirosHoje(tipo);
         if(!itens.length) return null;
 
         const hoje = dataLocalISO();
-        const chave = `${hoje}|${tipo}`;
+        const usuario =
+            usuarioAtualAgenda();
+
+        const chave =
+            `${usuario?.id || 'sem-usuario'}|${hoje}|${tipo}`;
         const atuais = itens.map(assinaturaItemFinanceiro);
         const reconhecidos = Array.isArray(window.db.agendaConfig.financeiroOk[chave])
             ? window.db.agendaConfig.financeiroOk[chave]
@@ -1402,6 +2897,13 @@
         };
     }
 
+    /* ===================================================== */
+    /* 10.5 CONSTRUIR LISTA DE NOTIFICAÇÕES                  */
+    /* ===================================================== */
+    /*
+        Junta compromissos pendentes e avisos financeiros.
+    */
+
     function construirNotificacoesAgenda(){
 
         garantirAgendaDB();
@@ -1409,44 +2911,107 @@
         const hoje = dataLocalISO();
         const notificacoes = [];
 
-        window.db.agenda
-            .filter(item => item.status === 'agendado' && item.data && item.data <= hoje)
-            .sort(compararCompromissos)
-            .forEach(item => {
-                notificacoes.push({
-                    tipo: 'compromisso',
-                    id: item.id,
-                    item
-                });
-            });
+        if(
+            usuarioAtualPodeVerAgenda()
+        ){
 
-        const pagar = avisoFinanceiroPendente('Pagar');
-        if(pagar){
-            notificacoes.push({
-                tipo: 'financeiro-pagar',
-                dados: pagar
-            });
+            agendaDoUsuarioAtual()
+                .filter(
+                    item =>
+                        item.status ===
+                            'agendado'
+                    &&
+                        item.data
+                    &&
+                        item.data <=
+                            hoje
+                )
+                .sort(
+                    compararCompromissos
+                )
+                .forEach(
+                    item => {
+
+                        notificacoes.push({
+
+                            tipo:
+                                'compromisso',
+
+                            id:
+                                item.id,
+
+                            item
+                        });
+                    }
+                );
         }
 
-        const receber = avisoFinanceiroPendente('Receber');
-        if(receber){
-            notificacoes.push({
-                tipo: 'financeiro-receber',
-                dados: receber
-            });
+        /*
+            Avisos financeiros só aparecem para quem possui
+            acesso à tela Fluxo Financeiro.
+        */
+
+        if(
+            usuarioAtualPodeVerFinanceiro()
+        ){
+
+            const pagar =
+                avisoFinanceiroPendente(
+                    'Pagar'
+                );
+
+            if(pagar){
+
+                notificacoes.push({
+
+                    tipo:
+                        'financeiro-pagar',
+
+                    dados:
+                        pagar
+                });
+            }
+
+            const receber =
+                avisoFinanceiroPendente(
+                    'Receber'
+                );
+
+            if(receber){
+
+                notificacoes.push({
+
+                    tipo:
+                        'financeiro-receber',
+
+                    dados:
+                        receber
+                });
+            }
         }
 
         return notificacoes;
     }
 
+    /* ===================================================== */
+    /* 10.6 ASSINATURA DA LISTA DE NOTIFICAÇÕES              */
+    /* ===================================================== */
+    /*
+        Permite detectar quando o conjunto de avisos mudou.
+    */
+
     function assinaturaNotificacoes(lista){
         return lista.map(n => {
             if(n.tipo === 'compromisso'){
-                return `C:${n.id}:${n.item.data}:${n.item.hora}:${n.item.status}`;
+                return `C:${n.id}:${n.item.data}:${n.item.hora}:${n.item.status}:${n.item.responsavel || ''}`;
             }
             return `${n.tipo}:${n.dados.assinaturas.join(',')}`;
         }).join('||');
     }
+
+    /* ===================================================== */
+    /* 10.7 ABRIR / FECHAR CENTRAL                           */
+    /* ===================================================== */
 
     window.toggleCentralNotificacoesAgenda = function(event){
         if(event) event.stopPropagation();
@@ -1454,16 +3019,32 @@
         aplicarEstadoPainelNotificacoes();
     };
 
+    /* ===================================================== */
+    /* 10.8 APLICAR ESTADO VISUAL DO PAINEL                  */
+    /* ===================================================== */
+
     function aplicarEstadoPainelNotificacoes(){
         const painel = document.getElementById('agenda-notificacao-painel');
         if(!painel) return;
         painel.classList.toggle('aberto', !!window.agendaPainelAberto);
     }
 
+    /* ===================================================== */
+    /* 10.9 FECHAR CENTRAL                                   */
+    /* ===================================================== */
+
     window.fecharCentralNotificacoesAgenda = function(){
         window.agendaPainelAberto = false;
         aplicarEstadoPainelNotificacoes();
     };
+
+    /* ===================================================== */
+    /* 10.10 ATUALIZAR CENTRAL DE NOTIFICAÇÕES               */
+    /* ===================================================== */
+    /*
+        Atualiza badge, painel, assinatura e abertura
+        automática quando necessário.
+    */
 
     window.atualizarCentralNotificacoesAgenda = function(autoAbrir = false){
 
@@ -1472,7 +3053,30 @@
 
         const painel = document.getElementById('agenda-notificacao-painel');
         const badge = document.getElementById('agenda-notificacao-badge');
-        if(!painel || !badge) return;
+        const root = document.getElementById('agenda-notificacao-root');
+
+        if(!painel || !badge || !root) return;
+
+        const podeUsarCentral =
+            usuarioAtualPodeVerAgenda()
+            ||
+            usuarioAtualPodeVerFinanceiro();
+
+        root.style.display =
+            podeUsarCentral
+                ?
+                ''
+                :
+                'none';
+
+        if(
+            !podeUsarCentral
+        ){
+
+            removerAlertaAltaPrioridadeAgenda();
+
+            return;
+        }
 
         const lista = construirNotificacoesAgenda();
         const assinatura = assinaturaNotificacoes(lista);
@@ -1493,7 +3097,19 @@
 
         window.agendaUltimaAssinaturaNotificacoes = assinatura;
         aplicarEstadoPainelNotificacoes();
+
+        /*
+            O sino continua funcionando normalmente.
+            Além dele, verificamos se algum compromisso de
+            Alta Prioridade já chegou ao horário de disparo.
+        */
+
+        atualizarAlertaAltaPrioridadeAgenda();
     };
+
+    /* ===================================================== */
+    /* 10.11 RENDERIZAR PAINEL                               */
+    /* ===================================================== */
 
     function renderPainelNotificacoes(lista){
 
@@ -1519,6 +3135,16 @@
         `;
     }
 
+    /* ===================================================== */
+    /* 10.12 RENDERIZAR CADA NOTIFICAÇÃO                     */
+    /* ===================================================== */
+    /*
+        Trata separadamente:
+        - compromisso
+        - financeiro a pagar
+        - financeiro a receber
+    */
+
     function renderNotificacaoAgenda(n){
 
         if(n.tipo === 'compromisso'){
@@ -1528,6 +3154,41 @@
 
             return `
             <div class="agenda-notif-card" style="--notif-cor:${p.cor};--notif-fundo:${p.fundo};--notif-borda:${p.borda};">
+
+                <div style="
+                    margin-bottom:10px;
+                    padding:9px 10px;
+                    border-radius:10px;
+                    background:${p.fundo};
+                    border:1px solid ${p.borda};
+                ">
+
+                    <div style="
+                        color:${p.cor};
+                        font-size:8.5px;
+                        font-weight:950;
+                        text-transform:uppercase;
+                        letter-spacing:.08em;
+                    ">
+                        Responsável
+                    </div>
+
+                    <div style="
+                        margin-top:2px;
+                        color:#111827;
+                        font-size:16px;
+                        font-weight:950;
+                        line-height:1.1;
+                    ">
+                        ${escapeHTML(
+                            item.responsavel
+                            ||
+                            'Não informado'
+                        )}
+                    </div>
+
+                </div>
+
                 <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
                     <div style="min-width:0;">
                         <div style="font-size:11px;color:${p.cor};font-weight:900;text-transform:uppercase;letter-spacing:.05em;">
@@ -1585,12 +3246,24 @@
         `;
     }
 
+    /* ===================================================== */
+    /* 10.13 CONFIRMAR AVISO FINANCEIRO COM OK               */
+    /* ===================================================== */
+    /*
+        Registra as assinaturas dos lançamentos reconhecidos
+        para não repetir o mesmo aviso sem necessidade.
+    */
+
     window.okNotificacaoFinanceiraAgenda = async function(tipo){
 
         garantirAgendaDB();
 
         const hoje = dataLocalISO();
-        const chave = `${hoje}|${tipo}`;
+        const usuario =
+            usuarioAtualAgenda();
+
+        const chave =
+            `${usuario?.id || 'sem-usuario'}|${hoje}|${tipo}`;
         const atuais = itensFinanceirosHoje(tipo).map(assinaturaItemFinanceiro);
         const anteriores = Array.isArray(window.db.agendaConfig.financeiroOk[chave])
             ? window.db.agendaConfig.financeiroOk[chave]
@@ -1604,9 +3277,26 @@
         atualizarCentralNotificacoesAgenda(false);
     };
 
-    /* ================================================= */
-    /* INICIALIZAÇÃO GLOBAL                              */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 11. INICIALIZAÇÃO GLOBAL DA AGENDA                       */
+    /* ========================================================= */
+    /*
+        Ao iniciar:
+        - instala estilos
+        - monta a central de notificações
+        - aguarda o banco ficar disponível
+        - faz a primeira atualização
+        - atualiza notificações a cada 30 segundos
+        - fecha o painel ao clicar fora
+    */
+
+    /* ===================================================== */
+    /* 11.1 START GLOBAL                                     */
+    /* ===================================================== */
+    /*
+        Aguarda o banco por algumas tentativas e mantém
+        atualização periódica de 30 segundos.
+    */
 
     function iniciarAgendaGlobal(){
 
@@ -1633,6 +3323,14 @@
             }
         }, 150);
 
+        /*
+            Verificação global a cada 5 segundos.
+
+            Isso faz a notificação de Alta Prioridade aparecer
+            praticamente no horário marcado, sem depender de
+            trocar de tela ou aguardar até 30 segundos.
+        */
+
         setInterval(()=>{
             try{
                 atualizarCentralNotificacoesAgenda(false);
@@ -1640,23 +3338,45 @@
             catch(e){
                 console.error('Agenda - notificações:', e);
             }
-        }, 30000);
+        }, 5000);
 
         document.addEventListener('click', event => {
-            const root = document.getElementById('agenda-notificacao-root');
+
+            /*
+                Clique fora fecha SOMENTE o painel do sininho.
+
+                O alerta de Alta Prioridade não participa desta regra
+                e, portanto, não pode ser dispensado clicando fora.
+            */
+
+            const root =
+                document.getElementById(
+                    'agenda-notificacao-root'
+                );
+
             if(
                 root
-                && window.agendaPainelAberto
-                && !root.contains(event.target)
+                &&
+                window.agendaPainelAberto
+                &&
+                !root.contains(
+                    event.target
+                )
             ){
+
                 fecharCentralNotificacoesAgenda();
             }
         });
     }
 
-    /* ================================================= */
-    /* REGISTRAR PÁGINA                                  */
-    /* ================================================= */
+    /* ========================================================= */
+    /* 12. REGISTRO DA PÁGINA E START                           */
+    /* ========================================================= */
+    /*
+        Registra "agenda" no sistema de páginas do Dominus.
+
+        Depois inicia a Agenda quando o DOM estiver pronto.
+    */
 
     if(typeof window.registerPage === 'function'){
         registerPage('agenda', window.renderAgenda);

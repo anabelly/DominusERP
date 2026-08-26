@@ -1,6 +1,33 @@
-/* ========================= */
-/* SOBRE */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - SOBRE.JS                                    */
+/* ========================================================= */
+/*
+    TELA SOBRE O SISTEMA
+
+    Este arquivo renderiza as informações institucionais
+    do Dominus ERP.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Exibir identidade visual do sistema
+    2. Exibir a empresa
+    3. Exibir o desenvolvedor
+    4. Buscar e mostrar a versão instalada
+    5. Registrar a página "sobre"
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhum texto, dado, imagem ou comportamento foi modificado.
+*/
+
+
+/* ========================================================= */
+/* 01. RENDERIZAÇÃO DA TELA SOBRE                          */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* renderSobre */
+/* Renderiza as informações institucionais e preenche a versão instalada. */
+/* --------------------------------------------------------- */
 
 window.renderSobre = function () {
 
@@ -124,6 +151,14 @@ window.renderSobre = function () {
 `;
 
 
+    /* ===================================================== */
+    /* 01.1 CARREGAR VERSÃO INSTALADA                     */
+    /* ===================================================== */
+    /*
+        Após a criação do HTML, preenche #versao-sistema
+        usando a API exposta pelo preload.js.
+    */
+
     setTimeout(()=>{
 
 
@@ -154,9 +189,9 @@ window.renderSobre = function () {
 };
 
 
-/* ========================= */
-/* REGISTRAR */
-/* ========================= */
+/* ========================================================= */
+/* 02. REGISTRAR PÁGINA NO SISTEMA                         */
+/* ========================================================= */
 
 registerPage(
     'sobre',

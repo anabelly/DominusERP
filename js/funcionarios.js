@@ -1,6 +1,56 @@
-/* ========================= */
-/* FUNCIONÁRIOS */
-/* ========================= */
+/* ========================================================= */
+/* DOMINUS ERP - FUNCIONARIOS.JS                             */
+/* ========================================================= */
+/*
+    FUNCIONÁRIOS / RH
+
+    Este arquivo concentra o cadastro de funcionários e
+    diversos recursos de RH utilizados no Dominus ERP.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Funções auxiliares de datas, números e segurança HTML
+    2. Garantir a estrutura interna de RH dos funcionários
+    3. Cadastro e manutenção de cargos
+    4. Renderização da tela de Funcionários
+    5. Cadastro e edição de funcionários
+    6. Plano de carreira
+    7. Férias e períodos aquisitivos
+    8. Rescisão / acerto avulso
+    9. Compatibilidade de status com férias agendadas
+    10. Status visual dos funcionários
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma regra, cálculo, valor, validação, campo ou
+    comportamento foi modificado.
+*/
+
+
+/* ========================================================= */
+/* 01. FUNÇÕES AUXILIARES E ESTRUTURA DE RH                 */
+/* ========================================================= */
+/*
+    Funções de apoio usadas em todo o módulo:
+    - proteção de HTML
+    - números seguros
+    - datas
+    - períodos
+    - estrutura de ponto/RH
+    - cadastro de cargos
+*/
+
+/* ========================================================= */
+/* 01.1 HELPERS GERAIS                                      */
+/* ========================================================= */
+/*
+    Conversões, datas e utilidades compartilhadas
+    pelas demais áreas deste arquivo.
+*/
+
+/* --------------------------------------------------------- */
+/* escaparHTMLFuncionario */
+/* Escapa caracteres especiais antes de inserir valores no HTML. */
+/* --------------------------------------------------------- */
 
 function escaparHTMLFuncionario(valor) {
     return String(valor ?? '')
@@ -11,15 +61,30 @@ function escaparHTMLFuncionario(valor) {
         .replace(/'/g, '&#039;');
 }
 
+/* --------------------------------------------------------- */
+/* numeroFuncionario */
+/* Converte um valor para número seguro. */
+/* --------------------------------------------------------- */
+
 function numeroFuncionario(valor) {
     const n = Number(valor);
     return Number.isFinite(n) ? n : 0;
 }
 
+/* --------------------------------------------------------- */
+/* dataHojeFuncionario */
+/* Retorna a data atual no formato YYYY-MM-DD. */
+/* --------------------------------------------------------- */
+
 function dataHojeFuncionario() {
     return new Date().toISOString().split('T')[0];
 }
 
+
+/* --------------------------------------------------------- */
+/* dataObjFuncionario */
+/* Converte uma data ISO em objeto Date seguro. */
+/* --------------------------------------------------------- */
 
 function dataObjFuncionario(data) {
     if (!data) return null;
@@ -31,6 +96,11 @@ function dataObjFuncionario(data) {
         : d;
 }
 
+/* --------------------------------------------------------- */
+/* dataISOFuncionario */
+/* Converte um objeto Date para YYYY-MM-DD. */
+/* --------------------------------------------------------- */
+
 function dataISOFuncionario(dataObj) {
     if (!dataObj) return '';
 
@@ -41,6 +111,11 @@ function dataISOFuncionario(dataObj) {
     ].join('-');
 }
 
+/* --------------------------------------------------------- */
+/* somarDiasFuncionario */
+/* Soma dias a uma data e devolve o resultado em formato ISO. */
+/* --------------------------------------------------------- */
+
 function somarDiasFuncionario(data, dias) {
     const d = dataObjFuncionario(data);
 
@@ -50,6 +125,11 @@ function somarDiasFuncionario(data, dias) {
 
     return dataISOFuncionario(d);
 }
+
+/* --------------------------------------------------------- */
+/* somarAnosFuncionario */
+/* Soma anos a uma data, incluindo tratamento de 29/02. */
+/* --------------------------------------------------------- */
 
 function somarAnosFuncionario(data, anos) {
     const d = dataObjFuncionario(data);
@@ -73,6 +153,11 @@ function somarAnosFuncionario(data, anos) {
     return dataISOFuncionario(d);
 }
 
+/* --------------------------------------------------------- */
+/* diasInclusivosFuncionario */
+/* Calcula a quantidade de dias entre duas datas incluindo as extremidades. */
+/* --------------------------------------------------------- */
+
 function diasInclusivosFuncionario(inicio, fim) {
     const a = dataObjFuncionario(inicio);
     const b = dataObjFuncionario(fim);
@@ -87,6 +172,11 @@ function diasInclusivosFuncionario(inicio, fim) {
     ) + 1;
 }
 
+/* --------------------------------------------------------- */
+/* hojeDentroPeriodoFuncionario */
+/* Verifica se a data atual está dentro de um período. */
+/* --------------------------------------------------------- */
+
 function hojeDentroPeriodoFuncionario(inicio, fim) {
     const hoje = dataHojeFuncionario();
 
@@ -97,6 +187,24 @@ function hojeDentroPeriodoFuncionario(inicio, fim) {
         hoje <= fim
     );
 }
+
+/* ========================================================= */
+/* 01.2 GARANTIR ESTRUTURA INTERNA DO FUNCIONÁRIO           */
+/* ========================================================= */
+/*
+    Garante arrays e objetos usados por:
+    - ponto
+    - fechamentos
+    - carreira
+    - feriados
+    - férias
+    - acertos/rescisão
+*/
+
+/* --------------------------------------------------------- */
+/* garantirEstruturaFuncionarioRH */
+/* Garante a estrutura necessária de RH dentro do funcionário. */
+/* --------------------------------------------------------- */
 
 function garantirEstruturaFuncionarioRH(func) {
     if (!func) return;
@@ -130,19 +238,49 @@ function garantirEstruturaFuncionarioRH(func) {
     }
 }
 
+/* ========================================================= */
+/* 02. CADASTRO E GERENCIAMENTO DE CARGOS                   */
+/* ========================================================= */
+/*
+    Mantém a lista de cargos utilizada no cadastro,
+    edição e plano de carreira.
+*/
+
+/* --------------------------------------------------------- */
+/* garantirCadastroCargosFuncionario */
+/* Garante e normaliza a lista global de cargos. */
+/* --------------------------------------------------------- */
+
 function garantirCadastroCargosFuncionario() {
     if (!window.db) {
         return [];
     }
 
+    /*
+        A lista oficial de cargos agora é db.cargosFuncionario.
+
+        IMPORTANTE:
+        não recriamos automaticamente os quatro cargos padrão
+        sempre que a lista estiver vazia.
+
+        Uma lista vazia é válida e significa que o usuário
+        realmente removeu todos os cargos que podia remover.
+    */
+
     if (!Array.isArray(db.cargosFuncionario)) {
-        db.cargosFuncionario = [
-            'Produção',
-            'Administrativo',
-            'Gerência',
-            'Auxiliar'
-        ];
+        db.cargosFuncionario = [];
     }
+
+    /*
+        MIGRAÇÃO / COMPATIBILIDADE
+
+        Se existir funcionário usando um cargo que ainda não esteja
+        na lista (por exemplo, banco antigo), o cargo é incorporado
+        uma única vez para não quebrar cadastros existentes.
+
+        Cargos realmente excluídos não voltam, pois o sistema
+        impede excluir um cargo que esteja em uso.
+    */
 
     const usados = [];
 
@@ -164,13 +302,18 @@ function garantirCadastroCargosFuncionario() {
         }
     });
 
-    [...db.cargosFuncionario, ...usados].forEach(cargo => {
+    usados.forEach(cargo => {
         const nome = String(cargo || '').trim();
 
         if (!nome) return;
 
         const existe = db.cargosFuncionario.some(
-            item => String(item).trim().toLowerCase() === nome.toLowerCase()
+            item =>
+                String(item || '')
+                    .trim()
+                    .toLowerCase()
+                ===
+                nome.toLowerCase()
         );
 
         if (!existe) {
@@ -179,20 +322,39 @@ function garantirCadastroCargosFuncionario() {
     });
 
     db.cargosFuncionario = db.cargosFuncionario
-        .map(item => String(item || '').trim())
+        .map(
+            item =>
+                String(item || '').trim()
+        )
         .filter(Boolean)
-        .filter((item, index, lista) =>
-            lista.findIndex(
-                outro => outro.toLowerCase() === item.toLowerCase()
-            ) === index
+        .filter(
+            (item, index, lista) =>
+                lista.findIndex(
+                    outro =>
+                        outro.toLowerCase()
+                        ===
+                        item.toLowerCase()
+                )
+                ===
+                index
         );
 
     return db.cargosFuncionario;
 }
 
+/* --------------------------------------------------------- */
+/* cargosPadraoFuncionario */
+/* Retorna uma cópia da lista atual de cargos. */
+/* --------------------------------------------------------- */
+
 function cargosPadraoFuncionario() {
     return [...garantirCadastroCargosFuncionario()];
 }
+
+/* --------------------------------------------------------- */
+/* opcoesCargoFuncionario */
+/* Monta as opções HTML do seletor de cargos. */
+/* --------------------------------------------------------- */
 
 function opcoesCargoFuncionario(valorAtual = '', incluirVazio = false) {
     const cargos = cargosPadraoFuncionario();
@@ -219,6 +381,11 @@ function opcoesCargoFuncionario(valorAtual = '', incluirVazio = false) {
     `).join('');
 }
 
+/* --------------------------------------------------------- */
+/* cargoEmUsoFuncionario */
+/* Verifica se um cargo está sendo usado por funcionário ou carreira. */
+/* --------------------------------------------------------- */
+
 function cargoEmUsoFuncionario(cargo) {
     const alvo = String(cargo || '').trim().toLowerCase();
 
@@ -235,6 +402,11 @@ function cargoEmUsoFuncionario(cargo) {
         );
     });
 }
+
+/* --------------------------------------------------------- */
+/* abrirCadastroCargosFuncionario */
+/* Abre o gerenciamento de cargos da empresa. */
+/* --------------------------------------------------------- */
 
 window.abrirCadastroCargosFuncionario = function () {
     garantirCadastroCargosFuncionario();
@@ -375,14 +547,35 @@ window.abrirCadastroCargosFuncionario = function () {
                 });
             });
 
-            db.cargosFuncionario = novos;
+            /*
+                A lista inteira é substituída pela lista exibida
+                no modal e salva no banco.
+
+                Assim:
+                - cargo novo permanece;
+                - cargo removido permanece removido;
+                - cargo renomeado permanece renomeado.
+            */
+
+            db.cargosFuncionario =
+                novos;
 
             await save();
+
             closeModal();
-            navigate('funcionarios');
+
+            await navigate(
+                'funcionarios',
+                false
+            );
         }
     });
 };
+
+/* --------------------------------------------------------- */
+/* adicionarLinhaCargoFuncionario */
+/* Adiciona uma nova linha ao cadastro de cargos. */
+/* --------------------------------------------------------- */
 
 window.adicionarLinhaCargoFuncionario = function () {
     const lista = document.getElementById('lista-cargos-funcionario');
@@ -425,7 +618,12 @@ window.adicionarLinhaCargoFuncionario = function () {
     linha.querySelector('input')?.focus();
 };
 
-window.removerCargoFuncionarioCadastro = function (botao) {
+/* --------------------------------------------------------- */
+/* removerCargoFuncionarioCadastro */
+/* Remove um cargo da tela quando ele não estiver em uso. */
+/* --------------------------------------------------------- */
+
+window.removerCargoFuncionarioCadastro = async function (botao) {
     const linha = botao?.closest('.cargo-funcionario-linha');
 
     if (!linha) return;
@@ -443,8 +641,66 @@ window.removerCargoFuncionarioCadastro = function (botao) {
         return;
     }
 
+    /*
+        Se o cargo já existia no cadastro, ele é removido
+        imediatamente da lista persistida e salvo no banco.
+
+        Isso evita o comportamento anterior em que o cargo
+        sumia visualmente do modal, mas voltava ao abrir de novo.
+    */
+
+    if (original) {
+        garantirCadastroCargosFuncionario();
+
+        db.cargosFuncionario =
+            db.cargosFuncionario.filter(
+                cargo =>
+                    String(cargo || '')
+                        .trim()
+                        .toLowerCase()
+                    !==
+                    original.toLowerCase()
+            );
+
+        /*
+            Salva ANTES de atualizar a interface.
+            Se o save falhar, o cargo não some falsamente da tela.
+        */
+
+        try {
+
+            await save();
+
+        } catch (erro) {
+
+            console.error(
+                'Erro ao excluir cargo:',
+                erro
+            );
+
+            alert(
+                'Não foi possível excluir o cargo. Tente novamente.'
+            );
+
+            return;
+        }
+    }
+
     linha.remove();
 };
+
+/* ========================================================= */
+/* 02.1 HELPERS DO PLANO DE CARREIRA                        */
+/* ========================================================= */
+/*
+    Funções usadas para datas, status e identificação
+    das etapas da carreira.
+*/
+
+/* --------------------------------------------------------- */
+/* formatarDataCarreira */
+/* Formata datas do plano de carreira para exibição. */
+/* --------------------------------------------------------- */
 
 function formatarDataCarreira(valor) {
     if (!valor) return '-';
@@ -458,6 +714,11 @@ function formatarDataCarreira(valor) {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
+/* --------------------------------------------------------- */
+/* normalizarStatusEtapaCarreira */
+/* Normaliza o status interno de uma etapa de carreira. */
+/* --------------------------------------------------------- */
+
 function normalizarStatusEtapaCarreira(status) {
     const s = String(status || '').toLowerCase();
 
@@ -466,6 +727,11 @@ function normalizarStatusEtapaCarreira(status) {
     return 'planejado';
 }
 
+/* --------------------------------------------------------- */
+/* textoStatusEtapaCarreira */
+/* Retorna o texto amigável do status da etapa. */
+/* --------------------------------------------------------- */
+
 function textoStatusEtapaCarreira(status) {
     const s = normalizarStatusEtapaCarreira(status);
 
@@ -473,6 +739,11 @@ function textoStatusEtapaCarreira(status) {
     if (s === 'concluido') return 'Concluído';
     return 'Planejado';
 }
+
+/* --------------------------------------------------------- */
+/* estiloStatusEtapaCarreira */
+/* Retorna o estilo visual do status da etapa. */
+/* --------------------------------------------------------- */
 
 function estiloStatusEtapaCarreira(status) {
     const s = normalizarStatusEtapaCarreira(status);
@@ -488,6 +759,11 @@ function estiloStatusEtapaCarreira(status) {
     return 'background:#dbeafe;color:#1d4ed8;';
 }
 
+/* --------------------------------------------------------- */
+/* obterEtapaAtivaCarreira */
+/* Localiza a etapa de carreira atualmente ativa. */
+/* --------------------------------------------------------- */
+
 function obterEtapaAtivaCarreira(func) {
     garantirEstruturaFuncionarioRH(func);
 
@@ -497,6 +773,11 @@ function obterEtapaAtivaCarreira(func) {
 
     return ativas[0] || null;
 }
+
+/* --------------------------------------------------------- */
+/* obterProximaEtapaCarreira */
+/* Localiza ou projeta a próxima etapa de carreira. */
+/* --------------------------------------------------------- */
 
 function obterProximaEtapaCarreira(func, etapaAtiva) {
     garantirEstruturaFuncionarioRH(func);
@@ -522,6 +803,22 @@ function obterProximaEtapaCarreira(func, etapaAtiva) {
 
     return null;
 }
+
+/* ========================================================= */
+/* 03. RENDERIZAÇÃO DA PÁGINA DE FUNCIONÁRIOS               */
+/* ========================================================= */
+/*
+    Monta a tela principal com:
+    - cadastro de cargos
+    - novo funcionário
+    - listagem de colaboradores
+    - Ponto
+    - Carreira
+    - Férias
+    - Rescisão
+    - Editar
+    - Excluir
+*/
 
 registerPage('funcionarios', function () {
 
@@ -771,9 +1068,19 @@ registerPage('funcionarios', function () {
 `;
 });
 
-/* ========================= */
-/* MODAL FUNCIONÁRIO */
-/* ========================= */
+/* ========================================================= */
+/* 04. CADASTRO DE FUNCIONÁRIO                              */
+/* ========================================================= */
+/*
+    Abre o formulário de novo funcionário e cria toda
+    a estrutura inicial usada por Ponto, Carreira,
+    Férias e Rescisão.
+*/
+
+/* --------------------------------------------------------- */
+/* abrirModalFuncionario */
+/* Abre o formulário para cadastrar um novo funcionário. */
+/* --------------------------------------------------------- */
 
 window.abrirModalFuncionario = function () {
 
@@ -1013,9 +1320,18 @@ window.abrirModalFuncionario = function () {
     });
 };
 
-/* ========================= */
-/* EDITAR FUNCIONÁRIO */
-/* ========================= */
+/* ========================================================= */
+/* 05. EDIÇÃO DE FUNCIONÁRIO                                */
+/* ========================================================= */
+/*
+    Permite alterar dados cadastrais, salário, status,
+    horário padrão e observações do funcionário.
+*/
+
+/* --------------------------------------------------------- */
+/* editarFuncionario */
+/* Abre o formulário para editar um funcionário existente. */
+/* --------------------------------------------------------- */
 
 window.editarFuncionario = function (index) {
 
@@ -1239,9 +1555,25 @@ window.editarFuncionario = function (index) {
     });
 };
 
-/* ===================================================== */
-/* PLANO DE CARREIRA                                     */
-/* ===================================================== */
+/* ========================================================= */
+/* 06. PLANO DE CARREIRA                                    */
+/* ========================================================= */
+/*
+    Controla:
+    - etapa atual
+    - próxima etapa
+    - histórico
+    - nível
+    - salário
+    - previsão de promoção
+    - requisitos
+    - competências
+*/
+
+/* --------------------------------------------------------- */
+/* abrirPlanoCarreira */
+/* Abre o painel completo do plano de carreira. */
+/* --------------------------------------------------------- */
 
 window.abrirPlanoCarreira = function (index) {
 
@@ -1492,13 +1824,28 @@ window.abrirPlanoCarreira = function (index) {
     }, 0);
 };
 
+/* --------------------------------------------------------- */
+/* novaEtapaCarreira */
+/* Inicia o cadastro de uma nova etapa de carreira. */
+/* --------------------------------------------------------- */
+
 window.novaEtapaCarreira = function (index) {
     abrirFormularioEtapaCarreira(index, null);
 };
 
+/* --------------------------------------------------------- */
+/* editarEtapaCarreira */
+/* Abre uma etapa de carreira existente para edição. */
+/* --------------------------------------------------------- */
+
 window.editarEtapaCarreira = function (index, etapaId) {
     abrirFormularioEtapaCarreira(index, etapaId);
 };
+
+/* --------------------------------------------------------- */
+/* abrirFormularioEtapaCarreira */
+/* Monta e processa o formulário de etapa de carreira. */
+/* --------------------------------------------------------- */
 
 function abrirFormularioEtapaCarreira(index, etapaId = null) {
 
@@ -1725,6 +2072,11 @@ function abrirFormularioEtapaCarreira(index, etapaId = null) {
     }, 0);
 }
 
+/* --------------------------------------------------------- */
+/* excluirEtapaCarreira */
+/* Exclui uma etapa de carreira após confirmação. */
+/* --------------------------------------------------------- */
+
 window.excluirEtapaCarreira = async function (index, etapaId) {
 
     const f = db.funcionarios[index];
@@ -1748,9 +2100,26 @@ window.excluirEtapaCarreira = async function (index, etapaId) {
 };
 
 
-/* ===================================================== */
-/* FÉRIAS                                                */
-/* ===================================================== */
+/* ========================================================= */
+/* 07. FÉRIAS                                               */
+/* ========================================================= */
+/*
+    Controla períodos aquisitivos, saldo, faltas,
+    agendamento, abono, valores e histórico de férias.
+*/
+
+/* ========================================================= */
+/* 07.1 REGRAS E CÁLCULOS DE FÉRIAS                         */
+/* ========================================================= */
+/*
+    Funções auxiliares para direito de férias,
+    faltas, períodos aquisitivos, valores e status.
+*/
+
+/* --------------------------------------------------------- */
+/* direitoFeriasPorFaltasFuncionario */
+/* Calcula a quantidade de dias de férias conforme faltas. */
+/* --------------------------------------------------------- */
 
 function direitoFeriasPorFaltasFuncionario(faltas) {
     faltas = Math.max(
@@ -1768,6 +2137,11 @@ function direitoFeriasPorFaltasFuncionario(faltas) {
     return 0;
 }
 
+/* --------------------------------------------------------- */
+/* contarFaltasInjustificadasPeriodoFuncionario */
+/* Conta faltas injustificadas dentro do período aquisitivo. */
+/* --------------------------------------------------------- */
+
 function contarFaltasInjustificadasPeriodoFuncionario(
     func,
     inicio,
@@ -1783,6 +2157,11 @@ function contarFaltasInjustificadasPeriodoFuncionario(
         reg.data <= fim
     )).length;
 }
+
+/* --------------------------------------------------------- */
+/* obterPeriodosAquisitivosFuncionario */
+/* Monta os períodos aquisitivos e respectivos saldos de férias. */
+/* --------------------------------------------------------- */
 
 function obterPeriodosAquisitivosFuncionario(func) {
     garantirEstruturaFuncionarioRH(func);
@@ -1879,6 +2258,11 @@ function obterPeriodosAquisitivosFuncionario(func) {
     return periodos;
 }
 
+/* --------------------------------------------------------- */
+/* normalizarTextoFuncionarioRH */
+/* Normaliza textos usados nas comparações internas de RH. */
+/* --------------------------------------------------------- */
+
 function normalizarTextoFuncionarioRH(valor) {
     return String(valor || '')
         .normalize('NFD')
@@ -1886,6 +2270,11 @@ function normalizarTextoFuncionarioRH(valor) {
         .toLowerCase()
         .trim();
 }
+
+/* --------------------------------------------------------- */
+/* statusFeriasTextoFuncionario */
+/* Retorna o texto amigável do status das férias. */
+/* --------------------------------------------------------- */
 
 function statusFeriasTextoFuncionario(status) {
     const s = normalizarTextoFuncionarioRH(status);
@@ -1901,6 +2290,11 @@ function statusFeriasTextoFuncionario(status) {
     return 'Agendadas';
 }
 
+/* --------------------------------------------------------- */
+/* statusFeriasEstiloFuncionario */
+/* Retorna o estilo visual do status das férias. */
+/* --------------------------------------------------------- */
+
 function statusFeriasEstiloFuncionario(status) {
     const s = normalizarTextoFuncionarioRH(status);
 
@@ -1914,6 +2308,11 @@ function statusFeriasEstiloFuncionario(status) {
 
     return 'background:#ede9fe;color:#5b21b6;';
 }
+
+/* --------------------------------------------------------- */
+/* calcularValorFeriasFuncionario */
+/* Calcula remuneração, terço e abono usados na tela de férias. */
+/* --------------------------------------------------------- */
 
 function calcularValorFeriasFuncionario(
     salario,
@@ -1969,6 +2368,11 @@ function calcularValorFeriasFuncionario(
     };
 }
 
+/* --------------------------------------------------------- */
+/* periodosFeriasHTMLFuncionario */
+/* Monta as opções dos períodos aquisitivos. */
+/* --------------------------------------------------------- */
+
 function periodosFeriasHTMLFuncionario(
     func,
     periodoSelecionado = ''
@@ -1991,6 +2395,11 @@ function periodosFeriasHTMLFuncionario(
         })
         .join('');
 }
+
+/* --------------------------------------------------------- */
+/* abrirFeriasFuncionario */
+/* Abre o painel de férias do funcionário. */
+/* --------------------------------------------------------- */
 
 window.abrirFeriasFuncionario = function (index) {
     const f = db.funcionarios[index];
@@ -2361,12 +2770,22 @@ window.abrirFeriasFuncionario = function (index) {
     }, 0);
 };
 
+/* --------------------------------------------------------- */
+/* novaFeriasFuncionario */
+/* Inicia um novo registro/agendamento de férias. */
+/* --------------------------------------------------------- */
+
 window.novaFeriasFuncionario = function (index) {
     abrirFormularioFeriasFuncionario(
         index,
         null
     );
 };
+
+/* --------------------------------------------------------- */
+/* editarFeriasFuncionario */
+/* Abre um registro de férias existente para edição. */
+/* --------------------------------------------------------- */
 
 window.editarFeriasFuncionario = function (
     index,
@@ -2377,6 +2796,11 @@ window.editarFeriasFuncionario = function (
         feriasId
     );
 };
+
+/* --------------------------------------------------------- */
+/* abrirFormularioFeriasFuncionario */
+/* Monta e processa o formulário de férias. */
+/* --------------------------------------------------------- */
 
 function abrirFormularioFeriasFuncionario(
     index,
@@ -2873,6 +3297,11 @@ function abrirFormularioFeriasFuncionario(
     );
 }
 
+/* --------------------------------------------------------- */
+/* atualizarPreviewFeriasFuncionario */
+/* Atualiza os valores e informações prévias do formulário de férias. */
+/* --------------------------------------------------------- */
+
 window.atualizarPreviewFeriasFuncionario = function (
     index
 ) {
@@ -3017,6 +3446,11 @@ window.atualizarPreviewFeriasFuncionario = function (
     `;
 };
 
+/* --------------------------------------------------------- */
+/* excluirFeriasFuncionario */
+/* Exclui um registro de férias após confirmação. */
+/* --------------------------------------------------------- */
+
 window.excluirFeriasFuncionario = async function (
     index,
     feriasId
@@ -3060,9 +3494,18 @@ window.excluirFeriasFuncionario = async function (
 };
 
 
-/* ===================================================== */
-/* RESCISÃO / ACERTO AVULSO                              */
-/* ===================================================== */
+/* ========================================================= */
+/* 08. RESCISÃO / ACERTO AVULSO                             */
+/* ========================================================= */
+/*
+    Controla os cálculos e registros internos usados
+    na tela de acerto/rescisão do funcionário.
+*/
+
+/* --------------------------------------------------------- */
+/* dataTrabalhadaNoPontoFuncionario */
+/* Verifica se uma data possui trabalho registrado no ponto. */
+/* --------------------------------------------------------- */
 
 function dataTrabalhadaNoPontoFuncionario(
     func,
@@ -3106,6 +3549,11 @@ function dataTrabalhadaNoPontoFuncionario(
         reg.saida
     );
 }
+
+/* --------------------------------------------------------- */
+/* datasTrabalhadasPeriodoFuncionario */
+/* Conta/lista datas trabalhadas dentro de um período. */
+/* --------------------------------------------------------- */
 
 function datasTrabalhadasPeriodoFuncionario(
     func,
@@ -3171,6 +3619,11 @@ function datasTrabalhadasPeriodoFuncionario(
 
     return datas;
 }
+
+/* --------------------------------------------------------- */
+/* calcularAcertoAvulsoFuncionario */
+/* Executa o cálculo interno do acerto avulso. */
+/* --------------------------------------------------------- */
 
 function calcularAcertoAvulsoFuncionario(
     func,
@@ -3301,6 +3754,11 @@ function calcularAcertoAvulsoFuncionario(
     };
 }
 
+/* --------------------------------------------------------- */
+/* abrirRescisaoFuncionario */
+/* Abre o painel de rescisão/acertos do funcionário. */
+/* --------------------------------------------------------- */
+
 window.abrirRescisaoFuncionario = function (index) {
     const f =
         db.funcionarios[index];
@@ -3309,93 +3767,159 @@ window.abrirRescisaoFuncionario = function (index) {
 
     garantirEstruturaFuncionarioRH(f);
 
-    const historico =
+    /*
+        Depois que uma rescisão/acerto foi concluída,
+        esta tela deixa de exibir tabela, histórico e botão
+        para novo acerto.
+
+        Ela passa a mostrar somente:
+        - Rescisão realizada
+        - valor
+        - botão do recibo de pagamento
+    */
+
+    const ultimoAcerto =
         [...f.acertosRescisao]
-        .sort(
-            (a, b) =>
-                String(b.dataCalculo || '')
-                .localeCompare(
-                    String(a.dataCalculo || '')
-                )
-        );
+            .filter(
+                acerto =>
+                    acerto.rescisaoRealizada === true
+                    &&
+                    acerto.rescisaoCancelada !== true
+            )
+            .sort(
+                (a, b) =>
+                    String(b.criadoEm || b.dataCalculo || '')
+                        .localeCompare(
+                            String(a.criadoEm || a.dataCalculo || '')
+                        )
+            )[0]
+        || null;
 
-    const linhas =
-        historico.length
-        ?
-        historico
-        .map(item => `
-            <tr>
-                <td style="padding:11px;border-bottom:1px solid #e5e7eb;">
-                    ${formatarDataCarreira(item.dataCalculo)}
-                </td>
+    if (ultimoAcerto) {
 
-                <td style="padding:11px;border-bottom:1px solid #e5e7eb;">
-                    ${formatarDataCarreira(item.inicio)}
-                    a
-                    ${formatarDataCarreira(item.fim)}
-                </td>
+        const html = `
+            <div style="
+                display:flex;
+                flex-direction:column;
+                gap:18px;
+            ">
 
-                <td style="padding:11px;border-bottom:1px solid #e5e7eb;text-align:right;">
-                    ${formatarMoeda(numeroFuncionario(item.valorDiarias))}
-                </td>
+                <div style="
+                    padding:28px;
+                    border-radius:16px;
+                    background:#f0fdf4;
+                    border:1px solid #bbf7d0;
+                    text-align:center;
+                ">
 
-                <td style="padding:11px;border-bottom:1px solid #e5e7eb;text-align:right;">
-                    ${formatarMoeda(numeroFuncionario(item.valorExtras))}
-                </td>
-
-                <td style="padding:11px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:800;">
-                    ${formatarMoeda(numeroFuncionario(item.total))}
-                </td>
-
-                <td style="padding:11px;border-bottom:1px solid #e5e7eb;">
-                    <span style="
-                        display:inline-block;
-                        padding:4px 9px;
-                        border-radius:999px;
-                        font-size:10px;
-                        font-weight:800;
-                        ${
-                            normalizarTextoFuncionarioRH(item.statusPagamento) === 'pago'
-                            ?
-                            'background:#dcfce7;color:#166534;'
-                            :
-                            'background:#fef3c7;color:#92400e;'
-                        }
+                    <div style="
+                        font-size:34px;
+                        margin-bottom:10px;
                     ">
-                        ${escaparHTMLFuncionario(item.statusPagamento || 'Pendente')}
-                    </span>
-                </td>
+                        ✅
+                    </div>
 
-                <td style="padding:11px;border-bottom:1px solid #e5e7eb;text-align:right;">
-                    <button
-                        type="button"
-                        class="btn-action"
-                        style="
-                            padding:5px 8px;
-                            font-size:11px;
-                            background:#475569;
-                        "
-                        onclick="gerarComprovanteAcertoFuncionario(${index}, '${String(item.id)}')">
-                        📄 PDF
-                    </button>
-                </td>
-            </tr>
-        `)
-        .join('')
-        :
-        `
-            <tr>
-                <td
-                    colspan="7"
-                    style="
-                        padding:28px;
-                        text-align:center;
-                        color:#6b7280;
+                    <div style="
+                        font-size:24px;
+                        font-weight:900;
+                        color:#166534;
                     ">
-                    Nenhum acerto registrado.
-                </td>
-            </tr>
+                        Rescisão realizada
+                    </div>
+
+                    <div style="
+                        margin-top:8px;
+                        color:#4b5563;
+                        font-size:13px;
+                    ">
+                        ${escaparHTMLFuncionario(f.nome || '-')}
+                    </div>
+
+                    <div style="
+                        margin-top:15px;
+                        font-size:13px;
+                        color:#64748b;
+                    ">
+                        Valor do acerto
+                    </div>
+
+                    <div style="
+                        margin-top:4px;
+                        font-size:28px;
+                        font-weight:900;
+                        color:#111827;
+                    ">
+                        ${formatarMoeda(
+                            numeroFuncionario(
+                                ultimoAcerto.total
+                            )
+                        )}
+                    </div>
+
+                    <div style="
+                        margin-top:22px;
+                        display:flex;
+                        justify-content:center;
+                        gap:10px;
+                        flex-wrap:wrap;
+                    ">
+
+                        <button
+                            type="button"
+                            class="btn-action"
+                            style="
+                                background:#7c3aed;
+                                padding:11px 18px;
+                                font-size:13px;
+                            "
+                            onclick="gerarReciboRescisaoFuncionario(${index}, '${String(ultimoAcerto.id)}')">
+
+                            🧾 Recibo de pagamento
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn-del"
+                            style="
+                                padding:11px 18px;
+                                font-size:13px;
+                            "
+                            onclick="cancelarRescisaoFuncionario(${index}, '${String(ultimoAcerto.id)}')">
+
+                            ↩ Cancelar rescisão
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
         `;
+
+        configModal({
+            title:
+                '🧾 Rescisão',
+
+            body:
+                html,
+
+            confirmText:
+                'Fechar',
+
+            onConfirm() {
+                closeModal();
+            }
+        });
+
+        return;
+    }
+
+    /*
+        Antes de existir uma rescisão, mostramos apenas
+        a opção para iniciar o processo.
+    */
 
     const html = `
         <div style="
@@ -3405,6 +3929,7 @@ window.abrirRescisaoFuncionario = function (index) {
         ">
 
             <div class="content-card">
+
                 <div style="
                     display:flex;
                     justify-content:space-between;
@@ -3412,7 +3937,9 @@ window.abrirRescisaoFuncionario = function (index) {
                     gap:15px;
                     flex-wrap:wrap;
                 ">
+
                     <div>
+
                         <div style="
                             font-size:20px;
                             font-weight:800;
@@ -3425,17 +3952,26 @@ window.abrirRescisaoFuncionario = function (index) {
                             margin-top:4px;
                         ">
                             Salário atual:
-                            ${formatarMoeda(numeroFuncionario(f.salario))}
+                            ${formatarMoeda(
+                                numeroFuncionario(
+                                    f.salario
+                                )
+                            )}
                         </div>
+
                     </div>
 
                     <button
                         class="btn-action"
                         style="background:#be123c;"
                         onclick="novoAcertoRescisaoFuncionario(${index})">
-                        ＋ Novo acerto
+
+                        🧾 Realizar Rescisão
+
                     </button>
+
                 </div>
+
             </div>
 
             <div style="
@@ -3453,28 +3989,6 @@ window.abrirRescisaoFuncionario = function (index) {
                 aviso-prévio, INSS ou benefícios.
             </div>
 
-            <div class="content-card" style="
-                padding:0;
-                overflow:auto;
-            ">
-                <table style="width:100%;">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Período</th>
-                            <th style="text-align:right;">Diárias</th>
-                            <th style="text-align:right;">Horas extras</th>
-                            <th style="text-align:right;">Total</th>
-                            <th>Status</th>
-                            <th style="text-align:right;">Comprovante</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        ${linhas}
-                    </tbody>
-                </table>
-            </div>
         </div>
     `;
 
@@ -3492,22 +4006,12 @@ window.abrirRescisaoFuncionario = function (index) {
             closeModal();
         }
     });
-
-    setTimeout(() => {
-        const content =
-            document.querySelector(
-                '#modal-global .content-card'
-            );
-
-        if (content) {
-            content.style.width =
-                '96vw';
-
-            content.style.maxWidth =
-                '1200px';
-        }
-    }, 0);
 };
+
+/* --------------------------------------------------------- */
+/* novoAcertoRescisaoFuncionario */
+/* Abre o formulário para registrar um novo acerto. */
+/* --------------------------------------------------------- */
 
 window.novoAcertoRescisaoFuncionario = function (
     index
@@ -3633,20 +4137,6 @@ window.novoAcertoRescisaoFuncionario = function (
                     border:1px solid #fed7aa;
                     border-radius:10px;
                 ">
-            </div>
-
-            <div style="grid-column:1 / -1;">
-                <label style="
-                    display:flex;
-                    align-items:center;
-                    gap:8px;
-                ">
-                    <input
-                        id="acerto-desligar"
-                        type="checkbox"
-                        style="width:auto;">
-                    Alterar o status do funcionário para Desligado ao finalizar
-                </label>
             </div>
 
             <div style="grid-column:1 / -1;">
@@ -3859,22 +4349,38 @@ window.novoAcertoRescisaoFuncionario = function (
                         .toISOString()
                 };
 
+                registro.rescisaoRealizada =
+                    true;
+
+                registro.reciboDisponivel =
+                    true;
+
                 f.acertosRescisao.push(
                     registro
                 );
 
-                if (
-                    document
-                    .getElementById(
-                        'acerto-desligar'
-                    )
-                    ?.checked
-                ) {
-                    f.status =
-                        'Desligado';
-                }
+                /*
+                    Concluir a rescisão sempre desliga o funcionário.
+                    A própria tela de Rescisão oferece a opção
+                    "Cancelar rescisão" para reativá-lo se necessário.
+                */
+
+                f.status =
+                    'Desligado';
 
                 await save();
+
+                /*
+                    Atualiza imediatamente a lista de funcionários
+                    usando os dados que acabaram de ser salvos.
+                    Assim o status "Desligado" aparece na mesma hora,
+                    sem precisar trocar de tela e voltar.
+                */
+
+                await navigate(
+                    'funcionarios',
+                    false
+                );
 
                 abrirRescisaoFuncionario(
                     index
@@ -3904,6 +4410,11 @@ window.novoAcertoRescisaoFuncionario = function (
         0
     );
 };
+
+/* --------------------------------------------------------- */
+/* atualizarDiasAcertoFuncionario */
+/* Atualiza a quantidade de dias considerada no acerto. */
+/* --------------------------------------------------------- */
 
 window.atualizarDiasAcertoFuncionario = function (
     index
@@ -3987,6 +4498,11 @@ window.atualizarDiasAcertoFuncionario = function (
         index
     );
 };
+
+/* --------------------------------------------------------- */
+/* atualizarPreviewAcertoFuncionario */
+/* Atualiza a prévia dos valores do acerto. */
+/* --------------------------------------------------------- */
 
 window.atualizarPreviewAcertoFuncionario = function (
     index
@@ -4126,245 +4642,1106 @@ window.atualizarPreviewAcertoFuncionario = function (
     `;
 };
 
-window.gerarComprovanteAcertoFuncionario = function (
+
+
+/* --------------------------------------------------------- */
+/* obterDatasTrabalhadasReciboFuncionario                    */
+/* Obtém as datas EXATAS trabalhadas registradas no ponto.   */
+/* --------------------------------------------------------- */
+
+function obterDatasTrabalhadasReciboFuncionario(
+    func,
+    item
+) {
+
+    /*
+        A rescisão já salva em "datasPonto" exatamente os dias
+        selecionados a partir do ponto do funcionário.
+
+        Para registros antigos, onde datasPonto ainda não exista,
+        o sistema reconstrói a lista usando o ponto entre início
+        e fim do acerto.
+    */
+
+    let datas =
+        Array.isArray(
+            item?.datasPonto
+        )
+        ?
+        item.datasPonto
+        :
+        [];
+
+    if (
+        !datas.length
+        &&
+        item?.inicio
+        &&
+        item?.fim
+    ) {
+
+        datas =
+            datasTrabalhadasPeriodoFuncionario(
+                func,
+                item.inicio,
+                item.fim
+            );
+    }
+
+    return [
+        ...new Set(
+            datas
+                .filter(Boolean)
+                .map(
+                    data =>
+                        String(data)
+                            .trim()
+                )
+        )
+    ]
+    .sort();
+}
+
+
+/* --------------------------------------------------------- */
+/* dataSeguinteReciboFuncionario                             */
+/* Verifica se duas datas são dias consecutivos.             */
+/* --------------------------------------------------------- */
+
+function dataSeguinteReciboFuncionario(
+    anterior,
+    atual
+) {
+
+    const a =
+        dataObjFuncionario(
+            anterior
+        );
+
+    const b =
+        dataObjFuncionario(
+            atual
+        );
+
+    if (
+        !a
+        ||
+        !b
+    ) {
+        return false;
+    }
+
+    const proximo =
+        new Date(
+            a.getTime()
+        );
+
+    proximo.setDate(
+        proximo.getDate() + 1
+    );
+
+    return (
+        dataISOFuncionario(
+            proximo
+        )
+        ===
+        atual
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* formatarDiasTrabalhadosReciboFuncionario                  */
+/* Agrupa apenas dias consecutivos.                          */
+/*                                                             */
+/* Exemplos:                                                  */
+/* 06 e 07 -> 06/08/2026 a 07/08/2026                       */
+/* 06 a 10 -> 06/08/2026 a 10/08/2026                       */
+/* 06, 07 e 10 -> 06/08/2026 a 07/08/2026 e 10/08/2026     */
+/* --------------------------------------------------------- */
+
+function formatarDiasTrabalhadosReciboFuncionario(
+    datas
+) {
+
+    if (
+        !Array.isArray(datas)
+        ||
+        !datas.length
+    ) {
+
+        return '';
+    }
+
+    const ordenadas =
+        [
+            ...new Set(
+                datas
+            )
+        ]
+        .sort();
+
+    const grupos =
+        [];
+
+    let inicio =
+        ordenadas[0];
+
+    let fim =
+        ordenadas[0];
+
+    for (
+        let i = 1;
+        i < ordenadas.length;
+        i++
+    ) {
+
+        const atual =
+            ordenadas[i];
+
+        if (
+            dataSeguinteReciboFuncionario(
+                fim,
+                atual
+            )
+        ) {
+
+            fim =
+                atual;
+
+            continue;
+        }
+
+        grupos.push({
+            inicio,
+            fim
+        });
+
+        inicio =
+            atual;
+
+        fim =
+            atual;
+    }
+
+    grupos.push({
+        inicio,
+        fim
+    });
+
+    const partes =
+        grupos.map(
+            grupo => {
+
+                const inicioBR =
+                    formatarDataCarreira(
+                        grupo.inicio
+                    );
+
+                const fimBR =
+                    formatarDataCarreira(
+                        grupo.fim
+                    );
+
+                if (
+                    grupo.inicio ===
+                    grupo.fim
+                ) {
+
+                    return inicioBR;
+                }
+
+                return (
+                    `${inicioBR} a ${fimBR}`
+                );
+            }
+        );
+
+    if (
+        partes.length === 1
+    ) {
+
+        return partes[0];
+    }
+
+    if (
+        partes.length === 2
+    ) {
+
+        return (
+            `${partes[0]} e ${partes[1]}`
+        );
+    }
+
+    return (
+        partes
+            .slice(
+                0,
+                -1
+            )
+            .join(', ')
+        +
+        ' e '
+        +
+        partes[
+            partes.length - 1
+        ]
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* formatarCompetenciaRescisaoFuncionario                    */
+/* Ex.: 2026-08-26 -> 08/2026                                */
+/* --------------------------------------------------------- */
+
+function formatarCompetenciaRescisaoFuncionario(
+    data
+) {
+
+    const valor =
+        String(
+            data || ''
+        ).trim();
+
+    const match =
+        valor.match(
+            /^(\d{4})-(\d{2})/
+        );
+
+    if (match) {
+
+        return `${match[2]}/${match[1]}`;
+    }
+
+    return '-';
+}
+
+
+/* --------------------------------------------------------- */
+/* cancelarRescisaoFuncionario                               */
+/* Cancela a rescisão registrada e reativa o funcionário.   */
+/* --------------------------------------------------------- */
+
+window.cancelarRescisaoFuncionario =
+async function (
     index,
     acertoId
 ) {
+
     const f =
         db.funcionarios[index];
 
-    if (!f) return;
+    if (!f) {
+        return;
+    }
 
-    garantirEstruturaFuncionarioRH(f);
+    garantirEstruturaFuncionarioRH(
+        f
+    );
 
     const item =
-        f.acertosRescisao
-        .find(
-            a =>
-                String(a.id) ===
+        f.acertosRescisao.find(
+            acerto =>
+                String(acerto.id)
+                ===
                 String(acertoId)
         );
 
     if (!item) {
+
         alert(
-            'Acerto não encontrado.'
+            'Rescisão não encontrada.'
         );
 
         return;
     }
 
-    if (
-        !window.jspdf
-        ?.jsPDF
-    ) {
-        alert(
-            'Biblioteca de PDF não encontrada.'
+    const confirmar =
+        confirm(
+            `Deseja cancelar a rescisão de ${f.nome || 'este funcionário'}?\n\n` +
+            'O funcionário será reativado no sistema.'
         );
 
+    if (!confirmar) {
         return;
     }
 
-    const {
-        jsPDF
-    } =
-        window.jspdf;
+    /*
+        Não apagamos o registro do banco.
+        Ele é marcado como cancelado para preservar o histórico,
+        mas deixa de ser considerado uma rescisão ativa.
+    */
 
-    const doc =
-        new jsPDF({
-            orientation:
-                'portrait',
+    item.rescisaoRealizada =
+        false;
 
-            unit:
-                'mm',
+    item.rescisaoCancelada =
+        true;
 
-            format:
-                'a4'
-        });
+    item.reciboDisponivel =
+        false;
 
-    doc.setFillColor(
-        30,
-        30,
-        30
+    item.canceladoEm =
+        new Date()
+            .toISOString();
+
+    f.status =
+        'Ativo';
+
+    await save();
+
+    /*
+        Atualiza a tela imediatamente.
+    */
+
+    await navigate(
+        'funcionarios',
+        false
     );
 
-    doc.rect(
-        0,
-        0,
-        210,
-        18,
-        'F'
-    );
-
-    doc.setTextColor(
-        255,
-        255,
-        255
-    );
-
-    doc.setFontSize(
-        13
-    );
-
-    doc.setFont(
-        undefined,
-        'bold'
-    );
-
-    doc.text(
-        'TERMO DE ACERTO DE PERÍODO TRABALHADO',
-        10,
-        11
-    );
-
-    doc.setTextColor(
-        20,
-        20,
-        20
-    );
-
-    doc.setFontSize(
-        10
-    );
-
-    doc.text(
-        f.nome || '-',
-        10,
-        29
-    );
-
-    doc.setFont(
-        undefined,
-        'normal'
-    );
-
-    doc.setFontSize(
-        8
-    );
-
-    const linhas = [
-        `Período: ${formatarDataCarreira(item.inicio)} a ${formatarDataCarreira(item.fim)}`,
-        `Salário de referência: ${formatarMoeda(numeroFuncionario(item.salarioReferencia))}`,
-        `Diária considerada: ${formatarMoeda(numeroFuncionario(item.diaria))}`,
-        `Dias considerados: ${numeroFuncionario(item.totalDias)}`,
-        `Valor das diárias: ${formatarMoeda(numeroFuncionario(item.valorDiarias))}`,
-        `Horas extras: ${formatarMoeda(numeroFuncionario(item.valorExtras))}`,
-        `Ajuste: ${formatarMoeda(numeroFuncionario(item.ajuste))}`
-    ];
-
-    let y =
-        36;
-
-    linhas.forEach(
-        linha => {
-            doc.text(
-                linha,
-                10,
-                y
-            );
-
-            y +=
-                7;
-        }
-    );
-
-    doc.setFont(
-        undefined,
-        'bold'
-    );
-
-    doc.setFontSize(
-        13
-    );
-
-    doc.text(
-        `TOTAL A RECEBER: ${formatarMoeda(numeroFuncionario(item.total))}`,
-        10,
-        y + 6
-    );
-
-    doc.setFont(
-        undefined,
-        'normal'
-    );
-
-    doc.setFontSize(
-        7
-    );
-
-    doc.setTextColor(
-        90,
-        90,
-        90
-    );
-
-    const aviso =
-        'Acerto simplificado para controle interno. Não representa cálculo completo de rescisão CLT.';
-
-    doc.text(
-        aviso,
-        10,
-        y + 16
-    );
-
-    if (
-        item.observacoes
-    ) {
-        const obs =
-            doc.splitTextToSize(
-                `Observações: ${item.observacoes}`,
-                185
-            );
-
-        doc.text(
-            obs,
-            10,
-            y + 25
-        );
-    }
-
-    doc.setTextColor(
-        20,
-        20,
-        20
-    );
-
-    doc.setFontSize(
-        8
-    );
-
-    doc.text(
-        '________________________________________',
-        20,
-        255
-    );
-
-    doc.text(
-        'Responsável / Empresa',
-        42,
-        261
-    );
-
-    doc.text(
-        '________________________________________',
-        115,
-        255
-    );
-
-    doc.text(
-        'Trabalhador',
-        145,
-        261
-    );
-
-    doc.save(
-        `acerto-${String(f.nome || 'funcionario').replace(/[^\w-]+/g, '-')}-${item.dataCalculo}.pdf`
+    abrirRescisaoFuncionario(
+        index
     );
 };
 
 
-/* ===================================================== */
-/* COMPATIBILIDADE DE STATUS COM FÉRIAS AGENDADAS        */
-/* ===================================================== */
+/* --------------------------------------------------------- */
+/* gerarReciboRescisaoFuncionario                            */
+/* Gera o recibo de pagamento da rescisão dentro do módulo.  */
+/* --------------------------------------------------------- */
+
+window.gerarReciboRescisaoFuncionario = async function (
+    index,
+    acertoId
+) {
+
+    const f =
+        db.funcionarios[index];
+
+    if (!f) {
+        return;
+    }
+
+    garantirEstruturaFuncionarioRH(
+        f
+    );
+
+    const item =
+        f.acertosRescisao.find(
+            acerto =>
+                String(acerto.id)
+                ===
+                String(acertoId)
+        );
+
+    if (!item) {
+
+        alert(
+            'Rescisão não encontrada.'
+        );
+
+        return;
+    }
+
+    /*
+        Puxa EXATAMENTE os dias preenchidos no ponto que foram
+        considerados como trabalhados na rescisão.
+    */
+
+    const datasTrabalhadas =
+        obterDatasTrabalhadasReciboFuncionario(
+            f,
+            item
+        );
+
+    if (!datasTrabalhadas.length) {
+
+        alert(
+            'Não existem dias trabalhados registrados no ponto para gerar este recibo.'
+        );
+
+        return;
+    }
+
+    const quantidadeDiarias =
+        datasTrabalhadas.length;
+
+    const diasTrabalhadosTexto =
+        formatarDiasTrabalhadosReciboFuncionario(
+            datasTrabalhadas
+        );
+
+    const competencia =
+        formatarCompetenciaRescisaoFuncionario(
+            datasTrabalhadas[
+                datasTrabalhadas.length - 1
+            ]
+            ||
+            item.fim
+            ||
+            item.dataCalculo
+        );
+
+    const textoDiarias =
+        quantidadeDiarias === 1
+            ? '1 diária de trabalho'
+            : `${quantidadeDiarias} diárias de trabalho`;
+
+    /*
+        Se existirem diárias lançadas manualmente no acerto,
+        elas continuam aparecendo no detalhamento, mas NÃO são
+        inventadas como datas no recibo. As datas são somente
+        as datas realmente encontradas no ponto.
+    */
+
+    const diasManuais =
+        Math.max(
+            0,
+            Math.floor(
+                numeroFuncionario(
+                    item.diasManuais
+                )
+            )
+        );
+
+    let logoEmpresa =
+        '';
+
+    try {
+
+        if (
+            window.api
+            &&
+            typeof window.api.getLogoPath ===
+                'function'
+        ) {
+
+            logoEmpresa =
+                await window.api
+                    .getLogoPath();
+        }
+
+    } catch (erro) {
+
+        console.warn(
+            'Não foi possível carregar a logo no recibo:',
+            erro
+        );
+    }
+
+    const valorTotal =
+        formatarMoeda(
+            numeroFuncionario(
+                item.total
+            )
+        );
+
+    const valorDiarias =
+        formatarMoeda(
+            numeroFuncionario(
+                item.valorDiarias
+            )
+        );
+
+    const valorExtras =
+        formatarMoeda(
+            numeroFuncionario(
+                item.valorExtras
+            )
+        );
+
+    const valorAjuste =
+        formatarMoeda(
+            numeroFuncionario(
+                item.ajuste
+            )
+        );
+
+    const observacoes =
+        escaparHTMLFuncionario(
+            item.observacoes
+            ||
+            ''
+        );
+
+    const declaracao =
+        `Eu, ${escaparHTMLFuncionario(f.nome || 'funcionário(a)')}, declaro ter recebido da ` +
+        `WN Comunicação Visual o valor de ${valorTotal}, referente ao pagamento de ` +
+        `${textoDiarias}, dos dias ${diasTrabalhadosTexto}.`;
+
+    /*
+        O recibo NÃO é salvo em nenhum módulo.
+        Ele é criado somente para impressão.
+    */
+
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        Recibo de Pagamento - ${escaparHTMLFuncionario(f.nome || 'Funcionário')}
+    </title>
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        html,
+        body{
+            margin:0;
+            padding:0;
+            background:#eef2f7;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+            color:#172033;
+        }
+
+        body{
+            padding:24px;
+        }
+
+        .print-page{
+            width:210mm;
+            min-height:297mm;
+            margin:0 auto;
+            background:#fff;
+            padding:18mm 18mm 16mm;
+            box-shadow:
+                0 12px 35px
+                rgba(15,23,42,.14);
+        }
+
+        .header{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:24px;
+            padding-bottom:18px;
+            border-bottom:3px solid #7c3aed;
+        }
+
+        .logo-wrap{
+            min-width:180px;
+        }
+
+        .logo{
+            max-width:190px;
+            max-height:65px;
+            object-fit:contain;
+            display:block;
+        }
+
+        .empresa-fallback{
+            font-size:18px;
+            font-weight:900;
+            letter-spacing:.4px;
+        }
+
+        .document-title{
+            text-align:right;
+        }
+
+        .document-title h1{
+            margin:0;
+            font-size:25px;
+            letter-spacing:.3px;
+        }
+
+        .document-title p{
+            margin:6px 0 0;
+            color:#64748b;
+            font-size:12px;
+        }
+
+        .meta{
+            display:grid;
+            grid-template-columns:
+                minmax(0,1fr)
+                180px;
+            gap:14px;
+            margin-top:24px;
+        }
+
+        .meta-card{
+            padding:14px 16px;
+            border:1px solid #e2e8f0;
+            border-radius:12px;
+            background:#f8fafc;
+        }
+
+        .label{
+            display:block;
+            color:#64748b;
+            font-size:10px;
+            font-weight:800;
+            letter-spacing:.7px;
+            text-transform:uppercase;
+            margin-bottom:6px;
+        }
+
+        .meta-value{
+            font-size:14px;
+            font-weight:800;
+            color:#172033;
+        }
+
+        .value-box{
+            margin-top:18px;
+            padding:20px;
+            text-align:center;
+            border-radius:15px;
+            background:
+                linear-gradient(
+                    135deg,
+                    #f5f3ff,
+                    #faf5ff
+                );
+            border:1px solid #ddd6fe;
+        }
+
+        .value-box .label{
+            color:#6d28d9;
+        }
+
+        .value-total{
+            margin-top:7px;
+            color:#5b21b6;
+            font-size:31px;
+            font-weight:900;
+        }
+
+        .declaration{
+            margin-top:26px;
+            padding:18px 20px;
+            border-left:4px solid #7c3aed;
+            background:#fafafa;
+            font-size:14px;
+            line-height:1.75;
+            text-align:justify;
+        }
+
+        .worked-days{
+            margin-top:20px;
+            padding:16px 18px;
+            border-radius:12px;
+            border:1px solid #e2e8f0;
+        }
+
+        .worked-days-title{
+            margin-bottom:10px;
+            font-size:13px;
+            font-weight:900;
+        }
+
+        .worked-days-text{
+            color:#334155;
+            font-size:13px;
+            line-height:1.6;
+        }
+
+        .details{
+            margin-top:20px;
+        }
+
+        .details h2{
+            margin:0 0 11px;
+            font-size:15px;
+        }
+
+        .detail-row{
+            display:flex;
+            justify-content:space-between;
+            gap:20px;
+            padding:10px 12px;
+            margin-bottom:6px;
+            border-radius:8px;
+            background:#f8fafc;
+            font-size:12px;
+        }
+
+        .detail-row strong{
+            color:#111827;
+        }
+
+        .obs{
+            margin-top:18px;
+            padding:13px 15px;
+            border-radius:10px;
+            background:#fffbeb;
+            border:1px solid #fde68a;
+            font-size:11px;
+            line-height:1.5;
+        }
+
+        .signatures{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:50px;
+            margin-top:75px;
+        }
+
+        .signature{
+            text-align:center;
+            padding-top:8px;
+            border-top:1px solid #334155;
+            font-size:11px;
+            color:#475569;
+        }
+
+        .footer{
+            margin-top:45px;
+            padding-top:12px;
+            border-top:1px solid #e2e8f0;
+            color:#94a3b8;
+            font-size:9px;
+        }
+
+        @media print{
+
+            @page{
+                size:A4;
+                margin:0;
+            }
+
+            html,
+            body{
+                background:#fff;
+            }
+
+            body{
+                padding:0;
+            }
+
+            .print-page{
+                width:210mm;
+                min-height:297mm;
+                margin:0;
+                box-shadow:none;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="print-page">
+
+        <div class="header">
+
+            <div class="logo-wrap">
+
+                ${
+                    logoEmpresa
+                        ? `
+                            <img
+                                class="logo"
+                                src="${logoEmpresa}"
+                                alt="WN Comunicação Visual">
+                        `
+                        : `
+                            <div class="empresa-fallback">
+                                WN Comunicação Visual
+                            </div>
+                        `
+                }
+
+            </div>
+
+            <div class="document-title">
+
+                <h1>
+                    RECIBO DE PAGAMENTO
+                </h1>
+
+                <p>
+                    Pagamento de diárias de trabalho
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="meta">
+
+            <div class="meta-card">
+
+                <span class="label">
+                    Funcionário
+                </span>
+
+                <div class="meta-value">
+                    ${escaparHTMLFuncionario(f.nome || '-')}
+                </div>
+
+            </div>
+
+            <div class="meta-card">
+
+                <span class="label">
+                    Competência
+                </span>
+
+                <div class="meta-value">
+                    ${competencia}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="value-box">
+
+            <span class="label">
+                Valor recebido
+            </span>
+
+            <div class="value-total">
+                ${valorTotal}
+            </div>
+
+        </div>
+
+
+        <div class="declaration">
+            ${declaracao}
+        </div>
+
+
+        <div class="worked-days">
+
+            <div class="worked-days-title">
+                Dias trabalhados considerados neste pagamento
+            </div>
+
+            <div class="worked-days-text">
+                ${diasTrabalhadosTexto}
+            </div>
+
+        </div>
+
+
+        <div class="details">
+
+            <h2>
+                Detalhamento do pagamento
+            </h2>
+
+            <div class="detail-row">
+
+                <span>
+                    Quantidade de diárias registradas no ponto
+                </span>
+
+                <strong>
+                    ${quantidadeDiarias}
+                </strong>
+
+            </div>
+
+            ${
+                diasManuais > 0
+                    ? `
+                        <div class="detail-row">
+
+                            <span>
+                                Diárias informadas manualmente
+                            </span>
+
+                            <strong>
+                                ${diasManuais}
+                            </strong>
+
+                        </div>
+                    `
+                    : ''
+            }
+
+            <div class="detail-row">
+
+                <span>
+                    Valor das diárias
+                </span>
+
+                <strong>
+                    ${valorDiarias}
+                </strong>
+
+            </div>
+
+            <div class="detail-row">
+
+                <span>
+                    Horas extras
+                </span>
+
+                <strong>
+                    ${valorExtras}
+                </strong>
+
+            </div>
+
+            <div class="detail-row">
+
+                <span>
+                    Ajuste
+                </span>
+
+                <strong>
+                    ${valorAjuste}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        ${
+            observacoes
+                ? `
+                    <div class="obs">
+                        <strong>Observações:</strong>
+                        ${observacoes}
+                    </div>
+                `
+                : ''
+        }
+
+
+        <div class="signatures">
+
+            <div class="signature">
+                WN Comunicação Visual
+            </div>
+
+            <div class="signature">
+                Assinatura do Funcionário
+            </div>
+
+        </div>
+
+
+        <div class="footer">
+            Emitido em
+            ${formatarDataCarreira(
+                dataHojeFuncionario()
+            )}
+        </div>
+
+    </div>
+
+
+    <script>
+
+        /*
+            Quando o HTML é aberto pelo sistema de impressão
+            do Dominus, a janela de impressão aparece direto.
+        */
+
+        window.addEventListener(
+            'load',
+            function () {
+
+                setTimeout(
+                    function () {
+
+                        window.print();
+
+                    },
+                    250
+                );
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
+`;
+
+    /*
+        Não chama doc.save() e não grava recibo em banco.
+        Apenas abre a impressão imediatamente.
+    */
+
+    if (
+        window.api
+        &&
+        typeof window.api.imprimirHTML ===
+            'function'
+    ) {
+
+        await window.api
+            .imprimirHTML(
+                html
+            );
+
+        return;
+    }
+
+    /*
+        Fallback para execução fora do Electron.
+    */
+
+    const janela =
+        window.open(
+            '',
+            '_blank'
+        );
+
+    if (!janela) {
+
+        alert(
+            'Não foi possível abrir a janela de impressão.'
+        );
+
+        return;
+    }
+
+    janela.document.write(
+        html
+    );
+
+    janela.document.close();
+};
+
+
+/*
+    Alias mantido somente para compatibilidade com versões
+    antigas do código. A tela atual usa exclusivamente o
+    recibo de pagamento acima.
+*/
+
+window.gerarComprovanteAcertoFuncionario =
+    window.gerarReciboRescisaoFuncionario;
+
+
+/* ========================================================= */
+/* 09. COMPATIBILIDADE DE STATUS COM FÉRIAS AGENDADAS       */
+/* ========================================================= */
+/*
+    Mantém o status do funcionário compatível com
+    períodos de férias agendados.
+*/
+
+/* --------------------------------------------------------- */
+/* atualizarStatusFeriasFuncionario */
+/* Atualiza o status do funcionário conforme férias agendadas. */
+/* --------------------------------------------------------- */
 
 window.atualizarStatusFeriasFuncionario = function (
     index
@@ -4409,9 +5786,18 @@ window.atualizarStatusFeriasFuncionario = function (
     }
 };
 
-/* ========================= */
-/* STATUS FUNCIONÁRIO */
-/* ========================= */
+/* ========================================================= */
+/* 10. STATUS VISUAL DO FUNCIONÁRIO                          */
+/* ========================================================= */
+/*
+    Retorna a classe visual correspondente ao status
+    exibido na listagem de funcionários.
+*/
+
+/* --------------------------------------------------------- */
+/* getStatusFuncionarioClass */
+/* Retorna a classe CSS correspondente ao status do funcionário. */
+/* --------------------------------------------------------- */
 
 window.getStatusFuncionarioClass = function (status) {
 

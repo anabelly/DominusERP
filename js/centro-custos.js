@@ -1,10 +1,61 @@
-/* ===================================================== */
-/* CENTRO DE CUSTOS                                      */
-/* ===================================================== */
+/* ========================================================= */
+/* DOMINUS ERP - CENTRO-CUSTOS.JS                            */
+/* ========================================================= */
+/*
+    CENTRO DE CUSTOS E PARÂMETROS DE PRECIFICAÇÃO
 
-/* ===================================================== */
-/* HELPERS                                               */
-/* ===================================================== */
+    Este arquivo controla a tela de Centro de Custos e os
+    cadastros utilizados na formação de preço dos orçamentos.
+
+    PRINCIPAIS RESPONSABILIDADES:
+    1. Garantir a estrutura do Centro de Custos no banco
+    2. Gerar IDs para novos registros
+    3. Converter números e formatar valores
+    4. Proteger textos exibidos no HTML
+    5. Exibir status de registros ativos/inativos
+    6. Renderizar a tela completa do Centro de Custos
+    7. Editar o endereço de origem
+    8. Cadastrar, editar e excluir combustíveis
+    9. Cadastrar, editar e excluir veículos
+    10. Cadastrar, editar e excluir equipamentos
+    11. Configurar parâmetros de mão de obra
+    12. Configurar parâmetros de precificação
+    13. Salvar alterações no banco
+    14. Registrar a página "centro-custos" no sistema
+
+    IMPORTANTE:
+    Apenas comentários e organização visual foram alterados.
+    Nenhuma regra, valor, validação, campo ou lógica foi modificada.
+*/
+
+
+/* ========================================================= */
+/* 01. CENTRO DE CUSTOS                                     */
+/* ========================================================= */
+/*
+    Arquivo responsável pelos parâmetros fixos usados
+    na formação de preço dos orçamentos.
+*/
+
+/* ========================================================= */
+/* 02. FUNÇÕES AUXILIARES / HELPERS                         */
+/* ========================================================= */
+/*
+    Funções reutilizadas nesta tela para:
+    - garantir a estrutura do banco
+    - gerar IDs
+    - converter números
+    - formatar moeda
+    - escapar HTML
+    - montar status
+    - traduzir tipo de cobrança de equipamento
+    - salvar e atualizar a tela
+*/
+
+/* --------------------------------------------------------- */
+/* garantirCentroCustosCC */
+/* Garante que window.db.centroCustos exista e esteja normalizado. */
+/* --------------------------------------------------------- */
 
 function garantirCentroCustosCC() {
 
@@ -41,9 +92,19 @@ function garantirCentroCustosCC() {
     return window.db.centroCustos;
 }
 
+/* --------------------------------------------------------- */
+/* idNovoCC */
+/* Gera um identificador numérico para novos registros do Centro de Custos. */
+/* --------------------------------------------------------- */
+
 function idNovoCC() {
     return Date.now() + Math.floor(Math.random() * 1000);
 }
+
+/* --------------------------------------------------------- */
+/* numeroCC */
+/* Converte valores digitados em número seguro, aceitando vírgula decimal. */
+/* --------------------------------------------------------- */
 
 function numeroCC(valor) {
 
@@ -66,6 +127,11 @@ function numeroCC(valor) {
         : 0;
 }
 
+/* --------------------------------------------------------- */
+/* moedaCC */
+/* Formata valores monetários no padrão brasileiro. */
+/* --------------------------------------------------------- */
+
 function moedaCC(valor) {
 
     return new Intl.NumberFormat(
@@ -79,6 +145,11 @@ function moedaCC(valor) {
     );
 }
 
+/* --------------------------------------------------------- */
+/* escaparHtmlCC */
+/* Escapa caracteres especiais antes de inserir texto no HTML. */
+/* --------------------------------------------------------- */
+
 function escaparHtmlCC(valor) {
 
     return String(
@@ -90,6 +161,11 @@ function escaparHtmlCC(valor) {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 }
+
+/* --------------------------------------------------------- */
+/* statusCC */
+/* Retorna o selo visual de status Ativo ou Inativo. */
+/* --------------------------------------------------------- */
 
 function statusCC(ativo) {
 
@@ -127,6 +203,11 @@ function statusCC(ativo) {
     `;
 }
 
+/* --------------------------------------------------------- */
+/* tipoEquipamentoLabelCC */
+/* Traduz o tipo interno de cálculo do equipamento para um rótulo amigável. */
+/* --------------------------------------------------------- */
+
 function tipoEquipamentoLabelCC(tipo) {
 
     const mapa = {
@@ -137,6 +218,11 @@ function tipoEquipamentoLabelCC(tipo) {
 
     return mapa[tipo] || '-';
 }
+
+/* --------------------------------------------------------- */
+/* salvarCentroCustosCC */
+/* Salva o banco, fecha o modal e atualiza a tela Centro de Custos. */
+/* --------------------------------------------------------- */
 
 async function salvarCentroCustosCC() {
 
@@ -150,9 +236,27 @@ async function salvarCentroCustosCC() {
     );
 }
 
-/* ===================================================== */
-/* RENDER                                                */
-/* ===================================================== */
+/* ========================================================= */
+/* 03. RENDERIZAÇÃO DA TELA                                 */
+/* ========================================================= */
+/*
+    renderCentroCustos()
+
+    Monta toda a tela do Centro de Custos.
+
+    Exibe:
+    - endereço de origem
+    - mão de obra
+    - combustíveis
+    - veículos
+    - equipamentos próprios
+    - parâmetros de precificação
+*/
+
+/* --------------------------------------------------------- */
+/* renderCentroCustos */
+/* Renderiza os cards, tabelas e parâmetros da página. */
+/* --------------------------------------------------------- */
 
 window.renderCentroCustos = function () {
 
@@ -399,7 +503,7 @@ window.renderCentroCustos = function () {
     gap:20px;
 ">
 
-    <!-- CABEÇALHO -->
+    <!-- 03.1 CABEÇALHO DA PÁGINA -->
 
     <div class="content-card" style="padding:24px;">
 
@@ -434,7 +538,7 @@ window.renderCentroCustos = function () {
 
     </div>
 
-    <!-- PRIMEIRA LINHA -->
+    <!-- 03.2 ENDEREÇO + MÃO DE OBRA -->
 
     <div style="
         display:grid;
@@ -442,7 +546,7 @@ window.renderCentroCustos = function () {
         gap:20px;
     ">
 
-        <!-- ENDEREÇO -->
+        <!-- 03.2.1 CARD - ENDEREÇO DE ORIGEM -->
 
         <div class="content-card" style="padding:24px;">
 
@@ -499,7 +603,7 @@ window.renderCentroCustos = function () {
 
         </div>
 
-        <!-- MÃO DE OBRA -->
+        <!-- 03.2.2 CARD - MÃO DE OBRA -->
 
         <div class="content-card" style="padding:24px;">
 
@@ -572,7 +676,7 @@ window.renderCentroCustos = function () {
 
     </div>
 
-    <!-- COMBUSTÍVEIS -->
+    <!-- 03.3 TABELA - COMBUSTÍVEIS -->
 
     <div class="content-card" style="padding:24px;">
 
@@ -626,7 +730,7 @@ window.renderCentroCustos = function () {
 
     </div>
 
-    <!-- VEÍCULOS -->
+    <!-- 03.4 TABELA - VEÍCULOS -->
 
     <div class="content-card" style="padding:24px;">
 
@@ -682,7 +786,7 @@ window.renderCentroCustos = function () {
 
     </div>
 
-    <!-- EQUIPAMENTOS -->
+    <!-- 03.5 TABELA - EQUIPAMENTOS -->
 
     <div class="content-card" style="padding:24px;">
 
@@ -737,7 +841,7 @@ window.renderCentroCustos = function () {
 
     </div>
 
-    <!-- PRECIFICAÇÃO -->
+    <!-- 03.6 PARÂMETROS DE PRECIFICAÇÃO -->
 
     <div class="content-card" style="padding:24px;">
 
@@ -811,9 +915,18 @@ window.renderCentroCustos = function () {
     `;
 };
 
-/* ===================================================== */
-/* ENDEREÇO                                              */
-/* ===================================================== */
+/* ========================================================= */
+/* 04. ENDEREÇO DE ORIGEM                                   */
+/* ========================================================= */
+/*
+    Permite editar o endereço utilizado como ponto
+    inicial dos cálculos de deslocamento.
+*/
+
+/* --------------------------------------------------------- */
+/* abrirModalEnderecoCC */
+/* Abre o formulário de edição do endereço de origem. */
+/* --------------------------------------------------------- */
 
 window.abrirModalEnderecoCC = function () {
 
@@ -923,9 +1036,22 @@ window.abrirModalEnderecoCC = function () {
     });
 };
 
-/* ===================================================== */
-/* COMBUSTÍVEL                                           */
-/* ===================================================== */
+/* ========================================================= */
+/* 05. COMBUSTÍVEIS                                         */
+/* ========================================================= */
+/*
+    Cadastro de combustíveis usados pelos veículos.
+
+    Cada registro pode armazenar:
+    - nome
+    - valor por litro
+    - status ativo/inativo
+*/
+
+/* --------------------------------------------------------- */
+/* abrirModalCombustivelCC */
+/* Abre o formulário de cadastro ou edição de combustível. */
+/* --------------------------------------------------------- */
 
 window.abrirModalCombustivelCC = function (id = null) {
 
@@ -1026,6 +1152,11 @@ window.abrirModalCombustivelCC = function (id = null) {
     });
 };
 
+/* --------------------------------------------------------- */
+/* excluirCombustivelCC */
+/* Exclui combustível somente quando não estiver vinculado a veículo. */
+/* --------------------------------------------------------- */
+
 window.excluirCombustivelCC = async function (id) {
 
     const cc =
@@ -1063,9 +1194,25 @@ window.excluirCombustivelCC = async function (id) {
     );
 };
 
-/* ===================================================== */
-/* VEÍCULOS                                              */
-/* ===================================================== */
+/* ========================================================= */
+/* 06. VEÍCULOS                                             */
+/* ========================================================= */
+/*
+    Cadastro de veículos usados nos cálculos de deslocamento.
+
+    Cada veículo pode guardar:
+    - nome
+    - placa
+    - combustível
+    - consumo médio em km/L
+    - custo operacional por km
+    - status ativo/inativo
+*/
+
+/* --------------------------------------------------------- */
+/* abrirModalVeiculoCC */
+/* Abre o formulário de cadastro ou edição de veículo. */
+/* --------------------------------------------------------- */
 
 window.abrirModalVeiculoCC = function (id = null) {
 
@@ -1270,6 +1417,11 @@ window.abrirModalVeiculoCC = function (id = null) {
     });
 };
 
+/* --------------------------------------------------------- */
+/* excluirVeiculoCC */
+/* Exclui um veículo após confirmação. */
+/* --------------------------------------------------------- */
+
 window.excluirVeiculoCC = async function (id) {
 
     const cc =
@@ -1292,9 +1444,23 @@ window.excluirVeiculoCC = async function (id) {
     );
 };
 
-/* ===================================================== */
-/* EQUIPAMENTOS                                          */
-/* ===================================================== */
+/* ========================================================= */
+/* 07. EQUIPAMENTOS PRÓPRIOS                                */
+/* ========================================================= */
+/*
+    Cadastro de máquinas e equipamentos utilizados
+    na execução dos serviços.
+
+    O custo pode ser configurado:
+    - por hora
+    - por dia
+    - por utilização
+*/
+
+/* --------------------------------------------------------- */
+/* abrirModalEquipamentoCC */
+/* Abre o formulário de cadastro ou edição de equipamento. */
+/* --------------------------------------------------------- */
 
 window.abrirModalEquipamentoCC = function (id = null) {
 
@@ -1435,6 +1601,11 @@ window.abrirModalEquipamentoCC = function (id = null) {
     });
 };
 
+/* --------------------------------------------------------- */
+/* excluirEquipamentoCC */
+/* Exclui um equipamento após confirmação. */
+/* --------------------------------------------------------- */
+
 window.excluirEquipamentoCC = async function (id) {
 
     const cc =
@@ -1457,9 +1628,22 @@ window.excluirEquipamentoCC = async function (id) {
     );
 };
 
-/* ===================================================== */
-/* MÃO DE OBRA                                           */
-/* ===================================================== */
+/* ========================================================= */
+/* 08. PARÂMETROS DE MÃO DE OBRA                            */
+/* ========================================================= */
+/*
+    Define:
+    - horas mensais base
+    - percentual de encargos
+
+    O salário individual continua vindo do cadastro
+    de Funcionários.
+*/
+
+/* --------------------------------------------------------- */
+/* abrirModalMaoDeObraCC */
+/* Abre os parâmetros de horas mensais e encargos. */
+/* --------------------------------------------------------- */
 
 window.abrirModalMaoDeObraCC = function () {
 
@@ -1541,9 +1725,21 @@ window.abrirModalMaoDeObraCC = function () {
     });
 };
 
-/* ===================================================== */
-/* PRECIFICAÇÃO                                          */
-/* ===================================================== */
+/* ========================================================= */
+/* 09. PARÂMETROS DE PRECIFICAÇÃO                           */
+/* ========================================================= */
+/*
+    Configura:
+    - desperdício
+    - custo administrativo
+    - margem/acréscimo padrão
+    - método de precificação
+*/
+
+/* --------------------------------------------------------- */
+/* abrirModalParametrosCC */
+/* Abre os parâmetros gerais de precificação. */
+/* --------------------------------------------------------- */
 
 window.abrirModalParametrosCC = function () {
 
@@ -1688,9 +1884,17 @@ window.abrirModalParametrosCC = function () {
     });
 };
 
-/* ===================================================== */
-/* REGISTRAR PÁGINA                                      */
-/* ===================================================== */
+/* ========================================================= */
+/* 10. REGISTRAR PÁGINA NO SISTEMA                          */
+/* ========================================================= */
+/*
+    Registra a tela com o nome:
+
+        centro-custos
+
+    Assim, navigate('centro-custos') consegue renderizar
+    esta página dentro do view-port.
+*/
 
 registerPage(
     'centro-custos',

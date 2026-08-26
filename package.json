@@ -1,16 +1,13 @@
 {
   "name": "sistema",
-  "version": "1.3.0",
+  "version": "2.1.0",
   "description": "ERP Sistema",
   "main": "main.js",
+  "type": "commonjs",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "cors": "^2.8.6",
     "electron-updater": "^6.8.3",
@@ -41,7 +38,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "artifactName": "Dominus-ERP-Setup-${version}.${ext}"
-
     },
     "publish": [
       {
@@ -50,5 +46,8 @@
         "repo": "DominusERP"
       }
     ]
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
