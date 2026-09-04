@@ -25,7 +25,8 @@
     14. Trabalhar somente com os status:
         Aguardando, Aprovado, Cancelado e Recusado
     15. Criar automaticamente uma OS ao aprovar o orçamento
-    16. Registrar a página "orcamentos"
+    16. Exibir clientes em ordem alfabética nos seletores
+    17. Registrar a página "orcamentos"
 
     REGRA DE APROVAÇÃO:
     Sempre que um orçamento estiver com status Aprovado,
@@ -44,6 +45,56 @@ const STATUS_ORCAMENTOS = [
     'Cancelado',
     'Recusado'
 ];
+
+
+/* --------------------------------------------------------- */
+/* ordenarClientesOrcamento                                  */
+/* Retorna uma cópia em ordem alfabética pelo nome.          */
+/* --------------------------------------------------------- */
+/*
+    ORDEM ALFABÉTICA - CLIENTES DOS ORÇAMENTOS
+
+    A ordenação é somente visual.
+
+    IMPORTANTE:
+    - o array original do banco NÃO é reordenado;
+    - códigos, IDs e vínculos permanecem intactos;
+    - a comparação usa pt-BR;
+    - diferenças de acentuação e maiúsculas/minúsculas não
+      atrapalham a ordem apresentada nos campos de seleção.
+*/
+
+function ordenarClientesOrcamento(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) =>
+            String(
+                a?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
 
 
 /* --------------------------------------------------------- */
@@ -86,6 +137,104 @@ function normalizarStatusOrcamento(
     }
 
     return 'Aguardando';
+}
+
+
+/* --------------------------------------------------------- */
+/* ordenarOrcamentosMaisRecentesPrimeiro                     */
+/* Exibe sempre o maior código / orçamento mais recente antes.*/
+/* --------------------------------------------------------- */
+
+function ordenarOrcamentosMaisRecentesPrimeiro(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (
+            a,
+            b
+        ) => {
+
+            const codigoA =
+                Number(
+                    a?.codigo
+                );
+
+            const codigoB =
+                Number(
+                    b?.codigo
+                );
+
+            const aValido =
+                Number.isFinite(
+                    codigoA
+                );
+
+            const bValido =
+                Number.isFinite(
+                    codigoB
+                );
+
+            if (
+                aValido
+                &&
+                bValido
+                &&
+                codigoA !==
+                    codigoB
+            ) {
+
+                return (
+                    codigoB
+                    -
+                    codigoA
+                );
+            }
+
+            if (
+                aValido
+                &&
+                !bValido
+            ) {
+
+                return -1;
+            }
+
+            if (
+                !aValido
+                &&
+                bValido
+            ) {
+
+                return 1;
+            }
+
+            const dataA =
+                String(
+                    a?.data || ''
+                );
+
+            const dataB =
+                String(
+                    b?.data || ''
+                );
+
+            return dataB.localeCompare(
+                dataA
+            );
+        }
+    );
 }
 
 
@@ -444,8 +593,15 @@ window.renderOrcamentos = function () {
 `;
     }
 
+    /*
+        Ordem da tela:
+        orçamento mais recente / maior código sempre primeiro.
+    */
+
     let listaOrcamentos =
-        [...db.orcamentos];
+        ordenarOrcamentosMaisRecentesPrimeiro(
+            db.orcamentos
+        );
 
     const filtroStatus =
         filtroStatusOrcamentoAtual;
@@ -900,8 +1056,15 @@ function () {
         )
         .value;
 
+    /*
+        A consulta também mantém o orçamento mais recente
+        no topo dos resultados.
+    */
+
     let orcamentos =
-        [...db.orcamentos];
+        ordenarOrcamentosMaisRecentesPrimeiro(
+            db.orcamentos
+        );
 
     /* ========================================================= */
     /* 05.1 FILTRO POR CÓDIGO                                  */
@@ -1289,7 +1452,18 @@ function () {
 
 `;
 
-    db.clientes.forEach(
+    /* ===================================================== */
+    /* CLIENTES EM ORDEM ALFABÉTICA                          */
+    /* ===================================================== */
+    /*
+        O cadastro de cliente continua com o mesmo código.
+        Aqui apenas organizamos a lista exibida no select.
+    */
+
+    ordenarClientesOrcamento(
+        db.clientes
+    )
+    .forEach(
         cliente => {
 
         optionsClientes += `
@@ -3090,8 +3264,14 @@ window.editarOrcamento = function(index){
     const o =
         db.orcamentos[index];
 
+    /* ===================================================== */
+    /* CLIENTES DA EDIÇÃO EM ORDEM ALFABÉTICA               */
+    /* ===================================================== */
+
     const clientes =
-        db.clientes || [];
+        ordenarClientesOrcamento(
+            db.clientes || []
+        );
 
     configModal({
 

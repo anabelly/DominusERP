@@ -20,7 +20,8 @@
     10. Excluir recibos
     11. Receber automaticamente Termos de Serviço vindos de OS
     12. Visualizar, editar, imprimir e excluir Termos de Serviço
-    13. Registrar a página "recibos"
+    13. Exibir clientes em ordem alfabética nos campos de seleção
+    14. Registrar a página "recibos"
 
     TERMO AUTOMÁTICO:
     Quando uma Ordem de Serviço muda para "Concluída",
@@ -68,6 +69,56 @@ function escaparHTMLTermoServico(
     .replace(
         /'/g,
         '&#039;'
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* ordenarClientesRecibos                                    */
+/* Retorna uma cópia em ordem alfabética pelo nome.          */
+/* --------------------------------------------------------- */
+/*
+    ORDEM ALFABÉTICA - CLIENTES DOS RECIBOS E COMPROVANTES
+
+    A ordenação é somente visual.
+
+    IMPORTANTE:
+    - o array original do banco NÃO é reordenado;
+    - códigos, IDs e vínculos permanecem intactos;
+    - a comparação usa pt-BR;
+    - diferenças de acentuação e maiúsculas/minúsculas não
+      atrapalham a ordem apresentada nos campos de seleção.
+*/
+
+function ordenarClientesRecibos(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) =>
+            String(
+                a?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
     );
 }
 
@@ -3174,8 +3225,18 @@ function(){
     const numero =
         proximoNumeroDocumentoRecibo();
 
+    /* ===================================================== */
+    /* CLIENTES DO NOVO RECIBO EM ORDEM ALFABÉTICA          */
+    /* ===================================================== */
+    /*
+        O datalist do novo Recibo/Termo usa uma cópia
+        ordenada. Os códigos dos clientes permanecem intactos.
+    */
+
     const clientesLista =
-        (db.clientes || [])
+        ordenarClientesRecibos(
+            db.clientes || []
+        )
             .map(
                 cliente => `
 

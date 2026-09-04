@@ -19,13 +19,117 @@
     9. Consultar e filtrar lançamentos
     10. Operar baixa/edição/exclusão dentro da consulta
     11. Salvar alterações no banco
-    12. Registrar a página "financeiro" no sistema
+    12. Exibir clientes e fornecedores em ordem alfabética
+    13. Registrar a página "financeiro" no sistema
 
     IMPORTANTE:
-    Apenas comentários e organização visual foram alterados.
-    Nenhuma regra, valor, categoria, recorrência, filtro,
-    status ou lógica foi modificada.
+    A única alteração funcional adicional desta versão é a
+    organização alfabética dos clientes e fornecedores nos
+    campos de seleção.
+
+    Nenhum código, ID, lançamento, valor, recorrência, filtro
+    ou status foi alterado.
 */
+
+
+/* --------------------------------------------------------- */
+/* ordenarClientesFinanceiro                                 */
+/* Retorna uma cópia em ordem alfabética pelo nome.          */
+/* --------------------------------------------------------- */
+/*
+    ORDEM ALFABÉTICA - CLIENTES DO FINANCEIRO
+
+    A ordenação é somente visual.
+
+    IMPORTANTE:
+    - o array original do banco NÃO é reordenado;
+    - códigos, IDs e vínculos permanecem intactos;
+    - a comparação usa pt-BR;
+    - diferenças de acentuação e maiúsculas/minúsculas não
+      atrapalham a ordem apresentada nos campos de seleção.
+*/
+
+function ordenarClientesFinanceiro(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) =>
+            String(
+                a?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* ordenarFornecedoresFinanceiro                             */
+/* Retorna uma cópia em ordem alfabética pelo nome.          */
+/* --------------------------------------------------------- */
+/*
+    ORDEM ALFABÉTICA - FORNECEDORES DO FINANCEIRO
+
+    A ordenação é somente visual.
+
+    IMPORTANTE:
+    - o array original do banco NÃO é reordenado;
+    - códigos, IDs e vínculos permanecem intactos;
+    - a comparação usa pt-BR;
+    - diferenças de acentuação e maiúsculas/minúsculas não
+      atrapalham a ordem apresentada nos campos de seleção.
+*/
+
+function ordenarFornecedoresFinanceiro(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) =>
+            String(
+                a?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
 
 
 /* ========================================================= */
@@ -748,7 +852,9 @@ window.abrirContaPagar = function (
                 Selecione
             </option>
 
-            ${db.fornecedores.map(f => `
+            ${ordenarFornecedoresFinanceiro(
+                db.fornecedores
+            ).map(f => `
 
                 <option
                     value="${f.nome}">
@@ -1070,7 +1176,9 @@ window.editarLancamento = function(idx){
             </option>
 
             ${
-            db.fornecedores.map(f=>`
+            ordenarFornecedoresFinanceiro(
+                db.fornecedores
+            ).map(f=>`
 
                 <option 
                 value="${f.nome}"
@@ -1100,7 +1208,9 @@ window.editarLancamento = function(idx){
             </option>
 
             ${
-            db.clientes.map(c=>`
+            ordenarClientesFinanceiro(
+                db.clientes
+            ).map(c=>`
 
                 <option 
                 value="${c.nome}"
@@ -1407,7 +1517,9 @@ window.abrirContaReceber = function (
                 Selecione
             </option>
 
-            ${db.clientes.map(c => `
+            ${ordenarClientesFinanceiro(
+                db.clientes
+            ).map(c => `
 
                 <option
                     value="${c.nome}"
@@ -1617,7 +1729,9 @@ window.abrirConsultaFinanceiro = function () {
         <label>Fornecedor</label>
         <select id="consulta-pessoa">
             <option value="">Todos</option>
-            ${db.fornecedores.map(f => `
+            ${ordenarFornecedoresFinanceiro(
+                db.fornecedores
+            ).map(f => `
                 <option value="${f.nome}">${f.nome}</option>
             `).join('')}
         </select>
@@ -1656,14 +1770,18 @@ window.toggleConsultaFinanceiro = function () {
 <label>Fornecedor</label>
 <select id="consulta-pessoa">
     <option value="">Todos</option>
-    ${db.fornecedores.map(f => `<option value="${f.nome}">${f.nome}</option>`).join('')}
+    ${ordenarFornecedoresFinanceiro(
+        db.fornecedores
+    ).map(f => `<option value="${f.nome}">${f.nome}</option>`).join('')}
 </select>`;
     } else {
         box.innerHTML = `
 <label>Cliente</label>
 <select id="consulta-pessoa">
     <option value="">Todos</option>
-    ${db.clientes.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('')}
+    ${ordenarClientesFinanceiro(
+        db.clientes
+    ).map(c => `<option value="${c.nome}">${c.nome}</option>`).join('')}
 </select>`;
     }
 };

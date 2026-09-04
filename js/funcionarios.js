@@ -15,14 +15,19 @@
     5. Cadastro e edição de funcionários
     6. Plano de carreira
     7. Férias e períodos aquisitivos
-    8. Rescisão / acerto avulso
-    9. Compatibilidade de status com férias agendadas
-    10. Status visual dos funcionários
+    8. Recibos avulsos de funcionários
+    9. Rescisão / acerto avulso
+    10. Compatibilidade de status com férias agendadas
+    11. Status visual dos funcionários
+    12. Abas Ativos / Desligados na listagem
+    13. Tabela de funcionários compactada sem alterar códigos
 
     IMPORTANTE:
-    Apenas comentários e organização visual foram alterados.
-    Nenhuma regra, cálculo, valor, validação, campo ou
-    comportamento foi modificado.
+    Nesta versão, a única alteração adicional é a ordem visual
+    alfabética dos funcionários pelo nome.
+
+    O conteúdo de db.funcionarios e seus índices originais não
+    são reordenados, preservando todas as ações e vínculos.
 */
 
 
@@ -690,7 +695,1863 @@ window.removerCargoFuncionarioCadastro = async function (botao) {
 };
 
 /* ========================================================= */
-/* 02.1 HELPERS DO PLANO DE CARREIRA                        */
+/* 02.1 RECIBOS AVULSOS DE FUNCIONÁRIOS                     */
+/* ========================================================= */
+/*
+    Gerador de recibos pequenos para pagamentos de funcionários.
+
+    TIPOS DISPONÍVEIS:
+    - Adiantamento
+    - Auxílio Combustível
+    - Diária
+    - Salário
+    - Vale
+    - Vale Transporte
+
+    REGRAS DOS CAMPOS:
+    - Adiantamento:
+        valor + bonificação
+    - Auxílio Combustível:
+        somente valor
+    - Diária:
+        quantidade de diárias + valor da diária
+    - Salário:
+        valor + descontos + bonificação + horas extras
+    - Vale:
+        somente valor
+    - Vale Transporte:
+        quantidade de passagens + valor da passagem
+
+    O recibo é gerado apenas para impressão.
+    Nenhum registro é salvo no módulo de Recibos.
+*/
+
+
+/* --------------------------------------------------------- */
+/* tiposReciboFuncionario                                    */
+/* Retorna os tipos em ordem alfabética.                     */
+/* --------------------------------------------------------- */
+
+function tiposReciboFuncionario() {
+
+    return [
+        'Adiantamento',
+        'Auxílio Combustível',
+        'Diária',
+        'Salário',
+        'Vale',
+        'Vale Transporte'
+    ]
+    .sort(
+        (a, b) =>
+            a.localeCompare(
+                b,
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* funcionariosAtivosRecibo                                  */
+/* Retorna somente funcionários com status Ativo.            */
+/* --------------------------------------------------------- */
+
+function funcionariosAtivosRecibo() {
+
+    return (
+        Array.isArray(
+            db.funcionarios
+        )
+        ?
+        db.funcionarios
+        :
+        []
+    )
+    .map(
+        (funcionario, index) => ({
+            funcionario,
+            index
+        })
+    )
+    .filter(
+        item =>
+            String(
+                item.funcionario?.status || ''
+            )
+            .trim()
+            ===
+            'Ativo'
+    )
+    .sort(
+        (a, b) =>
+            String(
+                a.funcionario?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b.funcionario?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* competenciaAtualReciboFuncionario                         */
+/* Retorna YYYY-MM para o campo type="month".                */
+/* --------------------------------------------------------- */
+
+function competenciaAtualReciboFuncionario() {
+
+    const hoje =
+        new Date();
+
+    return (
+        hoje.getFullYear()
+        +
+        '-'
+        +
+        String(
+            hoje.getMonth() + 1
+        )
+        .padStart(
+            2,
+            '0'
+        )
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* formatarCompetenciaReciboFuncionario                      */
+/* Ex.: 2026-09 -> set/26                                    */
+/* --------------------------------------------------------- */
+
+function formatarCompetenciaReciboFuncionario(
+    valor
+) {
+
+    const partes =
+        String(
+            valor || ''
+        )
+        .split(
+            '-'
+        );
+
+    if (
+        partes.length !==
+        2
+    ) {
+
+        return (
+            valor
+            ||
+            '-'
+        );
+    }
+
+    const ano =
+        partes[0];
+
+    const mes =
+        Number(
+            partes[1]
+        );
+
+    const meses = [
+        'jan',
+        'fev',
+        'mar',
+        'abr',
+        'mai',
+        'jun',
+        'jul',
+        'ago',
+        'set',
+        'out',
+        'nov',
+        'dez'
+    ];
+
+    const nomeMes =
+        meses[
+            mes - 1
+        ]
+        ||
+        partes[1];
+
+    return (
+        nomeMes
+        +
+        '/'
+        +
+        String(
+            ano
+        )
+        .slice(
+            -2
+        )
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* numeroCampoReciboFuncionario                              */
+/* Lê com segurança um campo numérico.                       */
+/* --------------------------------------------------------- */
+
+function numeroCampoReciboFuncionario(
+    id
+) {
+
+    const elemento =
+        document.getElementById(
+            id
+        );
+
+    return Math.max(
+        0,
+        numeroFuncionario(
+            elemento?.value
+        )
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* calcularDadosReciboFuncionario                            */
+/* Calcula o total conforme o tipo selecionado.              */
+/* --------------------------------------------------------- */
+
+function calcularDadosReciboFuncionario() {
+
+    const tipo =
+        document.getElementById(
+            'recibo-funcionario-tipo'
+        )
+        ?.value
+        ||
+        '';
+
+    const valor =
+        numeroCampoReciboFuncionario(
+            'recibo-funcionario-valor'
+        );
+
+    const descontos =
+        numeroCampoReciboFuncionario(
+            'recibo-funcionario-descontos'
+        );
+
+    const bonificacao =
+        numeroCampoReciboFuncionario(
+            'recibo-funcionario-bonificacao'
+        );
+
+    const horasExtras =
+        numeroCampoReciboFuncionario(
+            'recibo-funcionario-horas-extras'
+        );
+
+    const quantidadeDiarias =
+        Math.max(
+            0,
+            Math.floor(
+                numeroCampoReciboFuncionario(
+                    'recibo-funcionario-qtd-diarias'
+                )
+            )
+        );
+
+    const valorDiaria =
+        numeroCampoReciboFuncionario(
+            'recibo-funcionario-valor-diaria'
+        );
+
+    const quantidadePassagens =
+        Math.max(
+            0,
+            Math.floor(
+                numeroCampoReciboFuncionario(
+                    'recibo-funcionario-qtd-passagens'
+                )
+            )
+        );
+
+    const valorPassagem =
+        numeroCampoReciboFuncionario(
+            'recibo-funcionario-valor-passagem'
+        );
+
+    let total =
+        valor;
+
+    if (
+        tipo ===
+        'Salário'
+    ) {
+
+        total =
+            valor
+            -
+            descontos
+            +
+            bonificacao
+            +
+            horasExtras;
+    }
+
+    if (
+        tipo ===
+        'Adiantamento'
+    ) {
+
+        total =
+            valor
+            +
+            bonificacao;
+    }
+
+    if (
+        tipo ===
+        'Diária'
+    ) {
+
+        total =
+            quantidadeDiarias
+            *
+            valorDiaria;
+    }
+
+    if (
+        tipo ===
+        'Vale Transporte'
+    ) {
+
+        total =
+            quantidadePassagens
+            *
+            valorPassagem;
+    }
+
+    total =
+        Math.max(
+            0,
+            total
+        );
+
+    return {
+        tipo,
+        valor,
+        descontos,
+        bonificacao,
+        horasExtras,
+        quantidadeDiarias,
+        valorDiaria,
+        quantidadePassagens,
+        valorPassagem,
+        total
+    };
+}
+
+
+/* --------------------------------------------------------- */
+/* atualizarTotalReciboFuncionario                           */
+/* Atualiza o total exibido no formulário.                   */
+/* --------------------------------------------------------- */
+
+window.atualizarTotalReciboFuncionario =
+function () {
+
+    const dados =
+        calcularDadosReciboFuncionario();
+
+    const total =
+        document.getElementById(
+            'recibo-funcionario-total'
+        );
+
+    if (
+        total
+    ) {
+
+        total.innerText =
+            formatarMoeda(
+                dados.total
+            );
+    }
+};
+
+
+/* --------------------------------------------------------- */
+/* atualizarCamposReciboFuncionario                          */
+/* Exibe apenas os campos permitidos para cada tipo.         */
+/* --------------------------------------------------------- */
+
+window.atualizarCamposReciboFuncionario =
+function () {
+
+    const tipo =
+        document.getElementById(
+            'recibo-funcionario-tipo'
+        )
+        ?.value
+        ||
+        '';
+
+    const container =
+        document.getElementById(
+            'recibo-funcionario-campos'
+        );
+
+    if (
+        !container
+    ) {
+
+        return;
+    }
+
+    const campoValor =
+        (
+            rotulo = 'Valor'
+        ) => `
+
+            <div>
+
+                <label>
+                    ${rotulo}
+                </label>
+
+                <input
+                    id="recibo-funcionario-valor"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+        `;
+
+    if (
+        !tipo
+    ) {
+
+        container.innerHTML = `
+
+            <div style="
+                grid-column:1 / -1;
+                color:#64748b;
+                font-size:12px;
+                padding:12px 0;
+            ">
+                Selecione o tipo de recibo para preencher os valores.
+            </div>
+        `;
+
+        atualizarTotalReciboFuncionario();
+
+        return;
+    }
+
+
+    if (
+        tipo ===
+        'Salário'
+    ) {
+
+        container.innerHTML = `
+
+            ${campoValor('Valor do salário')}
+
+            <div>
+
+                <label>
+                    Descontos
+                </label>
+
+                <input
+                    id="recibo-funcionario-descontos"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+
+            <div>
+
+                <label>
+                    Bonificação
+                </label>
+
+                <input
+                    id="recibo-funcionario-bonificacao"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+
+            <div>
+
+                <label>
+                    Horas Extras
+                </label>
+
+                <input
+                    id="recibo-funcionario-horas-extras"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+        `;
+    }
+
+    else if (
+        tipo ===
+        'Adiantamento'
+    ) {
+
+        container.innerHTML = `
+
+            ${campoValor('Valor do adiantamento')}
+
+            <div>
+
+                <label>
+                    Bonificação
+                </label>
+
+                <input
+                    id="recibo-funcionario-bonificacao"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+        `;
+    }
+
+    else if (
+        tipo ===
+        'Diária'
+    ) {
+
+        container.innerHTML = `
+
+            <div>
+
+                <label>
+                    Quantidade de Diárias
+                </label>
+
+                <input
+                    id="recibo-funcionario-qtd-diarias"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="1"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+
+            <div>
+
+                <label>
+                    Valor da Diária
+                </label>
+
+                <input
+                    id="recibo-funcionario-valor-diaria"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+        `;
+    }
+
+    else if (
+        tipo ===
+        'Vale Transporte'
+    ) {
+
+        container.innerHTML = `
+
+            <div>
+
+                <label>
+                    Quantidade de Passagens
+                </label>
+
+                <input
+                    id="recibo-funcionario-qtd-passagens"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="1"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+
+            <div>
+
+                <label>
+                    Valor da Passagem
+                </label>
+
+                <input
+                    id="recibo-funcionario-valor-passagem"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    oninput="atualizarTotalReciboFuncionario()">
+
+            </div>
+        `;
+    }
+
+    else if (
+        tipo ===
+        'Auxílio Combustível'
+    ) {
+
+        container.innerHTML =
+            campoValor(
+                'Valor do auxílio combustível'
+            );
+    }
+
+    else {
+
+        /*
+            Vale:
+            somente o valor.
+        */
+
+        container.innerHTML =
+            campoValor(
+                'Valor do vale'
+            );
+    }
+
+    atualizarTotalReciboFuncionario();
+};
+
+
+/* --------------------------------------------------------- */
+/* abrirGeradorReciboFuncionario                             */
+/* Abre a tela para montar um recibo.                        */
+/* --------------------------------------------------------- */
+
+window.abrirGeradorReciboFuncionario =
+function () {
+
+    const funcionarios =
+        funcionariosAtivosRecibo();
+
+    if (
+        !funcionarios.length
+    ) {
+
+        alert(
+            'Não há funcionários ativos para gerar recibo.'
+        );
+
+        return;
+    }
+
+    const opcoesFuncionarios =
+        funcionarios
+        .map(
+            item => `
+
+                <option
+                    value="${item.index}">
+                    ${escaparHTMLFuncionario(
+                        item.funcionario?.nome || ''
+                    )}
+                </option>
+            `
+        )
+        .join(
+            ''
+        );
+
+    const opcoesTipos =
+        tiposReciboFuncionario()
+        .map(
+            tipo => `
+
+                <option
+                    value="${escaparHTMLFuncionario(
+                        tipo
+                    )}">
+                    ${escaparHTMLFuncionario(
+                        tipo
+                    )}
+                </option>
+            `
+        )
+        .join(
+            ''
+        );
+
+    const html = `
+
+        <div style="
+            display:flex;
+            flex-direction:column;
+            gap:18px;
+        ">
+
+            <div style="
+                padding:12px 14px;
+                border-radius:10px;
+                border:1px solid #bfdbfe;
+                background:#eff6ff;
+                color:#1e3a8a;
+                font-size:12px;
+                line-height:1.5;
+            ">
+                Selecione o funcionário, o tipo de pagamento e os valores.
+                O recibo será aberto diretamente para impressão.
+            </div>
+
+
+            <div style="
+                display:grid;
+                grid-template-columns:
+                    repeat(2,minmax(0,1fr));
+                gap:14px;
+            ">
+
+                <div>
+
+                    <label>
+                        Funcionário *
+                    </label>
+
+                    <select
+                        id="recibo-funcionario-indice">
+
+                        <option value="">
+                            Selecione...
+                        </option>
+
+                        ${opcoesFuncionarios}
+
+                    </select>
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        Tipo de Recibo *
+                    </label>
+
+                    <select
+                        id="recibo-funcionario-tipo"
+                        onchange="atualizarCamposReciboFuncionario()">
+
+                        <option value="">
+                            Selecione...
+                        </option>
+
+                        ${opcoesTipos}
+
+                    </select>
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        Competência *
+                    </label>
+
+                    <input
+                        id="recibo-funcionario-competencia"
+                        type="month"
+                        value="${competenciaAtualReciboFuncionario()}">
+
+                </div>
+
+
+                <div>
+
+                    <label>
+                        Data do Recebimento *
+                    </label>
+
+                    <input
+                        id="recibo-funcionario-data"
+                        type="date"
+                        value="${dataHojeFuncionario()}">
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="recibo-funcionario-campos"
+                style="
+                    display:grid;
+                    grid-template-columns:
+                        repeat(2,minmax(0,1fr));
+                    gap:14px;
+                    padding-top:4px;
+                "
+            >
+
+                <div style="
+                    grid-column:1 / -1;
+                    color:#64748b;
+                    font-size:12px;
+                    padding:12px 0;
+                ">
+                    Selecione o tipo de recibo para preencher os valores.
+                </div>
+
+            </div>
+
+
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:15px;
+                padding:15px 16px;
+                border-radius:12px;
+                background:#f8fafc;
+                border:1px solid #e2e8f0;
+            ">
+
+                <div>
+
+                    <div style="
+                        color:#64748b;
+                        font-size:10px;
+                        font-weight:900;
+                        text-transform:uppercase;
+                        letter-spacing:.08em;
+                    ">
+                        Total do recibo
+                    </div>
+
+                    <div style="
+                        margin-top:4px;
+                        color:#0f172a;
+                        font-size:11px;
+                    ">
+                        Valor que aparecerá em destaque no documento
+                    </div>
+
+                </div>
+
+                <div
+                    id="recibo-funcionario-total"
+                    style="
+                        font-size:25px;
+                        font-weight:950;
+                        color:#dc2626;
+                        white-space:nowrap;
+                    "
+                >
+                    R$ 0,00
+                </div>
+
+            </div>
+
+        </div>
+    `;
+
+    configModal({
+
+        title:
+            '🧾 Gerar Recibo',
+
+        body:
+            html,
+
+        size:
+            'large',
+
+        confirmText:
+            '🖨 Gerar / Imprimir Recibo',
+
+        onConfirm:
+            gerarReciboAvulsoFuncionario
+    });
+};
+
+
+/* --------------------------------------------------------- */
+/* tituloTipoReciboFuncionario                               */
+/* Título do recibo de acordo com o tipo.                    */
+/* --------------------------------------------------------- */
+
+function tituloTipoReciboFuncionario(
+    tipo
+) {
+
+    const mapa = {
+
+        'Adiantamento':
+            'RECIBO DE ADIANTAMENTO',
+
+        'Auxílio Combustível':
+            'RECIBO DE AUXÍLIO COMBUSTÍVEL',
+
+        'Diária':
+            'RECIBO DE DIÁRIA',
+
+        'Salário':
+            'RECIBO DE SALÁRIO',
+
+        'Vale':
+            'RECIBO DE VALE',
+
+        'Vale Transporte':
+            'RECIBO DE VALE-TRANSPORTE'
+    };
+
+    return (
+        mapa[
+            tipo
+        ]
+        ||
+        'RECIBO DE PAGAMENTO'
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* textoReferenciaReciboFuncionario                          */
+/* Frase principal conforme o tipo do recibo.                */
+/* --------------------------------------------------------- */
+
+function textoReferenciaReciboFuncionario(
+    dados,
+    competencia
+) {
+
+    const competenciaTexto =
+        escaparHTMLFuncionario(
+            competencia
+        );
+
+    if (
+        dados.tipo ===
+        'Adiantamento'
+    ) {
+
+        return (
+            `referente a adiantamento salarial da competência ${competenciaTexto}.`
+        );
+    }
+
+    if (
+        dados.tipo ===
+        'Auxílio Combustível'
+    ) {
+
+        return (
+            `referente a auxílio combustível da competência ${competenciaTexto}.`
+        );
+    }
+
+    if (
+        dados.tipo ===
+        'Diária'
+    ) {
+
+        const palavra =
+            dados.quantidadeDiarias ===
+                1
+                ?
+                'diária'
+                :
+                'diárias';
+
+        return (
+            `referente a ${dados.quantidadeDiarias} ${palavra}, ` +
+            `no valor unitário de ${formatarMoeda(dados.valorDiaria)}, ` +
+            `da competência ${competenciaTexto}.`
+        );
+    }
+
+    if (
+        dados.tipo ===
+        'Salário'
+    ) {
+
+        return (
+            `referente ao salário da competência ${competenciaTexto}.`
+        );
+    }
+
+    if (
+        dados.tipo ===
+        'Vale Transporte'
+    ) {
+
+        const palavra =
+            dados.quantidadePassagens ===
+                1
+                ?
+                'passagem'
+                :
+                'passagens';
+
+        return (
+            `referente a vale-transporte, correspondente a ` +
+            `${dados.quantidadePassagens} ${palavra}, ` +
+            `no valor unitário de ${formatarMoeda(dados.valorPassagem)}, ` +
+            `da competência ${competenciaTexto}.`
+        );
+    }
+
+    return (
+        `referente a vale da competência ${competenciaTexto}.`
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* detalhesReciboFuncionario                                 */
+/* Monta os detalhes específicos de cada tipo.               */
+/* --------------------------------------------------------- */
+
+function detalhesReciboFuncionario(
+    dados
+) {
+
+    const linha =
+        (
+            label,
+            valor,
+            classe = ''
+        ) => `
+
+            <div class="detail-row ${classe}">
+
+                <span>
+                    ${label}
+                </span>
+
+                <strong>
+                    ${valor}
+                </strong>
+
+            </div>
+        `;
+
+    if (
+        dados.tipo ===
+        'Salário'
+    ) {
+
+        return (
+            linha(
+                'Valor do salário',
+                formatarMoeda(
+                    dados.valor
+                )
+            )
+            +
+            linha(
+                'Descontos',
+                `- ${formatarMoeda(
+                    dados.descontos
+                )}`,
+                'negative'
+            )
+            +
+            linha(
+                'Bonificação',
+                `+ ${formatarMoeda(
+                    dados.bonificacao
+                )}`,
+                'positive'
+            )
+            +
+            linha(
+                'Horas extras',
+                `+ ${formatarMoeda(
+                    dados.horasExtras
+                )}`,
+                'positive'
+            )
+        );
+    }
+
+    if (
+        dados.tipo ===
+        'Adiantamento'
+    ) {
+
+        return (
+            linha(
+                'Valor do adiantamento',
+                formatarMoeda(
+                    dados.valor
+                )
+            )
+            +
+            (
+                dados.bonificacao > 0
+                    ?
+                    linha(
+                        'Bonificação',
+                        `+ ${formatarMoeda(
+                            dados.bonificacao
+                        )}`,
+                        'positive'
+                    )
+                    :
+                    ''
+            )
+        );
+    }
+
+    if (
+        dados.tipo ===
+        'Diária'
+    ) {
+
+        return (
+            linha(
+                'Quantidade de diárias',
+                dados.quantidadeDiarias
+            )
+            +
+            linha(
+                'Valor da diária',
+                formatarMoeda(
+                    dados.valorDiaria
+                )
+            )
+        );
+    }
+
+    if (
+        dados.tipo ===
+        'Vale Transporte'
+    ) {
+
+        return (
+            linha(
+                'Quantidade de passagens',
+                dados.quantidadePassagens
+            )
+            +
+            linha(
+                'Valor da passagem',
+                formatarMoeda(
+                    dados.valorPassagem
+                )
+            )
+        );
+    }
+
+    return '';
+}
+
+
+/* --------------------------------------------------------- */
+/* gerarReciboAvulsoFuncionario                              */
+/* Gera e abre o recibo pequeno para impressão.              */
+/* --------------------------------------------------------- */
+
+window.gerarReciboAvulsoFuncionario =
+async function () {
+
+    const indiceTexto =
+        document.getElementById(
+            'recibo-funcionario-indice'
+        )
+        ?.value
+        ||
+        '';
+
+    const tipo =
+        document.getElementById(
+            'recibo-funcionario-tipo'
+        )
+        ?.value
+        ||
+        '';
+
+    const competenciaISO =
+        document.getElementById(
+            'recibo-funcionario-competencia'
+        )
+        ?.value
+        ||
+        '';
+
+    const dataRecebimento =
+        document.getElementById(
+            'recibo-funcionario-data'
+        )
+        ?.value
+        ||
+        '';
+
+    if (
+        indiceTexto ===
+        ''
+    ) {
+
+        alert(
+            'Selecione o funcionário.'
+        );
+
+        return;
+    }
+
+    if (
+        !tipo
+    ) {
+
+        alert(
+            'Selecione o tipo de recibo.'
+        );
+
+        return;
+    }
+
+    if (
+        !competenciaISO
+    ) {
+
+        alert(
+            'Selecione a competência.'
+        );
+
+        return;
+    }
+
+    if (
+        !dataRecebimento
+    ) {
+
+        alert(
+            'Selecione a data do recebimento.'
+        );
+
+        return;
+    }
+
+    const indice =
+        Number(
+            indiceTexto
+        );
+
+    const funcionario =
+        db.funcionarios[
+            indice
+        ];
+
+    if (
+        !funcionario
+        ||
+        funcionario.status !==
+            'Ativo'
+    ) {
+
+        alert(
+            'O funcionário selecionado não está disponível para este recibo.'
+        );
+
+        return;
+    }
+
+    const dados =
+        calcularDadosReciboFuncionario();
+
+    if (
+        tipo ===
+        'Diária'
+        &&
+        (
+            dados.quantidadeDiarias <=
+                0
+            ||
+            dados.valorDiaria <=
+                0
+        )
+    ) {
+
+        alert(
+            'Informe a quantidade de diárias e o valor da diária.'
+        );
+
+        return;
+    }
+
+    if (
+        tipo ===
+        'Vale Transporte'
+        &&
+        (
+            dados.quantidadePassagens <=
+                0
+            ||
+            dados.valorPassagem <=
+                0
+        )
+    ) {
+
+        alert(
+            'Informe a quantidade de passagens e o valor da passagem.'
+        );
+
+        return;
+    }
+
+    if (
+        ![
+            'Diária',
+            'Vale Transporte'
+        ]
+        .includes(
+            tipo
+        )
+        &&
+        dados.valor <=
+            0
+    ) {
+
+        alert(
+            'Informe o valor do recibo.'
+        );
+
+        return;
+    }
+
+    if (
+        dados.total <=
+        0
+    ) {
+
+        alert(
+            'O total do recibo precisa ser maior que zero.'
+        );
+
+        return;
+    }
+
+    let logoEmpresa =
+        '';
+
+    try{
+
+        if(
+            window.api
+            &&
+            typeof window.api.getLogoPath ===
+                'function'
+        ){
+
+            logoEmpresa =
+                await window.api
+                    .getLogoPath();
+        }
+
+    }
+    catch(erro){
+
+        console.warn(
+            'Não foi possível carregar a logo no recibo:',
+            erro
+        );
+    }
+
+    const competencia =
+        formatarCompetenciaReciboFuncionario(
+            competenciaISO
+        );
+
+    const valorTotal =
+        formatarMoeda(
+            dados.total
+        );
+
+    const referencia =
+        textoReferenciaReciboFuncionario(
+            dados,
+            competencia
+        );
+
+    const detalhes =
+        detalhesReciboFuncionario(
+            dados
+        );
+
+    const ano =
+        String(
+            dataRecebimento
+        )
+        .slice(
+            0,
+            4
+        )
+        ||
+        new Date()
+            .getFullYear();
+
+    const nomeFuncionario =
+        escaparHTMLFuncionario(
+            funcionario.nome
+            ||
+            'Funcionário'
+        );
+
+    const tituloTipo =
+        tituloTipoReciboFuncionario(
+            tipo
+        );
+
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        ${tituloTipo} - ${nomeFuncionario}
+    </title>
+
+    <style>
+
+        *{
+            box-sizing:border-box;
+        }
+
+        html,
+        body{
+            margin:0;
+            padding:0;
+            background:#fff;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+            color:#111827;
+        }
+
+        body{
+            padding:10mm;
+        }
+
+        .receipt{
+            width:190mm;
+            max-width:100%;
+            min-height:92mm;
+            margin:0 auto;
+            border:1.5px solid #9ca3af;
+            background:#fff;
+        }
+
+        .header{
+            display:grid;
+            grid-template-columns:
+                1fr
+                48mm;
+            min-height:26mm;
+            border-bottom:1px solid #d1d5db;
+        }
+
+        .header-main{
+            display:flex;
+            flex-direction:column;
+            justify-content:center;
+            align-items:center;
+            padding:7px 12px;
+            text-align:center;
+        }
+
+        .receipt-number{
+            font-size:14px;
+            font-weight:900;
+            color:#111827;
+        }
+
+        .receipt-type{
+            margin-top:5px;
+            font-size:15px;
+            font-weight:900;
+            text-transform:uppercase;
+        }
+
+        .logo-box{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:5px;
+            border-left:1px solid #d1d5db;
+        }
+
+        .logo{
+            max-width:42mm;
+            max-height:21mm;
+            object-fit:contain;
+        }
+
+        .empresa-fallback{
+            text-align:center;
+            font-size:12px;
+            font-weight:900;
+        }
+
+        .statement{
+            padding:8px 15px 5px;
+            text-align:center;
+            font-size:12px;
+            line-height:1.5;
+        }
+
+        .amount{
+            padding:3px 15px 8px;
+            text-align:center;
+            color:#ef1b1b;
+            font-size:24px;
+            font-weight:950;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        .reference{
+            padding:8px 16px;
+            text-align:center;
+            font-size:11.5px;
+            line-height:1.5;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        .details{
+            display:grid;
+            grid-template-columns:
+                repeat(2,minmax(0,1fr));
+            gap:4px 12px;
+            padding:7px 16px;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        .detail-row{
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            padding:3px 0;
+            font-size:10px;
+        }
+
+        .detail-row span{
+            color:#475569;
+        }
+
+        .detail-row strong{
+            color:#111827;
+            white-space:nowrap;
+        }
+
+        .detail-row.positive strong{
+            color:#15803d;
+        }
+
+        .detail-row.negative strong{
+            color:#b91c1c;
+        }
+
+        .footer-grid{
+            display:grid;
+            grid-template-columns:
+                1fr
+                1fr;
+            gap:0;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        .footer-cell{
+            padding:5px 12px;
+            font-size:10.5px;
+        }
+
+        .footer-cell + .footer-cell{
+            border-left:1px solid #e5e7eb;
+        }
+
+        .footer-label{
+            font-weight:900;
+            color:#111827;
+        }
+
+        .signature{
+            padding:13px 18px 8px;
+            display:flex;
+            align-items:flex-end;
+            gap:8px;
+            min-height:18mm;
+            font-size:10.5px;
+        }
+
+        .signature-label{
+            font-weight:900;
+            white-space:nowrap;
+        }
+
+        .signature-line{
+            flex:1;
+            min-width:40mm;
+            border-bottom:1px solid #111827;
+            height:12px;
+        }
+
+        .employee-name{
+            white-space:nowrap;
+            font-weight:800;
+            text-transform:uppercase;
+        }
+
+        @media print{
+
+            @page{
+                size:A4 portrait;
+                margin:10mm;
+            }
+
+            body{
+                padding:0;
+            }
+
+            .receipt{
+                width:190mm;
+                margin:0;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="receipt">
+
+        <div class="header">
+
+            <div class="header-main">
+
+                <div class="receipt-number">
+                    RECIBO / ${escaparHTMLFuncionario(
+                        ano
+                    )}
+                </div>
+
+                <div class="receipt-type">
+                    ${escaparHTMLFuncionario(
+                        tituloTipo
+                    )}
+                </div>
+
+            </div>
+
+            <div class="logo-box">
+
+                ${
+                    logoEmpresa
+                        ? `
+                            <img
+                                class="logo"
+                                src="${logoEmpresa}"
+                                alt="WN Comunicação Visual">
+                        `
+                        : `
+                            <div class="empresa-fallback">
+                                WN Comunicação Visual
+                            </div>
+                        `
+                }
+
+            </div>
+
+        </div>
+
+
+        <div class="statement">
+
+            RECEBI DE
+            <strong>
+                WN COMUNICAÇÃO VISUAL LTDA
+            </strong>
+            A QUANTIA DE:
+
+        </div>
+
+
+        <div class="amount">
+            ${valorTotal}
+        </div>
+
+
+        <div class="reference">
+            ${referencia}
+        </div>
+
+
+        ${
+            detalhes
+                ? `
+                    <div class="details">
+                        ${detalhes}
+                    </div>
+                `
+                : ''
+        }
+
+
+        <div class="footer-grid">
+
+            <div class="footer-cell">
+
+                <span class="footer-label">
+                    Competência:
+                </span>
+
+                ${escaparHTMLFuncionario(
+                    competencia
+                )}
+
+            </div>
+
+            <div class="footer-cell">
+
+                <span class="footer-label">
+                    Data:
+                </span>
+
+                ${escaparHTMLFuncionario(
+                    formatarDataCarreira(
+                        dataRecebimento
+                    )
+                )}
+
+            </div>
+
+        </div>
+
+
+        <div class="signature">
+
+            <span class="signature-label">
+                Assinatura:
+            </span>
+
+            <span class="signature-line"></span>
+
+            <span class="employee-name">
+                ${nomeFuncionario}
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        window.addEventListener(
+            'load',
+            function () {
+
+                setTimeout(
+                    function () {
+
+                        window.print();
+
+                    },
+                    250
+                );
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
+`;
+
+    if(
+        window.api
+        &&
+        typeof window.api.imprimirHTML ===
+            'function'
+    ){
+
+        await window.api
+            .imprimirHTML(
+                html
+            );
+
+        return;
+    }
+
+    const janela =
+        window.open(
+            '',
+            '_blank'
+        );
+
+    if(
+        !janela
+    ){
+
+        alert(
+            'Não foi possível abrir a janela de impressão.'
+        );
+
+        return;
+    }
+
+    janela.document.write(
+        html
+    );
+
+    janela.document.close();
+};
+
+
+/* ========================================================= */
+/* 02.2 HELPERS DO PLANO DE CARREIRA                        */
 /* ========================================================= */
 /*
     Funções usadas para datas, status e identificação
@@ -805,25 +2666,216 @@ function obterProximaEtapaCarreira(func, etapaAtiva) {
 }
 
 /* ========================================================= */
+/* 02.3 ABAS ATIVOS / DESLIGADOS                            */
+/* ========================================================= */
+/*
+    A tela principal de Funcionários passa a separar visualmente
+    os colaboradores em duas abas:
+
+    ATIVOS:
+        Todos os funcionários que ainda possuem vínculo com a
+        empresa. Isso inclui os status:
+        - Ativo
+        - Férias
+        - Afastado
+
+    DESLIGADOS:
+        Somente funcionários com status "Desligado".
+
+    IMPORTANTE:
+    O funcionário NÃO é movido de posição dentro de db.funcionarios.
+    A separação é apenas visual e depende do status atual.
+
+    Portanto:
+    - ao alterar um funcionário para "Desligado", ele deixa
+      imediatamente a aba Ativos e passa para Desligados;
+    - ao cancelar uma rescisão e reativá-lo, ele volta
+      automaticamente para a aba Ativos.
+*/
+
+window.abaFuncionariosAtual =
+    window.abaFuncionariosAtual
+    ||
+    'ativos';
+
+
+/* --------------------------------------------------------- */
+/* alterarAbaFuncionarios                                    */
+/* Troca a aba sem recarregar o banco inteiro.               */
+/* --------------------------------------------------------- */
+
+window.alterarAbaFuncionarios =
+function (
+    aba
+) {
+
+    window.abaFuncionariosAtual =
+        aba ===
+            'desligados'
+            ?
+            'desligados'
+            :
+            'ativos';
+
+    navigate(
+        'funcionarios',
+        false
+    );
+};
+
+
+/* --------------------------------------------------------- */
+/* funcionarioEstaDesligado                                 */
+/* Centraliza a identificação do grupo Desligados.           */
+/* --------------------------------------------------------- */
+
+function funcionarioEstaDesligado(
+    funcionario
+) {
+
+    return (
+        String(
+            funcionario?.status || ''
+        )
+        .trim()
+        .toLowerCase()
+        ===
+        'desligado'
+    );
+}
+
+
+/* ========================================================= */
+/* 02.4 ORDEM ALFABÉTICA DOS FUNCIONÁRIOS                   */
+/* ========================================================= */
+/*
+    ordenarFuncionariosPorNome(lista)
+
+    Retorna uma cópia da lista organizada pelo nome.
+
+    IMPORTANTE:
+    - db.funcionarios permanece na ordem original;
+    - nenhum código, vínculo ou índice é modificado;
+    - a ordenação serve somente para facilitar a localização
+      visual dos colaboradores.
+*/
+
+/* --------------------------------------------------------- */
+/* ordenarFuncionariosPorNome                                */
+/* Retorna uma cópia em ordem alfabética.                    */
+/* --------------------------------------------------------- */
+
+function ordenarFuncionariosPorNome(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) =>
+            String(
+                a?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
+
+
+/* ========================================================= */
 /* 03. RENDERIZAÇÃO DA PÁGINA DE FUNCIONÁRIOS               */
 /* ========================================================= */
 /*
     Monta a tela principal com:
     - cadastro de cargos
+    - recibos avulsos
     - novo funcionário
-    - listagem de colaboradores
+    - abas Ativos / Desligados
+    - listagem em ordem alfabética
     - Ponto
     - Carreira
     - Férias
     - Rescisão
     - Editar
     - Excluir
+
+    A tabela foi compactada para aproximar a coluna Ações
+    da Data de Admissão e reduzir a necessidade de rolagem
+    horizontal.
 */
 
 registerPage('funcionarios', function () {
 
     garantirCadastroCargosFuncionario();
     db.funcionarios.forEach(garantirEstruturaFuncionarioRH);
+
+    /* ===================================================== */
+    /* 03.1 LISTA VISUAL EM ORDEM ALFABÉTICA                */
+    /* ===================================================== */
+    /*
+        A lista usada no HTML é uma cópia ordenada.
+        db.funcionarios não sofre alteração.
+    */
+
+    const funcionariosOrdenados =
+        ordenarFuncionariosPorNome(
+            db.funcionarios
+        );
+
+
+    /* ===================================================== */
+    /* 03.2 SEPARAR ATIVOS E DESLIGADOS                     */
+    /* ===================================================== */
+
+    const funcionariosAtivos =
+        funcionariosOrdenados
+            .filter(
+                funcionario =>
+                    !funcionarioEstaDesligado(
+                        funcionario
+                    )
+            );
+
+    const funcionariosDesligados =
+        funcionariosOrdenados
+            .filter(
+                funcionario =>
+                    funcionarioEstaDesligado(
+                        funcionario
+                    )
+            );
+
+    const abaAtual =
+        window.abaFuncionariosAtual ===
+            'desligados'
+            ?
+            'desligados'
+            :
+            'ativos';
+
+    const funcionariosExibidos =
+        abaAtual ===
+            'desligados'
+            ?
+            funcionariosDesligados
+            :
+            funcionariosAtivos;
 
     return `
 
@@ -879,6 +2931,15 @@ registerPage('funcionarios', function () {
 
                 <button
                     class="btn-action"
+                    style="background:#0f766e;"
+                    onclick="abrirGeradorReciboFuncionario()">
+
+                    🧾 Recibo
+
+                </button>
+
+                <button
+                    class="btn-action"
                     onclick="abrirModalFuncionario()">
 
                     + Novo Funcionário
@@ -895,6 +2956,96 @@ registerPage('funcionarios', function () {
 
     <div class="content-card">
 
+        <!-- ================================================= -->
+        <!-- 03.3 ABAS DE SITUAÇÃO                            -->
+        <!-- ================================================= -->
+
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-bottom:18px;
+            padding-bottom:14px;
+            border-bottom:1px solid #e5e7eb;
+        ">
+
+            <button
+                type="button"
+                onclick="alterarAbaFuncionarios('ativos')"
+                style="
+                    border:none;
+                    cursor:pointer;
+                    padding:9px 16px;
+                    border-radius:10px;
+                    font-size:12px;
+                    font-weight:850;
+                    transition:.15s;
+                    background:${
+                        abaAtual === 'ativos'
+                            ? '#dcfce7'
+                            : '#f8fafc'
+                    };
+                    color:${
+                        abaAtual === 'ativos'
+                            ? '#166534'
+                            : '#64748b'
+                    };
+                    box-shadow:${
+                        abaAtual === 'ativos'
+                            ? 'inset 0 0 0 1px #bbf7d0'
+                            : 'inset 0 0 0 1px #e2e8f0'
+                    };
+                "
+            >
+                Ativos
+                <span style="
+                    margin-left:5px;
+                    opacity:.8;
+                ">
+                    (${funcionariosAtivos.length})
+                </span>
+            </button>
+
+
+            <button
+                type="button"
+                onclick="alterarAbaFuncionarios('desligados')"
+                style="
+                    border:none;
+                    cursor:pointer;
+                    padding:9px 16px;
+                    border-radius:10px;
+                    font-size:12px;
+                    font-weight:850;
+                    transition:.15s;
+                    background:${
+                        abaAtual === 'desligados'
+                            ? '#fee2e2'
+                            : '#f8fafc'
+                    };
+                    color:${
+                        abaAtual === 'desligados'
+                            ? '#991b1b'
+                            : '#64748b'
+                    };
+                    box-shadow:${
+                        abaAtual === 'desligados'
+                            ? 'inset 0 0 0 1px #fecaca'
+                            : 'inset 0 0 0 1px #e2e8f0'
+                    };
+                "
+            >
+                Desligados
+                <span style="
+                    margin-left:5px;
+                    opacity:.8;
+                ">
+                    (${funcionariosDesligados.length})
+                </span>
+            </button>
+
+        </div>
+
         ${
             db.funcionarios.length === 0
             ? `
@@ -906,23 +3057,74 @@ registerPage('funcionarios', function () {
                     Nenhum funcionário cadastrado.
                 </p>
             `
+            : funcionariosExibidos.length === 0
+            ? `
+                <p style="
+                    text-align:center;
+                    color:#777;
+                    padding:30px;
+                ">
+                    ${
+                        abaAtual === 'desligados'
+                            ? 'Nenhum funcionário desligado.'
+                            : 'Nenhum funcionário ativo.'
+                    }
+                </p>
+            `
             : `
-                <div style="overflow:auto;">
-                    <table>
+                <div style="
+                    overflow-x:auto;
+                    overflow-y:hidden;
+                ">
+                    <table style="
+                        width:100%;
+                        table-layout:auto;
+                    ">
 
                         <thead>
 
                             <tr>
 
-                                <th>Nome</th>
-                                <th>Cargo</th>
-                                <th>Status</th>
-                                <th>Salário</th>
-                                <th>Admissão</th>
+                                <th style="
+                                    width:17%;
+                                    min-width:82px;
+                                ">
+                                    Nome
+                                </th>
 
                                 <th style="
-                                    text-align:right;
-                                    min-width:560px;
+                                    width:15%;
+                                    min-width:92px;
+                                ">
+                                    Cargo
+                                </th>
+
+                                <th style="
+                                    width:11%;
+                                    min-width:86px;
+                                ">
+                                    Status
+                                </th>
+
+                                <th style="
+                                    width:11%;
+                                    min-width:88px;
+                                ">
+                                    Salário
+                                </th>
+
+                                <th style="
+                                    width:12%;
+                                    min-width:92px;
+                                ">
+                                    Admissão
+                                </th>
+
+                                <th style="
+                                    text-align:left;
+                                    width:34%;
+                                    min-width:430px;
+                                    padding-left:8px;
                                 ">
                                     Ações
                                 </th>
@@ -933,7 +3135,23 @@ registerPage('funcionarios', function () {
 
                         <tbody>
 
-                            ${db.funcionarios.map((f, index) => `
+                            ${funcionariosExibidos.map(f => {
+
+                                /* ========================= */
+                                /* ÍNDICE REAL DO FUNCIONÁRIO */
+                                /* ========================= */
+                                /*
+                                    A lista está em ordem alfabética,
+                                    mas as ações precisam continuar
+                                    apontando para db.funcionarios.
+                                */
+
+                                const index =
+                                    db.funcionarios.indexOf(
+                                        f
+                                    );
+
+                                return `
 
                                 <tr>
 
@@ -964,21 +3182,25 @@ registerPage('funcionarios', function () {
                                     </td>
 
                                     <td style="
-                                        text-align:right;
+                                        text-align:left;
                                         white-space:nowrap;
+                                        padding-left:8px;
+                                        padding-right:4px;
                                     ">
 
                                         <div style="
                                             display:flex;
-                                            justify-content:flex-end;
-                                            gap:5px;
-                                            flex-wrap:wrap;
+                                            justify-content:flex-start;
+                                            align-items:center;
+                                            gap:4px;
+                                            flex-wrap:nowrap;
+                                            min-width:max-content;
                                         ">
                                             <button
                                                 class="btn-action"
                                                 style="
-                                                    padding:6px 10px;
-                                                    font-size:0.75rem;
+                                                    padding:5px 7px;
+                                                    font-size:0.68rem;
                                                     background:#2563eb;
                                                 "
                                                 onclick="abrirPontoFuncionario(${index})">
@@ -990,8 +3212,8 @@ registerPage('funcionarios', function () {
                                             <button
                                                 class="btn-action"
                                                 style="
-                                                    padding:6px 10px;
-                                                    font-size:0.75rem;
+                                                    padding:5px 7px;
+                                                    font-size:0.68rem;
                                                     background:#0f766e;
                                                 "
                                                 onclick="abrirPlanoCarreira(${index})">
@@ -1003,8 +3225,8 @@ registerPage('funcionarios', function () {
                                             <button
                                                 class="btn-action"
                                                 style="
-                                                    padding:6px 10px;
-                                                    font-size:0.75rem;
+                                                    padding:5px 7px;
+                                                    font-size:0.68rem;
                                                     background:#7c3aed;
                                                 "
                                                 onclick="abrirFeriasFuncionario(${index})">
@@ -1016,8 +3238,8 @@ registerPage('funcionarios', function () {
                                             <button
                                                 class="btn-action"
                                                 style="
-                                                    padding:6px 10px;
-                                                    font-size:0.75rem;
+                                                    padding:5px 7px;
+                                                    font-size:0.68rem;
                                                     background:#be123c;
                                                 "
                                                 onclick="abrirRescisaoFuncionario(${index})">
@@ -1029,8 +3251,8 @@ registerPage('funcionarios', function () {
                                             <button
                                                 class="btn-action"
                                                 style="
-                                                    padding:6px 10px;
-                                                    font-size:0.75rem;
+                                                    padding:5px 7px;
+                                                    font-size:0.68rem;
                                                     background:#f59e0b;
                                                 "
                                                 onclick="editarFuncionario(${index})">
@@ -1041,6 +3263,10 @@ registerPage('funcionarios', function () {
 
                                             <button
                                                 class="btn-del"
+                                                style="
+                                                    padding:5px 7px;
+                                                    font-size:0.68rem;
+                                                "
                                                 onclick="deleteItem('funcionarios', ${index})">
 
                                                 Excluir
@@ -1053,7 +3279,8 @@ registerPage('funcionarios', function () {
 
                                 </tr>
 
-                            `).join('')}
+                            `;
+                            }).join('')}
 
                         </tbody>
 
@@ -1315,7 +3542,20 @@ window.abrirModalFuncionario = function () {
 
             save();
             closeModal();
-            navigate('funcionarios');
+
+            /*
+                A aba é filtrada pelo status em tempo real.
+
+                Se o status acabou de ser alterado para "Desligado",
+                o funcionário deixa automaticamente a aba Ativos e
+                passa a existir somente em Desligados.
+
+                Se for reativado, acontece o caminho inverso.
+            */
+
+            navigate(
+                'funcionarios'
+            );
         }
     });
 };
@@ -1636,12 +3876,30 @@ window.abrirPlanoCarreira = function (index) {
             ? (aumento / salarioAtual) * 100
             : 0;
 
+    /* ===================================================== */
+    /* FUNCIONÁRIOS DO SELETOR EM ORDEM ALFABÉTICA          */
+    /* ===================================================== */
+
     const opcoesFuncionarios =
-        db.funcionarios.map((func, idx) => `
-            <option value="${idx}" ${idx === index ? 'selected' : ''}>
-                ${escaparHTMLFuncionario(func.nome || `Funcionário ${idx + 1}`)}
-            </option>
-        `).join('');
+        ordenarFuncionariosPorNome(
+            db.funcionarios
+        )
+        .map(
+            func => {
+
+                const idx =
+                    db.funcionarios.indexOf(
+                        func
+                    );
+
+                return `
+                    <option value="${idx}" ${idx === index ? 'selected' : ''}>
+                        ${escaparHTMLFuncionario(func.nome || `Funcionário ${idx + 1}`)}
+                    </option>
+                `;
+            }
+        )
+        .join('');
 
     const historico =
         [...f.planoCarreira]

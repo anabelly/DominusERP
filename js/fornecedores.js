@@ -22,8 +22,11 @@
     12. Registrar a página "fornecedores" no sistema
 
     IMPORTANTE:
-    Apenas comentários e organização visual foram alterados.
-    Nenhuma regra, campo, índice, filtro ou lógica foi modificada.
+    A única alteração funcional desta versão é a ordem visual
+    alfabética pelo Nome Fantasia do fornecedor.
+
+    O banco, os registros e os índices originais permanecem
+    exatamente como estavam.
 */
 
 
@@ -40,6 +43,77 @@
 
 window.paginaFornecedores = 1;
 window.limiteFornecedores = 15;
+
+
+/* ========================================================= */
+/* 01.1 ORDEM ALFABÉTICA DOS FORNECEDORES                   */
+/* ========================================================= */
+/*
+    ordenarFornecedoresPorNome(lista)
+
+    Cria uma cópia da lista para exibição e ordena por:
+    1. Nome Fantasia
+    2. Nome / Razão Social como alternativa
+
+    IMPORTANTE:
+    db.fornecedores não é reordenado.
+    As ações continuam usando o índice real do fornecedor
+    dentro do banco.
+*/
+
+/* --------------------------------------------------------- */
+/* ordenarFornecedoresPorNome                                */
+/* Retorna uma cópia em ordem alfabética.                    */
+/* --------------------------------------------------------- */
+
+function ordenarFornecedoresPorNome(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) => {
+
+            const nomeA =
+                String(
+                    a?.fantasia
+                    ||
+                    a?.nome
+                    ||
+                    ''
+                );
+
+            const nomeB =
+                String(
+                    b?.fantasia
+                    ||
+                    b?.nome
+                    ||
+                    ''
+                );
+
+            return nomeA.localeCompare(
+                nomeB,
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            );
+        }
+    );
+}
+
+
 /* ========================================================= */
 /* 02. RENDERIZAÇÃO DA PÁGINA DE FORNECEDORES               */
 /* ========================================================= */
@@ -75,8 +149,21 @@ const fim =
     window.limiteFornecedores;
 
 
+/* ===================================================== */
+/* 02.1 ORDENAR ANTES DE PAGINAR                        */
+/* ===================================================== */
+/*
+    A ordenação acontece apenas na cópia usada pela tela.
+    Depois disso é aplicado o recorte da página atual.
+*/
+
+const fornecedoresOrdenados =
+    ordenarFornecedoresPorNome(
+        db.fornecedores
+    );
+
 const fornecedoresTela =
-    db.fornecedores.slice(
+    fornecedoresOrdenados.slice(
         inicio,
         fim
     );
@@ -197,7 +284,16 @@ const fornecedoresTela =
 `;
     }
 
-  fornecedoresTela.forEach((fornecedor, idxTela) => {
+  fornecedoresTela.forEach(fornecedor => {
+
+    /* ===================================================== */
+    /* 02.3 ÍNDICE REAL DO FORNECEDOR                       */
+    /* ===================================================== */
+    /*
+        A posição na lista alfabética é apenas visual.
+        Para editar, visualizar ou excluir, buscamos o índice
+        verdadeiro dentro de db.fornecedores.
+    */
 
     const idx =
         db.fornecedores.indexOf(
@@ -1237,8 +1333,14 @@ function () {
             .value
             .toLowerCase();
 
+    /* ===================================================== */
+    /* 10.1 ORDEM ALFABÉTICA DOS RESULTADOS                 */
+    /* ===================================================== */
+
     let lista =
-        [...db.fornecedores];
+        ordenarFornecedoresPorNome(
+            db.fornecedores
+        );
 
     if (nome) {
 

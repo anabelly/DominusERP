@@ -24,13 +24,16 @@
     14. Trabalhar com os status:
         Aberta, Em Produção, Concluída, Finalizada,
         Cancelada e Atrasada
-    15. Registrar a página no Dominus ERP
+    15. Exibir clientes em ordem alfabética nos formulários
+    16. Registrar a página no Dominus ERP
 
     IMPORTANTE:
     A lógica visual, o formulário de criação, itens,
     visualização e impressão da OS foram preservados.
-    A alteração desta versão está concentrada na base
-    dos status e na criação automática vinda de orçamento.
+
+    Além das regras já existentes de status e vínculo com
+    orçamento, os clientes agora são exibidos em ordem
+    alfabética nos campos de seleção, sem alterar o banco.
 */
 
 
@@ -129,6 +132,56 @@ async function salvarOSStorage() {
         console.error("Erro ao salvar DB:", e);
     }
 }
+
+/* --------------------------------------------------------- */
+/* ordenarClientesOS                                         */
+/* Retorna uma cópia em ordem alfabética pelo nome.          */
+/* --------------------------------------------------------- */
+/*
+    ORDEM ALFABÉTICA - CLIENTES DAS ORDENS DE SERVIÇO
+
+    A ordenação é somente visual.
+
+    IMPORTANTE:
+    - o array original do banco NÃO é reordenado;
+    - códigos, IDs e vínculos permanecem intactos;
+    - a comparação usa pt-BR;
+    - diferenças de acentuação e maiúsculas/minúsculas não
+      atrapalham a ordem apresentada nos campos de seleção.
+*/
+
+function ordenarClientesOS(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) =>
+            String(
+                a?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
+
 
 /* ========================================================= */
 /* 04. FORMATAR DATA                                       */
@@ -1084,7 +1137,9 @@ function renderFormOS() {
             Selecione o cliente
         </option>
 
-        ${(window.db.clientes || []).map(c => `
+        ${ordenarClientesOS(
+            window.db.clientes || []
+        ).map(c => `
 
             <option value="${c.nome}">
                 ${c.nome}

@@ -243,19 +243,26 @@ window.abrirRelatorio = function(tipo){
 
     ];
 
+    /*
+        STATUS ATUAIS DOS ORÇAMENTOS
+
+        O fluxo de produção/finalização pertence à OS.
+        Na tela de Orçamentos permanecem somente:
+        - Aguardando
+        - Aprovado
+        - Recusado
+        - Cancelado
+    */
+
     const status = [
 
         'Aguardando',
 
         'Aprovado',
 
-        'Em Produção',
-
         'Recusado',
 
-        'Cancelado',
-
-        'Finalizado'
+        'Cancelado'
 
     ];
 
@@ -1161,40 +1168,82 @@ window.filtrarPeriodoRelatorio = function(
 window.gerarFluxoCaixa =
 function(){
 
-    let dados =
+    const dados =
         filtrarPeriodoRelatorio(
             db.financeiro
         );
 
-    let entradas = 0;
-    let saidas = 0;
 
-    dados.forEach(l=>{
+    /* ===================================================== */
+    /* 09.1 SEPARAR CONTAS A RECEBER E CONTAS A PAGAR       */
+    /* ===================================================== */
+    /*
+        Antes todos os lançamentos eram exibidos juntos em
+        uma única tabela, fazendo A Pagar e A Receber se
+        misturarem visualmente no histórico.
 
-        if(
-            l.tipo === 'Receber'
-        ){
+        Agora o relatório mantém os mesmos lançamentos e os
+        mesmos cálculos, mas exibe dois históricos separados:
+        - Contas a Receber
+        - Contas a Pagar
+    */
 
-            entradas +=
+    const dadosReceber =
+        dados.filter(
+            item =>
+                item.tipo ===
+                'Receber'
+        );
+
+    const dadosPagar =
+        dados.filter(
+            item =>
+                item.tipo ===
+                'Pagar'
+        );
+
+
+    /* ===================================================== */
+    /* 09.2 TOTAIS                                           */
+    /* ===================================================== */
+
+    const entradas =
+        dadosReceber.reduce(
+            (
+                total,
+                item
+            ) =>
+                total
+                +
                 Number(
-                    l.valor || 0
-                );
-        }
+                    item.valor || 0
+                ),
+            0
+        );
 
-        if(
-            l.tipo === 'Pagar'
-        ){
-
-            saidas +=
+    const saidas =
+        dadosPagar.reduce(
+            (
+                total,
+                item
+            ) =>
+                total
+                +
                 Number(
-                    l.valor || 0
-                );
-        }
-
-    });
+                    item.valor || 0
+                ),
+            0
+        );
 
     const saldo =
-        entradas - saidas;
+        entradas
+        -
+        saidas;
+
+
+    /* ===================================================== */
+    /* 09.3 CABEÇALHO E INDICADORES                          */
+    /* ===================================================== */
 
     let html =
         getCabecalhoRelatorio(
@@ -1252,62 +1301,320 @@ ${cardIndicadorRelatorio(
 </div>
 `;
 
-    let linhas='';
 
-    dados.forEach(l=>{
+    /* ===================================================== */
+    /* 09.4 HISTÓRICO - CONTAS A RECEBER                    */
+    /* ===================================================== */
 
-        linhas += `
+    let linhasReceber =
+        '';
+
+    if(
+        !dadosReceber.length
+    ){
+
+        linhasReceber += `
 
 <tr>
 
-<td>
-${formatarData(
-    l.vencimento
-)}
-</td>
+<td
+colspan="5"
+style="
+padding:30px;
+text-align:center;
+color:#6b7280;
+">
 
-<td>
-${l.descricao||'-'}
-</td>
+Nenhuma conta a receber encontrada no período.
 
-<td>
-${l.tipo||'-'}
-</td>
-
-<td>
-${l.nome||'-'}
-</td>
-
-<td>
-${formatarMoeda(
-    l.valor||0
-)}
 </td>
 
 </tr>
 `;
-    });
+    }
+
+    dadosReceber.forEach(
+        item => {
+
+            linhasReceber += `
+
+<tr>
+
+<td>
+
+${formatarData(
+    item.vencimento
+)}
+
+</td>
+
+<td>
+
+${item.descricao || '-'}
+
+</td>
+
+<td>
+
+${item.nome || '-'}
+
+</td>
+
+<td>
+
+${item.status || '-'}
+
+</td>
+
+<td>
+
+${formatarMoeda(
+    item.valor || 0
+)}
+
+</td>
+
+</tr>
+`;
+        }
+    );
+
+    html += `
+
+<div style="
+margin-top:10px;
+margin-bottom:14px;
+padding:14px 18px;
+border-radius:14px;
+background:#f0fdf4;
+border:1px solid #bbf7d0;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:15px;
+flex-wrap:wrap;
+">
+
+<div>
+
+<div style="
+font-size:18px;
+font-weight:900;
+color:#166534;
+">
+
+💰 HISTÓRICO — CONTAS A RECEBER
+
+</div>
+
+<div style="
+margin-top:4px;
+font-size:11px;
+color:#64748b;
+">
+
+${dadosReceber.length}
+lançamento(s)
+
+</div>
+
+</div>
+
+<div style="
+font-size:18px;
+font-weight:900;
+color:#16a34a;
+">
+
+${formatarMoeda(
+    entradas
+)}
+
+</div>
+
+</div>
+`;
 
     html +=
         tabelaProfissionalRelatorio(
 
             [
 
-                'Data',
+                'Vencimento',
 
                 'Descrição',
 
-                'Tipo',
-
                 'Nome',
+
+                'Status',
 
                 'Valor'
 
             ],
 
-            linhas
+            linhasReceber
 
         );
+
+
+    /* ===================================================== */
+    /* 09.5 HISTÓRICO - CONTAS A PAGAR                      */
+    /* ===================================================== */
+
+    let linhasPagar =
+        '';
+
+    if(
+        !dadosPagar.length
+    ){
+
+        linhasPagar += `
+
+<tr>
+
+<td
+colspan="5"
+style="
+padding:30px;
+text-align:center;
+color:#6b7280;
+">
+
+Nenhuma conta a pagar encontrada no período.
+
+</td>
+
+</tr>
+`;
+    }
+
+    dadosPagar.forEach(
+        item => {
+
+            linhasPagar += `
+
+<tr>
+
+<td>
+
+${formatarData(
+    item.vencimento
+)}
+
+</td>
+
+<td>
+
+${item.descricao || '-'}
+
+</td>
+
+<td>
+
+${item.nome || '-'}
+
+</td>
+
+<td>
+
+${item.status || '-'}
+
+</td>
+
+<td>
+
+${formatarMoeda(
+    item.valor || 0
+)}
+
+</td>
+
+</tr>
+`;
+        }
+    );
+
+    html += `
+
+<div style="
+margin-top:35px;
+margin-bottom:14px;
+padding:14px 18px;
+border-radius:14px;
+background:#fef2f2;
+border:1px solid #fecaca;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:15px;
+flex-wrap:wrap;
+">
+
+<div>
+
+<div style="
+font-size:18px;
+font-weight:900;
+color:#991b1b;
+">
+
+💸 HISTÓRICO — CONTAS A PAGAR
+
+</div>
+
+<div style="
+margin-top:4px;
+font-size:11px;
+color:#64748b;
+">
+
+${dadosPagar.length}
+lançamento(s)
+
+</div>
+
+</div>
+
+<div style="
+font-size:18px;
+font-weight:900;
+color:#dc2626;
+">
+
+${formatarMoeda(
+    saidas
+)}
+
+</div>
+
+</div>
+`;
+
+    html +=
+        tabelaProfissionalRelatorio(
+
+            [
+
+                'Vencimento',
+
+                'Descrição',
+
+                'Nome',
+
+                'Status',
+
+                'Valor'
+
+            ],
+
+            linhasPagar
+
+        );
+
+
+    /* ===================================================== */
+    /* 09.6 IMPRESSÃO / RODAPÉ                              */
+    /* ===================================================== */
 
     html += `
 
@@ -1333,8 +1640,11 @@ onclick="imprimirRelatorio()">
 
     document.getElementById(
         'resultado-relatorio'
-    ).innerHTML = html;
+    ).innerHTML =
+        html;
 };
+
+
 /* --------------------------------------------------------- */
 /* gerarContasPagar */
 /* Gera o relatório de contas a pagar. */

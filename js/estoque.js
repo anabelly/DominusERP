@@ -33,6 +33,206 @@
 
 
 /* ========================================================= */
+/* 00. TIPOS DE PRODUTO - ORDEM ALFABÉTICA                  */
+/* ========================================================= */
+/*
+    Mantém db.tiposProduto sempre organizado em ordem alfabética.
+
+    Regras:
+    - ignora espaços extras nas pontas;
+    - remove duplicados considerando maiúsculas/minúsculas;
+    - ordena em português (pt-BR);
+    - quando solicitado, salva a ordem corrigida no banco.
+
+    Assim, qualquer novo tipo entra automaticamente na posição
+    correta, sem ficar simplesmente no final da lista.
+*/
+
+
+/* --------------------------------------------------------- */
+/* ordenarTiposProdutoAlfabeticamente                        */
+/* --------------------------------------------------------- */
+
+function ordenarTiposProdutoAlfabeticamente(
+    salvarAlteracoes = false
+) {
+
+    if (
+        !Array.isArray(
+            db.tiposProduto
+        )
+    ) {
+
+        db.tiposProduto =
+            [];
+    }
+
+    const antes =
+        JSON.stringify(
+            db.tiposProduto
+        );
+
+    const mapaUnicos =
+        new Map();
+
+    db.tiposProduto
+        .forEach(
+            tipo => {
+
+                const nome =
+                    String(
+                        tipo || ''
+                    )
+                    .trim();
+
+                if (
+                    !nome
+                ) {
+
+                    return;
+                }
+
+                const chave =
+                    nome
+                        .normalize(
+                            'NFD'
+                        )
+                        .replace(
+                            /[\u0300-\u036f]/g,
+                            ''
+                        )
+                        .toLocaleLowerCase(
+                            'pt-BR'
+                        );
+
+                if (
+                    !mapaUnicos.has(
+                        chave
+                    )
+                ) {
+
+                    mapaUnicos.set(
+                        chave,
+                        nome
+                    );
+                }
+            }
+        );
+
+    db.tiposProduto =
+        [
+            ...mapaUnicos.values()
+        ]
+        .sort(
+            (
+                a,
+                b
+            ) =>
+                a.localeCompare(
+                    b,
+                    'pt-BR',
+                    {
+                        sensitivity:
+                            'base'
+                    }
+                )
+        );
+
+    const depois =
+        JSON.stringify(
+            db.tiposProduto
+        );
+
+    const alterou =
+        antes !==
+        depois;
+
+    if (
+        alterou
+        &&
+        salvarAlteracoes
+        &&
+        typeof save ===
+            'function'
+    ) {
+
+        Promise
+            .resolve(
+                save()
+            )
+            .catch(
+                erro =>
+                    console.error(
+                        'Erro ao salvar ordem dos tipos de produto:',
+                        erro
+                    )
+            );
+    }
+
+    return db.tiposProduto;
+}
+
+
+/* --------------------------------------------------------- */
+/* tipoProdutoJaExiste                                       */
+/* Evita duplicidade ignorando maiúsculas e acentos.         */
+/* --------------------------------------------------------- */
+
+function tipoProdutoJaExiste(
+    nome
+) {
+
+    const chave =
+        String(
+            nome || ''
+        )
+        .trim()
+        .normalize(
+            'NFD'
+        )
+        .replace(
+            /[\u0300-\u036f]/g,
+            ''
+        )
+        .toLocaleLowerCase(
+            'pt-BR'
+        );
+
+    if (
+        !chave
+    ) {
+
+        return false;
+    }
+
+    return (
+        db.tiposProduto
+        ||
+        []
+    )
+    .some(
+        tipo =>
+            String(
+                tipo || ''
+            )
+            .trim()
+            .normalize(
+                'NFD'
+            )
+            .replace(
+                /[\u0300-\u036f]/g,
+                ''
+            )
+            .toLocaleLowerCase(
+                'pt-BR'
+            )
+            ===
+            chave
+    );
+}
+
+
+/* ========================================================= */
 /* 01. RENDERIZAÇÃO DA TELA DE ESTOQUE                      */
 /* ========================================================= */
 /*
@@ -62,6 +262,15 @@ window.renderEstoque = function () {
     if (!db.tiposProduto) {
         db.tiposProduto = [];
     }
+
+    /*
+        Corrige inclusive os tipos já cadastrados anteriormente.
+        Se estavam fora de ordem, a nova ordem é salva no banco.
+    */
+
+    ordenarTiposProdutoAlfabeticamente(
+        true
+    );
 
     if (!Array.isArray(db.xmlImportados)) {
         db.xmlImportados = [];
@@ -329,6 +538,8 @@ window.abrirNovoProduto = function (dados = {}) {
     if (!db.tiposProduto) {
         db.tiposProduto = [];
     }
+
+    ordenarTiposProdutoAlfabeticamente();
 
     const proximoCodigo =
         db.produtos.length + 1;
@@ -672,10 +883,21 @@ window.novoTipoProduto = function () {
 
 
             if (
-                !db.tiposProduto.includes(nome)
+                !tipoProdutoJaExiste(
+                    nome
+                )
             ) {
 
-                db.tiposProduto.push(nome);
+                db.tiposProduto.push(
+                    nome
+                );
+
+                /*
+                    O novo tipo já entra na posição alfabética
+                    correta antes de salvar.
+                */
+
+                ordenarTiposProdutoAlfabeticamente();
 
                 save();
 
@@ -906,6 +1128,8 @@ window.editarProduto = function (idx) {
 /* --------------------------------------------------------- */
 
 window.abrirConsultaProduto = function () {
+
+    ordenarTiposProdutoAlfabeticamente();
 
     let optionsTipos = `
         <option value="">
@@ -3297,6 +3521,8 @@ async function (
         db.tiposProduto = [];
     }
 
+    ordenarTiposProdutoAlfabeticamente();
+
     garantirHistoricoXML();
 
     const identificacao =
@@ -3427,6 +3653,8 @@ async function (
 function opcoesTiposProdutoXML(
     tipoAtual = ''
 ) {
+
+    ordenarTiposProdutoAlfabeticamente();
 
     let html = `
         <option value="">
@@ -3895,21 +4123,22 @@ function () {
             }
 
             const existe =
-                (db.tiposProduto || [])
-                    .some(
-                        tipo =>
-                            String(tipo)
-                                .trim()
-                                .toLowerCase()
-                            ===
-                            nome.toLowerCase()
-                    );
+                tipoProdutoJaExiste(
+                    nome
+                );
 
             if (!existe) {
 
                 db.tiposProduto.push(
                     nome
                 );
+
+                /*
+                    Também durante a importação XML, o novo tipo
+                    entra automaticamente na posição alfabética.
+                */
+
+                ordenarTiposProdutoAlfabeticamente();
 
                 await save();
             }

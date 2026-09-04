@@ -20,8 +20,11 @@
     11. Registrar a página "clientes" no sistema
 
     IMPORTANTE:
-    Apenas comentários e organização visual foram alterados.
-    Nenhuma regra, campo, índice, filtro ou lógica foi modificada.
+    A única alteração funcional desta versão é a ordem visual
+    alfabética pelo nome do cliente.
+
+    O código do cliente, o conteúdo de db.clientes e os índices
+    originais no banco NÃO são alterados.
 */
 
 
@@ -41,6 +44,61 @@
 
 window.paginaClientes = 1;
 window.limiteClientes = 15;
+
+
+/* ========================================================= */
+/* 01.1 ORDEM ALFABÉTICA DOS CLIENTES                       */
+/* ========================================================= */
+/*
+    ordenarClientesPorNome(lista)
+
+    Cria uma CÓPIA da lista e ordena visualmente pelo campo nome.
+
+    IMPORTANTE:
+    - db.clientes não é reordenado;
+    - o código de cada cliente permanece exatamente o mesmo;
+    - o índice real continua sendo localizado em db.clientes;
+    - a ordenação usa pt-BR e ignora diferenças de acentuação
+      e maiúsculas/minúsculas para fins de comparação.
+*/
+
+/* --------------------------------------------------------- */
+/* ordenarClientesPorNome                                    */
+/* Retorna uma cópia dos clientes em ordem alfabética.       */
+/* --------------------------------------------------------- */
+
+function ordenarClientesPorNome(
+    lista
+) {
+
+    return [
+        ...(
+            Array.isArray(
+                lista
+            )
+            ?
+            lista
+            :
+            []
+        )
+    ]
+    .sort(
+        (a, b) =>
+            String(
+                a?.nome || ''
+            )
+            .localeCompare(
+                String(
+                    b?.nome || ''
+                ),
+                'pt-BR',
+                {
+                    sensitivity:'base'
+                }
+            )
+    );
+}
+
 
 /* ========================================================= */
 /* 02. RENDERIZAÇÃO DA PÁGINA DE CLIENTES                   */
@@ -76,8 +134,23 @@ const fim =
     inicio + window.limiteClientes;
 
 
+/* ===================================================== */
+/* 02.1 ORDENAR ANTES DE PAGINAR                        */
+/* ===================================================== */
+/*
+    Primeiro organiza todos os clientes por nome.
+    Depois aplica o recorte da página atual.
+
+    Assim a página 1 começa realmente pelos nomes em A, B, C...
+*/
+
+const clientesOrdenados =
+    ordenarClientesPorNome(
+        db.clientes
+    );
+
 const clientesTela =
-    db.clientes.slice(
+    clientesOrdenados.slice(
         inicio,
         fim
     );
@@ -198,7 +271,23 @@ const clientesTela =
 `;
     }
 
-    clientesTela.forEach((cliente, idx) => {
+    clientesTela.forEach(cliente => {
+
+        /* ================================================= */
+        /* 02.3 ÍNDICE REAL DO CLIENTE                       */
+        /* ================================================= */
+        /*
+            Como a lista exibida está ordenada alfabeticamente,
+            não podemos usar a posição visual como índice do banco.
+
+            indexOf(cliente) recupera a posição real em db.clientes,
+            preservando Visualizar / Editar / Excluir.
+        */
+
+        const idx =
+            db.clientes.indexOf(
+                cliente
+            );
 
         html += `
 
@@ -1232,8 +1321,18 @@ function () {
             .value
             .toLowerCase();
 
+    /* ===================================================== */
+    /* 10.1 ORDEM ALFABÉTICA DOS RESULTADOS                 */
+    /* ===================================================== */
+    /*
+        A consulta também começa com a lista em ordem
+        alfabética para manter o mesmo padrão da tela principal.
+    */
+
     let clientes =
-        [...db.clientes];
+        ordenarClientesPorNome(
+            db.clientes
+        );
 
     if (nome) {
 
