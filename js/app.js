@@ -80,6 +80,39 @@ window.TELAS_SISTEMA = [
         icone:'🛠️'
     },
 
+
+    /*
+        SOLICITAÇÕES
+
+        Tela utilizada para pedidos internos de materiais.
+        Funcionários podem receber acesso a ela normalmente pelo
+        Cadastro de Logins, sem ganhar acesso às áreas administrativas.
+    */
+    {
+        id:'solicitacoes',
+        nome:'Solicitações',
+        icone:'📦'
+    },
+
+
+    {
+        id:'recados-ocorrencias',
+        nome:'Recados / Ocorrências',
+        icone:'🗒️'
+    },
+
+    {
+        id:'retrabalhos',
+        nome:'Registro de Retrabalho',
+        icone:'💸'
+    },
+
+    {
+        id:'pos-venda',
+        nome:'Pós-venda',
+        icone:'☎️'
+    },
+
     {
         id:'recibos',
         nome:'Recibos / Comprovantes',
@@ -308,6 +341,7 @@ function () {
         'agenda',
         'orcamentos',
         'ordens-servico',
+        'solicitacoes',
         'clientes',
         'estoque',
         'financeiro',
@@ -654,6 +688,53 @@ window.registerPage = function (nome, renderFn) {
     window.pages[nome] = renderFn;
 };
 
+/* ========================================================= */
+/* CENTRAL GLOBAL DE SOLICITAÇÕES                           */
+/* ========================================================= */
+/*
+    Esta ponte pertence ao APP principal porque o APP permanece ativo
+    durante toda a navegação do Dominus.
+
+    A tela Solicitações continua independente da Agenda. O APP apenas
+    chama a rotina pública do módulo solicitacoes.js para garantir que
+    o ícone flutuante seja atualizado em QUALQUER tela do sistema.
+
+    REGRAS:
+    - qualquer login com permissão pode criar uma solicitação;
+    - somente Administradores recebem o ícone global;
+    - o ícone só existe visualmente quando houver pedido Pendente;
+    - Agenda/sininho não são alterados.
+*/
+window.atualizarCentralGlobalSolicitacoes = async function(){
+
+    try{
+        if(typeof window.sincronizarSolicitacoesServidor === 'function'){
+            await window.sincronizarSolicitacoesServidor();
+            return;
+        }
+
+        if(typeof window.atualizarNotificacaoSolicitacoes === 'function'){
+            window.atualizarNotificacaoSolicitacoes();
+        }
+    }
+    catch(erro){
+        console.error('Erro ao atualizar central global de Solicitações:',erro);
+    }
+};
+
+/*
+    O temporizador fica no APP, e não depende da página Solicitações
+    estar aberta. A trava impede criar mais de um temporizador caso o
+    arquivo seja executado novamente durante desenvolvimento.
+*/
+if(!window._timerCentralGlobalSolicitacoes){
+    window._timerCentralGlobalSolicitacoes = setInterval(function(){
+        if(typeof window.atualizarCentralGlobalSolicitacoes === 'function'){
+            window.atualizarCentralGlobalSolicitacoes();
+        }
+    },4000);
+}
+
 /* ========================= */
 /* NAVEGAÇÃO */
 /* ========================= */
@@ -703,6 +784,11 @@ if(
 }
 
 aplicarPermissoesMenu();
+
+/* Atualiza o ícone global de Solicitações após DB + sessão. */
+if(typeof window.atualizarCentralGlobalSolicitacoes === 'function'){
+    window.atualizarCentralGlobalSolicitacoes();
+}
 
 if(
     !usuarioPodeAcessarPagina(
@@ -833,6 +919,15 @@ if (!render) {
         viewPort.innerHTML =
 
             render();
+
+        /*
+            A troca do conteúdo do view-port não pode remover a central,
+            pois ela vive no document.body. Ainda assim, atualizamos o
+            estado visual logo após cada navegação.
+        */
+        if(typeof window.atualizarNotificacaoSolicitacoes === 'function'){
+            window.atualizarNotificacaoSolicitacoes();
+        }
 
             /* ========================= */
 /* VERSÃO SISTEMA */

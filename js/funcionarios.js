@@ -21,6 +21,7 @@
     11. Status visual dos funcionários
     12. Abas Ativos / Desligados na listagem
     13. Tabela de funcionários compactada sem alterar códigos
+    14. Controle de Uniformes e EPIs integrado aos funcionários ativos
 
     IMPORTANTE:
     Nesta versão, a única alteração adicional é a ordem visual
@@ -2926,6 +2927,20 @@ registerPage('funcionarios', function () {
                     onclick="abrirCadastroCargosFuncionario()">
 
                     ⚙ Cargos
+
+                </button>
+
+                <!-- ================================================= -->
+                <!-- UNIFORMES E EPIs                                  -->
+                <!-- Abre o controle baseado na planilha de uniformes. -->
+                <!-- ================================================= -->
+
+                <button
+                    class="btn-action"
+                    style="background:#1d4ed8;"
+                    onclick="abrirUniformesEPIFuncionario()">
+
+                    👕 Uniformes e EPIs
 
                 </button>
 
@@ -8076,4 +8091,926 @@ window.getStatusFuncionarioClass = function (status) {
         default:
             return 'status-padrao';
     }
+};
+
+
+/* ========================================================= */
+/* 10. CONTROLE DE UNIFORMES E EPIs                          */
+/* ========================================================= */
+/*
+    CONTROLE INTEGRADO DE UNIFORMES E EPIs
+
+    Esta área reproduz dentro do Dominus a lógica da planilha:
+    "Controle de Uniformes e EPIs - Dashboard v2".
+
+    ESTRUTURA DA PLANILHA REPRODUZIDA:
+    1. Dashboard
+    2. Cadastro de Produtos
+    3. Cadastro de Funcionários
+    4. Movimentações
+
+    IMPORTANTE SOBRE FUNCIONÁRIOS:
+    O cadastro de funcionários da planilha NÃO é duplicado no ERP.
+    O campo Funcionário das movimentações busca diretamente em
+    db.funcionarios e exibe SOMENTE quem estiver com status "Ativo".
+
+    Se um funcionário for desligado, ele deixa de aparecer em novas
+    movimentações, porém o histórico antigo continua preservado.
+
+    REGRA DE ESTOQUE DA PLANILHA:
+    - Quantidade em estoque = quantidade cadastrada do produto;
+    - Qtd. pendente = soma das movimentações com status "Pendente";
+    - Quantidade disponível = estoque - pendências, nunca menor que zero;
+    - ZERADO = disponível igual a zero;
+    - ABAIXO DO MÍNIMO = disponível maior que zero e menor que o mínimo;
+    - OK = disponível igual ou superior ao estoque mínimo.
+
+    STATUS DAS MOVIMENTAÇÕES:
+    - Pendente
+    - Devolvido
+
+    SITUAÇÃO NA DEVOLUÇÃO:
+    - Suja
+    - Limpo
+    - Inteiro
+    - Quebrado
+
+    Os produtos e as quatro movimentações já existentes na planilha
+    enviada são importados automaticamente SOMENTE na primeira criação
+    da estrutura de Uniformes e EPIs no banco do Dominus.
+*/
+
+
+/* --------------------------------------------------------- */
+/* produtosIniciaisUniformesEPI                              */
+/* Produtos existentes na planilha enviada.                  */
+/* --------------------------------------------------------- */
+
+function produtosIniciaisUniformesEPI() {
+    const dados = [
+        ['Camisa azul claro - P',1,2],['Camisa azul claro - M',1,1],['Camisa azul claro - G',2,1],['Camisa azul claro - GG',2,1],['Camisa azul claro - EXG',2,1],
+        ['Colete preto - P',1,0],['Colete preto - M',1,0],['Colete preto - G',2,4],['Colete preto - GG',2,3],['Colete preto - XG',2,0],['Colete preto - EXG',2,0],
+        ['Camisa simples preto e vermelho - P',1,2],['Camisa simples preto e vermelho - M',1,0],['Camisa simples preto e vermelho - G',2,10],['Camisa simples preto e vermelho - GG',2,5],['Camisa simples preto e vermelho - XG',2,7],['Camisa simples preto e vermelho - EXG',2,0],
+        ['Camisa polo preto e vermelho - P',1,0],['Camisa polo preto e vermelho - M',1,0],['Camisa polo preto e vermelho - G',2,0],['Camisa polo preto e vermelho - GG',2,6],['Camisa polo preto e vermelho - XG',2,5],['Camisa polo preto e vermelho - EXG',2,0],
+        ['Camisa preta simples - P',1,0],['Camisa preta simples - M',1,1],['Camisa preta simples - G',2,7],['Camisa preta simples - GG',2,0],['Camisa preta simples - XG',2,0],['Camisa preta simples - EXG',2,0],
+        ['Camisa cinza Sintonia Fina - P',1,0],['Camisa cinza Sintonia Fina - M',1,9],['Camisa cinza Sintonia Fina - G',2,7],['Camisa cinza Sintonia Fina - GG',2,19],['Camisa cinza Sintonia Fina - XG',2,0],['Camisa cinza Sintonia Fina - EXG',2,0],
+        ['Boné WN - Único',2,4],
+        ['Calça preta - P',1,0],['Calça preta - M',1,2],['Calça preta - G',2,1],['Calça preta - GG',2,2],['Calça preta - XG',2,0],['Calça preta - EXG',2,0],
+        ['Calça azul - P',1,2],['Calça azul - M',1,3],['Calça azul - G',2,1],['Calça azul - GG',2,2],['Calça azul - XG',2,0],['Calça azul - EXG',2,1],
+        ['Colete azul - P',1,0],['Colete azul - M',1,3],['Colete azul - G',2,1],['Colete azul - GG',2,0],['Colete azul - XG',2,0],['Colete azul - EXG',2,0],
+        ['Jaqueta corta vento - P',1,0],['Jaqueta corta vento - M',1,1],['Jaqueta corta vento - G',2,1],['Jaqueta corta vento - GG',2,0],['Jaqueta corta vento - XG',2,0],['Jaqueta corta vento - EXG',2,0],
+        ['Camisa social azul claro - Tamanho não informado',2,6],
+        ['Botina - 40',2,3],['Botina - 41',2,3],['Botina - 42',1,2],['Botina - 43',1,2],
+        ['Protetor auricular - Único',2,3],['Abafador de ruídos - Único',2,7],['Máscara de proteção grande - Único',1,1],['Luva simples de proteção - Único',4,16],['Luva raspa - Único',2,4],['Óculos de proteção - Único',2,1],['Óculos escuro de proteção - Único',1,4],['Óculos amarelo de proteção - Único',1,1]
+    ];
+
+    return dados.map((item, indice) => ({
+        id: `uni-prod-${String(indice + 1).padStart(3,'0')}`,
+        nome: item[0],
+        estoqueMinimo: item[1],
+        quantidadeEstoque: item[2],
+        valorUnitario: 0
+    }));
+}
+
+
+/* --------------------------------------------------------- */
+/* movimentacoesIniciaisUniformesEPI                         */
+/* Movimentações já existentes na planilha enviada.          */
+/* --------------------------------------------------------- */
+
+function movimentacoesIniciaisUniformesEPI() {
+    return [
+        ['Kauan Gabriel Alves da Silva','Botina - 40',1],
+        ['Kauan Gabriel Alves da Silva','Luva simples de proteção - Único',1],
+        ['Kauan Gabriel Alves da Silva','Camisa cinza Sintonia Fina - GG',2],
+        ['Kauan Gabriel Alves da Silva','Calça azul - M',1]
+    ].map((item, indice) => ({
+        id: `uni-mov-${String(indice + 1).padStart(3,'0')}`,
+        dataRetirada: '2026-09-16',
+        funcionarioId: '',
+        funcionarioNome: item[0],
+        produtoId: '',
+        produtoNome: item[1],
+        quantidade: item[2],
+        motivo: 'Funcionário novo',
+        status: 'Pendente',
+        dataDevolucao: '',
+        situacao: ''
+    }));
+}
+
+
+/* --------------------------------------------------------- */
+/* garantirEstruturaUniformesEPI                             */
+/* Garante a estrutura no banco e importa a planilha 1 vez. */
+/* --------------------------------------------------------- */
+
+function garantirEstruturaUniformesEPI() {
+    if (!window.db) return null;
+
+    if (!db.uniformesEPI || typeof db.uniformesEPI !== 'object') {
+        db.uniformesEPI = {
+            versao: 1,
+            inicializadoPlanilhaV2: false,
+            produtos: [],
+            movimentacoes: []
+        };
+    }
+
+    if (!Array.isArray(db.uniformesEPI.produtos)) {
+        db.uniformesEPI.produtos = [];
+    }
+
+    if (!Array.isArray(db.uniformesEPI.movimentacoes)) {
+        db.uniformesEPI.movimentacoes = [];
+    }
+
+    if (!db.uniformesEPI.inicializadoPlanilhaV2) {
+        if (db.uniformesEPI.produtos.length === 0) {
+            db.uniformesEPI.produtos = produtosIniciaisUniformesEPI();
+        }
+
+        if (db.uniformesEPI.movimentacoes.length === 0) {
+            db.uniformesEPI.movimentacoes = movimentacoesIniciaisUniformesEPI();
+        }
+
+        db.uniformesEPI.inicializadoPlanilhaV2 = true;
+
+        Promise.resolve(save()).catch(erro =>
+            console.error('Erro ao inicializar Uniformes e EPIs:', erro)
+        );
+    }
+
+    return db.uniformesEPI;
+}
+
+
+/* --------------------------------------------------------- */
+/* idUniformeEPI                                             */
+/* Gera um identificador simples e único.                    */
+/* --------------------------------------------------------- */
+
+function idUniformeEPI(prefixo) {
+    return `${prefixo}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+}
+
+
+/* --------------------------------------------------------- */
+/* funcionariosAtivosUniformesEPI                            */
+/* Retorna literalmente somente funcionários com status Ativo. */
+/* --------------------------------------------------------- */
+
+function funcionariosAtivosUniformesEPI() {
+    return ordenarFuncionariosPorNome(
+        (Array.isArray(db.funcionarios) ? db.funcionarios : [])
+            .filter(funcionario =>
+                String(funcionario?.status || '')
+                    .trim()
+                    .toLowerCase() === 'ativo'
+            )
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* quantidadePendenteProdutoUniformeEPI                      */
+/* Soma as retiradas que continuam pendentes.                */
+/* --------------------------------------------------------- */
+
+function quantidadePendenteProdutoUniformeEPI(produto) {
+    const estrutura = garantirEstruturaUniformesEPI();
+    if (!estrutura || !produto) return 0;
+
+    return estrutura.movimentacoes
+        .filter(mov =>
+            String(mov.status || '').toLowerCase() === 'pendente' &&
+            (
+                (mov.produtoId && mov.produtoId === produto.id) ||
+                (!mov.produtoId && mov.produtoNome === produto.nome)
+            )
+        )
+        .reduce((total, mov) => total + numeroFuncionario(mov.quantidade), 0);
+}
+
+
+/* --------------------------------------------------------- */
+/* resumoProdutoUniformeEPI                                  */
+/* Reproduz os cálculos automáticos do Cadastro de Produtos. */
+/* --------------------------------------------------------- */
+
+function resumoProdutoUniformeEPI(produto) {
+    const estoque = numeroFuncionario(produto?.quantidadeEstoque);
+    const minimo = numeroFuncionario(produto?.estoqueMinimo);
+    const valor = numeroFuncionario(produto?.valorUnitario);
+    const pendente = quantidadePendenteProdutoUniformeEPI(produto);
+    const disponivel = Math.max(0, estoque - pendente);
+
+    let status = 'OK';
+    if (disponivel === 0) {
+        status = 'ZERADO';
+    } else if (disponivel < minimo) {
+        status = 'ABAIXO DO MÍNIMO';
+    }
+
+    return {
+        estoque,
+        minimo,
+        valor,
+        pendente,
+        disponivel,
+        valorTotal: estoque * valor,
+        valorDisponivel: disponivel * valor,
+        status
+    };
+}
+
+
+/* --------------------------------------------------------- */
+/* formatarMoedaUniformeEPI                                  */
+/* Formata valores monetários no padrão brasileiro.          */
+/* --------------------------------------------------------- */
+
+function formatarMoedaUniformeEPI(valor) {
+    return numeroFuncionario(valor).toLocaleString(
+        'pt-BR',
+        { style:'currency', currency:'BRL' }
+    );
+}
+
+
+/* --------------------------------------------------------- */
+/* formatarDataUniformeEPI                                   */
+/* Formata YYYY-MM-DD para DD/MM/YYYY.                       */
+/* --------------------------------------------------------- */
+
+function formatarDataUniformeEPI(data) {
+    if (!data) return '-';
+    const partes = String(data).split('-');
+    return partes.length === 3
+        ? `${partes[2]}/${partes[1]}/${partes[0]}`
+        : String(data);
+}
+
+
+/* --------------------------------------------------------- */
+/* abrirUniformesEPIFuncionario                              */
+/* Abre a área principal de Uniformes e EPIs.                */
+/* --------------------------------------------------------- */
+
+window.abrirUniformesEPIFuncionario = function () {
+    garantirEstruturaUniformesEPI();
+    window.abaUniformesEPIAtual = window.abaUniformesEPIAtual || 'dashboard';
+
+    configModal({
+        title: '👕 Uniformes e EPIs',
+        body: '<div id="uniformes-epi-conteudo"></div>',
+        size: 'fullscreen',
+        confirmText: 'Fechar',
+        onConfirm() {
+            closeModal();
+        }
+    });
+
+    renderUniformesEPI();
+};
+
+
+/* --------------------------------------------------------- */
+/* mudarAbaUniformesEPI                                      */
+/* Alterna Dashboard, Produtos e Movimentações.              */
+/* --------------------------------------------------------- */
+
+window.mudarAbaUniformesEPI = function (aba) {
+    window.abaUniformesEPIAtual = aba;
+    renderUniformesEPI();
+};
+
+
+/* --------------------------------------------------------- */
+/* renderUniformesEPI                                        */
+/* Monta a navegação e a aba selecionada.                    */
+/* --------------------------------------------------------- */
+
+window.renderUniformesEPI = function () {
+    const alvo = document.getElementById('uniformes-epi-conteudo');
+    if (!alvo) return;
+
+    const aba = window.abaUniformesEPIAtual || 'dashboard';
+
+    const botaoAba = (id, texto) => `
+        <button
+            type="button"
+            onclick="mudarAbaUniformesEPI('${id}')"
+            style="
+                border:none;
+                border-radius:10px;
+                padding:10px 16px;
+                cursor:pointer;
+                font-weight:700;
+                background:${aba === id ? '#dc2626' : '#e5e7eb'};
+                color:${aba === id ? '#fff' : '#111827'};
+            "
+        >${texto}</button>
+    `;
+
+    let conteudo = '';
+
+    if (aba === 'produtos') {
+        conteudo = htmlProdutosUniformesEPI();
+    } else if (aba === 'movimentacoes') {
+        conteudo = htmlMovimentacoesUniformesEPI();
+    } else {
+        conteudo = htmlDashboardUniformesEPI();
+    }
+
+    alvo.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:18px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                ${botaoAba('dashboard','📊 Dashboard')}
+                ${botaoAba('produtos','📦 Produtos')}
+                ${botaoAba('movimentacoes','🔄 Movimentações')}
+            </div>
+            ${conteudo}
+        </div>
+    `;
+};
+
+
+/* --------------------------------------------------------- */
+/* htmlDashboardUniformesEPI                                 */
+/* Reproduz o Dashboard da planilha.                         */
+/* --------------------------------------------------------- */
+
+function htmlDashboardUniformesEPI() {
+    const estrutura = garantirEstruturaUniformesEPI();
+    const produtos = estrutura.produtos
+        .map(produto => ({ produto, resumo: resumoProdutoUniformeEPI(produto) }));
+
+    const abaixo = produtos.filter(item => item.resumo.status === 'ABAIXO DO MÍNIMO');
+    const zerados = produtos.filter(item => item.resumo.status === 'ZERADO');
+    const pendencias = estrutura.movimentacoes.filter(
+        mov => String(mov.status || '').toLowerCase() === 'pendente'
+    );
+
+    const card = (titulo, valor, cor) => `
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;border-top:4px solid ${cor};">
+            <div style="font-size:12px;color:#6b7280;font-weight:700;">${titulo}</div>
+            <div style="font-size:30px;font-weight:800;margin-top:6px;">${valor}</div>
+        </div>
+    `;
+
+    const linhasProdutos = lista => lista.length
+        ? lista.map(item => `
+            <tr>
+                <td>${escaparHTMLFuncionario(item.produto.nome)}</td>
+                <td style="text-align:center;">${item.resumo.disponivel}</td>
+                <td style="text-align:center;">${item.resumo.minimo}</td>
+                <td><strong>${item.resumo.status}</strong></td>
+            </tr>
+        `).join('')
+        : '<tr><td colspan="4" style="text-align:center;color:#6b7280;padding:18px;">Nenhum produto.</td></tr>';
+
+    const linhasPendencias = pendencias.length
+        ? pendencias.map(mov => `
+            <tr>
+                <td>${formatarDataUniformeEPI(mov.dataRetirada)}</td>
+                <td>${escaparHTMLFuncionario(mov.funcionarioNome)}</td>
+                <td>${escaparHTMLFuncionario(mov.produtoNome)}</td>
+                <td style="text-align:center;">${numeroFuncionario(mov.quantidade)}</td>
+                <td>${escaparHTMLFuncionario(mov.motivo || '-')}</td>
+                <td>${escaparHTMLFuncionario(mov.situacao || '-')}</td>
+            </tr>
+        `).join('')
+        : '<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:18px;">Nenhuma pendência ativa.</td></tr>';
+
+    return `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;">
+            ${card('PRODUTOS ABAIXO DO MÍNIMO', abaixo.length, '#f59e0b')}
+            ${card('PRODUTOS ZERADOS', zerados.length, '#dc2626')}
+            ${card('PENDÊNCIAS ATIVAS', pendencias.length, '#2563eb')}
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;">
+            <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;overflow:auto;">
+                <h3 style="margin:0 0 12px;">Produtos abaixo do mínimo</h3>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr><th>Produto</th><th>Disponível</th><th>Mínimo</th><th>Status</th></tr></thead>
+                    <tbody>${linhasProdutos(abaixo)}</tbody>
+                </table>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;overflow:auto;">
+                <h3 style="margin:0 0 12px;">Produtos zerados</h3>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr><th>Produto</th><th>Disponível</th><th>Mínimo</th><th>Status</th></tr></thead>
+                    <tbody>${linhasProdutos(zerados)}</tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;overflow:auto;">
+            <h3 style="margin:0 0 12px;">Movimentações pendentes</h3>
+            <table style="width:100%;border-collapse:collapse;min-width:850px;">
+                <thead><tr><th>Data</th><th>Funcionário</th><th>Produto</th><th>Qtd.</th><th>Motivo</th><th>Situação</th></tr></thead>
+                <tbody>${linhasPendencias}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+
+/* --------------------------------------------------------- */
+/* htmlProdutosUniformesEPI                                  */
+/* Reproduz o Cadastro de Produtos da planilha.              */
+/* --------------------------------------------------------- */
+
+function htmlProdutosUniformesEPI() {
+    const estrutura = garantirEstruturaUniformesEPI();
+    const produtos = [...estrutura.produtos].sort((a,b) =>
+        String(a.nome || '').localeCompare(String(b.nome || ''),'pt-BR',{sensitivity:'base'})
+    );
+
+    const linhas = produtos.length
+        ? produtos.map(produto => {
+            const r = resumoProdutoUniformeEPI(produto);
+            const cor = r.status === 'ZERADO' ? '#dc2626' : r.status === 'ABAIXO DO MÍNIMO' ? '#f59e0b' : '#16a34a';
+
+            return `
+                <tr>
+                    <td>${escaparHTMLFuncionario(produto.nome)}</td>
+                    <td style="text-align:center;">${r.minimo}</td>
+                    <td style="text-align:center;">${r.estoque}</td>
+                    <td>${formatarMoedaUniformeEPI(r.valor)}</td>
+                    <td style="text-align:center;">${r.pendente}</td>
+                    <td style="text-align:center;font-weight:800;">${r.disponivel}</td>
+                    <td>${formatarMoedaUniformeEPI(r.valorTotal)}</td>
+                    <td>${formatarMoedaUniformeEPI(r.valorDisponivel)}</td>
+                    <td><span style="background:${cor};color:#fff;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;">${r.status}</span></td>
+                    <td>
+                        <div style="display:flex;gap:6px;white-space:nowrap;">
+                            <button type="button" class="btn-action" style="padding:6px 9px;background:#f59e0b;" onclick="editarProdutoUniformeEPI('${produto.id}')">Editar</button>
+                            <button type="button" class="btn-del" style="padding:6px 9px;" onclick="excluirProdutoUniformeEPI('${produto.id}')">Excluir</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('')
+        : '<tr><td colspan="10" style="text-align:center;padding:20px;color:#6b7280;">Nenhum produto cadastrado.</td></tr>';
+
+    return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div>
+                <h2 style="margin:0;">Cadastro de Produtos</h2>
+                <div style="color:#6b7280;font-size:13px;margin-top:4px;">Estoque, mínimo e valores dos uniformes e EPIs.</div>
+            </div>
+            <button type="button" class="btn-action" style="background:#16a34a;" onclick="novoProdutoUniformeEPI()">+ Novo Produto</button>
+        </div>
+
+        <div style="overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
+            <table style="width:100%;border-collapse:collapse;min-width:1250px;">
+                <thead>
+                    <tr>
+                        <th>Produto / Tamanho</th>
+                        <th>Estoque mínimo</th>
+                        <th>Qtd. em estoque</th>
+                        <th>Valor pago unit.</th>
+                        <th>Qtd. pendente</th>
+                        <th>Qtd. disponível</th>
+                        <th>Valor total cadastrado</th>
+                        <th>Valor disponível</th>
+                        <th>Status estoque</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+
+/* --------------------------------------------------------- */
+/* novoProdutoUniformeEPI                                    */
+/* Abre o cadastro de um novo uniforme ou EPI.               */
+/* --------------------------------------------------------- */
+
+window.novoProdutoUniformeEPI = function () {
+    abrirFormularioProdutoUniformeEPI(null);
+};
+
+
+/* --------------------------------------------------------- */
+/* editarProdutoUniformeEPI                                  */
+/* Abre um produto existente para edição.                    */
+/* --------------------------------------------------------- */
+
+window.editarProdutoUniformeEPI = function (id) {
+    const produto = garantirEstruturaUniformesEPI().produtos.find(p => p.id === id);
+    if (!produto) return;
+    abrirFormularioProdutoUniformeEPI(produto);
+};
+
+
+/* --------------------------------------------------------- */
+/* abrirFormularioProdutoUniformeEPI                         */
+/* Formulário compartilhado entre novo e editar.             */
+/* --------------------------------------------------------- */
+
+function abrirFormularioProdutoUniformeEPI(produto) {
+    const editando = !!produto;
+
+    configModal({
+        title: editando ? 'Editar Uniforme / EPI' : 'Novo Uniforme / EPI',
+        size: 'medium',
+        confirmText: 'Salvar',
+        body: `
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                    <label>Produto / Tamanho</label>
+                    <input id="uni-prod-nome" value="${escaparHTMLFuncionario(produto?.nome || '')}" placeholder="Ex.: Botina - 40">
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+                    <div><label>Estoque mínimo</label><input id="uni-prod-minimo" type="number" min="0" step="1" value="${numeroFuncionario(produto?.estoqueMinimo)}"></div>
+                    <div><label>Quantidade em estoque</label><input id="uni-prod-estoque" type="number" min="0" step="1" value="${numeroFuncionario(produto?.quantidadeEstoque)}"></div>
+                    <div><label>Valor pago unit. (R$)</label><input id="uni-prod-valor" type="number" min="0" step="0.01" value="${numeroFuncionario(produto?.valorUnitario)}"></div>
+                </div>
+            </div>
+        `,
+        async onConfirm() {
+            const nome = document.getElementById('uni-prod-nome')?.value.trim();
+            const minimo = numeroFuncionario(document.getElementById('uni-prod-minimo')?.value);
+            const estoque = numeroFuncionario(document.getElementById('uni-prod-estoque')?.value);
+            const valor = numeroFuncionario(document.getElementById('uni-prod-valor')?.value);
+
+            if (!nome) {
+                alert('Informe o produto / tamanho.');
+                return;
+            }
+
+            const estrutura = garantirEstruturaUniformesEPI();
+            const duplicado = estrutura.produtos.some(p =>
+                p.id !== produto?.id &&
+                String(p.nome || '').trim().toLowerCase() === nome.toLowerCase()
+            );
+
+            if (duplicado) {
+                alert('Já existe um produto com esse nome.');
+                return;
+            }
+
+            if (editando) {
+                const nomeAntigo = produto.nome;
+                produto.nome = nome;
+                produto.estoqueMinimo = minimo;
+                produto.quantidadeEstoque = estoque;
+                produto.valorUnitario = valor;
+
+                estrutura.movimentacoes.forEach(mov => {
+                    if (mov.produtoId === produto.id || (!mov.produtoId && mov.produtoNome === nomeAntigo)) {
+                        mov.produtoId = produto.id;
+                        mov.produtoNome = nome;
+                    }
+                });
+            } else {
+                estrutura.produtos.push({
+                    id: idUniformeEPI('uni-prod'),
+                    nome,
+                    estoqueMinimo: minimo,
+                    quantidadeEstoque: estoque,
+                    valorUnitario: valor
+                });
+            }
+
+            await save();
+            abrirUniformesEPIFuncionario();
+            window.abaUniformesEPIAtual = 'produtos';
+            renderUniformesEPI();
+        }
+    });
+}
+
+
+/* --------------------------------------------------------- */
+/* excluirProdutoUniformeEPI                                 */
+/* Exclui produto somente se não houver movimentação ligada. */
+/* --------------------------------------------------------- */
+
+window.excluirProdutoUniformeEPI = async function (id) {
+    const estrutura = garantirEstruturaUniformesEPI();
+    const produto = estrutura.produtos.find(p => p.id === id);
+    if (!produto) return;
+
+    const emUso = estrutura.movimentacoes.some(mov =>
+        mov.produtoId === id || (!mov.produtoId && mov.produtoNome === produto.nome)
+    );
+
+    if (emUso) {
+        alert('Este produto possui movimentações registradas e não pode ser excluído. Edite o produto se necessário.');
+        return;
+    }
+
+    if (!confirm(`Deseja excluir "${produto.nome}"?`)) return;
+
+    estrutura.produtos = estrutura.produtos.filter(p => p.id !== id);
+    await save();
+    renderUniformesEPI();
+};
+
+
+/* --------------------------------------------------------- */
+/* htmlMovimentacoesUniformesEPI                             */
+/* Reproduz a aba Movimentações da planilha.                 */
+/* --------------------------------------------------------- */
+
+function htmlMovimentacoesUniformesEPI() {
+    const estrutura = garantirEstruturaUniformesEPI();
+    const movimentacoes = [...estrutura.movimentacoes].sort((a,b) =>
+        String(b.dataRetirada || '').localeCompare(String(a.dataRetirada || ''))
+    );
+
+    const linhas = movimentacoes.length
+        ? movimentacoes.map(mov => {
+            const pendente = String(mov.status || '').toLowerCase() === 'pendente';
+            return `
+                <tr>
+                    <td>${formatarDataUniformeEPI(mov.dataRetirada)}</td>
+                    <td>${escaparHTMLFuncionario(mov.funcionarioNome)}</td>
+                    <td>${escaparHTMLFuncionario(mov.produtoNome)}</td>
+                    <td style="text-align:center;">${numeroFuncionario(mov.quantidade)}</td>
+                    <td>${escaparHTMLFuncionario(mov.estadoProduto || '-')}</td>
+                    <td>${escaparHTMLFuncionario(mov.motivo || '-')}</td>
+                    <td><span style="background:${pendente ? '#f59e0b' : '#16a34a'};color:#fff;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800;">${escaparHTMLFuncionario(mov.status || '')}</span></td>
+                    <td>${formatarDataUniformeEPI(mov.dataDevolucao)}</td>
+                    <td>${escaparHTMLFuncionario(mov.situacao || '-')}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;white-space:nowrap;">
+                            <button type="button" class="btn-action" style="padding:6px 9px;background:#f59e0b;" onclick="editarMovimentacaoUniformeEPI('${mov.id}')">Editar</button>
+                            ${pendente ? `<button type="button" class="btn-action" style="padding:6px 9px;background:#16a34a;" onclick="devolverMovimentacaoUniformeEPI('${mov.id}')">Devolver</button>` : ''}
+                            <button type="button" class="btn-del" style="padding:6px 9px;" onclick="excluirMovimentacaoUniformeEPI('${mov.id}')">Excluir</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('')
+        : '<tr><td colspan="10" style="text-align:center;padding:20px;color:#6b7280;">Nenhuma movimentação registrada.</td></tr>';
+
+    return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div>
+                <h2 style="margin:0;">Movimentações de Uniformes e EPI</h2>
+                <div style="color:#6b7280;font-size:13px;margin-top:4px;">Retiradas, pendências e devoluções.</div>
+            </div>
+            <button type="button" class="btn-action" style="background:#16a34a;" onclick="novaMovimentacaoUniformeEPI()">+ Nova Movimentação</button>
+        </div>
+
+        <div style="overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
+            <table style="width:100%;border-collapse:collapse;min-width:1300px;">
+                <thead>
+                    <tr>
+                        <th>Data da retirada</th>
+                        <th>Funcionário</th>
+                        <th>Produto</th>
+                        <th>Quantidade</th>
+                        <th>Estado entregue</th>
+                        <th>Motivo</th>
+                        <th>Status</th>
+                        <th>Data da devolução</th>
+                        <th>Situação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+
+/* --------------------------------------------------------- */
+/* novaMovimentacaoUniformeEPI                               */
+/* Abre uma nova retirada.                                   */
+/* --------------------------------------------------------- */
+
+window.novaMovimentacaoUniformeEPI = function () {
+    abrirFormularioMovimentacaoUniformeEPI(null);
+};
+
+
+/* --------------------------------------------------------- */
+/* editarMovimentacaoUniformeEPI                             */
+/* Abre uma movimentação para edição.                        */
+/* --------------------------------------------------------- */
+
+window.editarMovimentacaoUniformeEPI = function (id) {
+    const mov = garantirEstruturaUniformesEPI().movimentacoes.find(m => m.id === id);
+    if (!mov) return;
+    abrirFormularioMovimentacaoUniformeEPI(mov);
+};
+
+
+/* --------------------------------------------------------- */
+/* abrirFormularioMovimentacaoUniformeEPI                    */
+/* Formulário de retirada / edição de movimentação.          */
+/* --------------------------------------------------------- */
+
+function abrirFormularioMovimentacaoUniformeEPI(mov) {
+    const estrutura = garantirEstruturaUniformesEPI();
+    const funcionarios = funcionariosAtivosUniformesEPI();
+    const produtos = [...estrutura.produtos].sort((a,b) =>
+        String(a.nome || '').localeCompare(String(b.nome || ''),'pt-BR',{sensitivity:'base'})
+    );
+
+    const funcionarioAtual = mov?.funcionarioNome || '';
+    const produtoAtual = mov?.produtoNome || '';
+
+    const opcoesFuncionarios = funcionarios.map((func, indice) => `
+        <option value="${indice}" ${func.nome === funcionarioAtual ? 'selected' : ''}>${escaparHTMLFuncionario(func.nome)}</option>
+    `).join('');
+
+    const opcoesProdutos = produtos.map(produto => {
+        const r = resumoProdutoUniformeEPI(produto);
+        return `<option value="${produto.id}" ${produto.nome === produtoAtual ? 'selected' : ''}>${escaparHTMLFuncionario(produto.nome)} — disponível: ${r.disponivel}</option>`;
+    }).join('');
+
+    configModal({
+        title: mov ? 'Editar Movimentação' : 'Nova Movimentação',
+        size: 'large',
+        confirmText: 'Salvar',
+        body: `
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+                <div><label>Data da retirada</label><input id="uni-mov-data" type="date" value="${mov?.dataRetirada || dataHojeFuncionario()}"></div>
+                <div>
+                    <label>Funcionário</label>
+                    <select id="uni-mov-funcionario">
+                        <option value="">Selecione...</option>
+                        ${opcoesFuncionarios}
+                        ${mov && !funcionarios.some(f => f.nome === funcionarioAtual) ? `<option value="historico" selected>${escaparHTMLFuncionario(funcionarioAtual)} (histórico)</option>` : ''}
+                    </select>
+                </div>
+                <div>
+                    <label>Produto</label>
+                    <select id="uni-mov-produto">
+                        <option value="">Selecione...</option>
+                        ${opcoesProdutos}
+                    </select>
+                </div>
+                <div><label>Quantidade</label><input id="uni-mov-qtd" type="number" min="1" step="1" value="${numeroFuncionario(mov?.quantidade) || 1}"></div>
+                <div>
+                    <label>Estado do produto entregue</label>
+                    <select id="uni-mov-estado-produto">
+                        <option value="">Selecione...</option>
+                        <option value="Novo" ${mov?.estadoProduto === 'Novo' ? 'selected' : ''}>Novo</option>
+                        <option value="Usado" ${mov?.estadoProduto === 'Usado' ? 'selected' : ''}>Usado</option>
+                    </select>
+                </div>
+                <div style="grid-column:1/-1;"><label>Motivo</label><input id="uni-mov-motivo" value="${escaparHTMLFuncionario(mov?.motivo || '')}" placeholder="Ex.: Funcionário novo"></div>
+                <div>
+                    <label>Status</label>
+                    <select id="uni-mov-status" onchange="atualizarCamposDevolucaoUniformeEPI()">
+                        <option value="Pendente" ${mov?.status !== 'Devolvido' ? 'selected' : ''}>Pendente</option>
+                        <option value="Devolvido" ${mov?.status === 'Devolvido' ? 'selected' : ''}>Devolvido</option>
+                    </select>
+                </div>
+                <div><label>Data da devolução</label><input id="uni-mov-devolucao" type="date" value="${mov?.dataDevolucao || ''}"></div>
+                <div>
+                    <label>Situação</label>
+                    <select id="uni-mov-situacao">
+                        <option value="">Selecione...</option>
+                        ${['Suja','Limpo','Inteiro','Quebrado'].map(s => `<option ${mov?.situacao === s ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+        `,
+        async onConfirm() {
+            const funcSel = document.getElementById('uni-mov-funcionario');
+            const prodId = document.getElementById('uni-mov-produto')?.value;
+            const produto = estrutura.produtos.find(p => p.id === prodId);
+            const qtd = numeroFuncionario(document.getElementById('uni-mov-qtd')?.value);
+            const estadoProduto = document.getElementById('uni-mov-estado-produto')?.value || '';
+            const status = document.getElementById('uni-mov-status')?.value;
+
+            let funcionario = null;
+            let funcionarioNome = '';
+
+            if (funcSel?.value === 'historico' && mov) {
+                funcionarioNome = mov.funcionarioNome;
+            } else if (funcSel?.value !== '') {
+                funcionario = funcionarios[Number(funcSel.value)];
+                funcionarioNome = funcionario?.nome || '';
+            }
+
+            if (!funcionarioNome) {
+                alert('Selecione um funcionário ativo.');
+                return;
+            }
+
+            if (!produto) {
+                alert('Selecione um produto.');
+                return;
+            }
+
+            if (qtd <= 0) {
+                alert('Informe uma quantidade válida.');
+                return;
+            }
+
+            if (!estadoProduto) {
+                alert('Informe se o produto entregue é Novo ou Usado.');
+                return;
+            }
+
+            /*
+                Para nova retirada pendente, impede entregar quantidade
+                superior à disponível, exatamente para manter o estoque
+                coerente com o cálculo da planilha.
+            */
+            if (status === 'Pendente') {
+                let disponivel = resumoProdutoUniformeEPI(produto).disponivel;
+
+                if (mov && String(mov.status || '').toLowerCase() === 'pendente') {
+                    const mesmoProduto =
+                        mov.produtoId === produto.id ||
+                        (!mov.produtoId && mov.produtoNome === produto.nome);
+
+                    if (mesmoProduto) {
+                        disponivel += numeroFuncionario(mov.quantidade);
+                    }
+                }
+
+                if (qtd > disponivel) {
+                    alert(`Quantidade indisponível. Disponível para este produto: ${disponivel}.`);
+                    return;
+                }
+            }
+
+            const registro = mov || { id:idUniformeEPI('uni-mov') };
+            registro.dataRetirada = document.getElementById('uni-mov-data')?.value || dataHojeFuncionario();
+            registro.funcionarioId = funcionario?.id || mov?.funcionarioId || '';
+            registro.funcionarioNome = funcionarioNome;
+            registro.produtoId = produto.id;
+            registro.produtoNome = produto.nome;
+            registro.quantidade = qtd;
+            registro.estadoProduto = estadoProduto;
+            registro.motivo = document.getElementById('uni-mov-motivo')?.value.trim() || '';
+            registro.status = status;
+            registro.dataDevolucao = status === 'Devolvido' ? (document.getElementById('uni-mov-devolucao')?.value || dataHojeFuncionario()) : '';
+            registro.situacao = status === 'Devolvido' ? (document.getElementById('uni-mov-situacao')?.value || '') : '';
+
+            if (!mov) {
+                estrutura.movimentacoes.push(registro);
+            }
+
+            await save();
+            abrirUniformesEPIFuncionario();
+            window.abaUniformesEPIAtual = 'movimentacoes';
+            renderUniformesEPI();
+        }
+    });
+
+    atualizarCamposDevolucaoUniformeEPI();
+}
+
+
+/* --------------------------------------------------------- */
+/* atualizarCamposDevolucaoUniformeEPI                       */
+/* Habilita os campos de devolução conforme o status.        */
+/* --------------------------------------------------------- */
+
+window.atualizarCamposDevolucaoUniformeEPI = function () {
+    const devolvido = document.getElementById('uni-mov-status')?.value === 'Devolvido';
+    const data = document.getElementById('uni-mov-devolucao');
+    const situacao = document.getElementById('uni-mov-situacao');
+
+    if (data) data.disabled = !devolvido;
+    if (situacao) situacao.disabled = !devolvido;
+};
+
+
+/* --------------------------------------------------------- */
+/* devolverMovimentacaoUniformeEPI                           */
+/* Atalho para registrar a devolução de um item pendente.    */
+/* --------------------------------------------------------- */
+
+window.devolverMovimentacaoUniformeEPI = function (id) {
+    const mov = garantirEstruturaUniformesEPI().movimentacoes.find(m => m.id === id);
+    if (!mov) return;
+    mov.status = 'Devolvido';
+    mov.dataDevolucao = mov.dataDevolucao || dataHojeFuncionario();
+    abrirFormularioMovimentacaoUniformeEPI(mov);
+};
+
+
+/* --------------------------------------------------------- */
+/* excluirMovimentacaoUniformeEPI                            */
+/* Remove uma movimentação e recalcula o disponível.         */
+/* --------------------------------------------------------- */
+
+window.excluirMovimentacaoUniformeEPI = async function (id) {
+    if (!confirm('Deseja excluir esta movimentação?')) return;
+
+    const estrutura = garantirEstruturaUniformesEPI();
+    estrutura.movimentacoes = estrutura.movimentacoes.filter(m => m.id !== id);
+    await save();
+    renderUniformesEPI();
 };

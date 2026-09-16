@@ -16,7 +16,8 @@
     5. Preencher dados do cliente
     6. Adicionar e calcular produtos/serviços
     7. Aplicar a regra atual de orçamento sem nota
-    8. Visualizar orçamento completo
+    8. Aplicar desconto manual em valor (R$) preservando o valor original
+    9. Visualizar orçamento completo
     9. Imprimir / gerar versão para impressão
     10. Editar orçamentos existentes
     11. Duplicar orçamentos
@@ -1774,23 +1775,85 @@ function () {
 
     </div>
 
-    <!-- TOTAL -->
+    ${blocoImagensOrcamentoFormulario()}
 
-    <h2 style="
-        margin-top:10px;
-        text-align:right;
+    <!-- DESCONTO / TOTAIS -->
+
+    <div style="
+        margin-top:20px;
+        display:flex;
+        flex-direction:column;
+        align-items:flex-end;
+        gap:10px;
     ">
 
-        Total:
+        <!-- VALOR TOTAL ANTES DO DESCONTO -->
 
-        <span id="orc-total">
-            R$ 0,00
-        </span>
+        <div style="
+            font-size:18px;
+            font-weight:600;
+        ">
 
-    </h2>
+            Valor Total:
+
+            <span id="orc-total-original">
+                R$ 0,00
+            </span>
+
+        </div>
+
+        <!-- DESCONTO EM REAIS -->
+
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:10px;
+        ">
+
+            <label
+                for="orc-desconto"
+                style="
+                    margin:0;
+                    font-weight:600;
+                ">
+                Desconto (R$):
+            </label>
+
+            <input
+                id="orc-desconto"
+                type="text"
+                inputmode="decimal"
+                value="0,00"
+                placeholder="0,00"
+                oninput="calcularTotalOrcamento()"
+                style="
+                    width:150px;
+                    text-align:right;
+                ">
+
+        </div>
+
+        <!-- VALOR FINAL APÓS O DESCONTO -->
+
+        <h2 style="
+            margin:0;
+            text-align:right;
+        ">
+
+            Valor com Desconto:
+
+            <span id="orc-total">
+                R$ 0,00
+            </span>
+
+        </h2>
+
+    </div>
 
 </div>
 `;
+
+    window._orcImagensEdicao = [];
 
     configModal({
 
@@ -1813,6 +1876,140 @@ function () {
     });
 
     adicionarProdutoOrcamento();
+    renderizarImagensOrcamentoEdicao();
+};
+
+/* ========================================================= */
+/* 06.1 IMAGENS / REFERÊNCIAS DO ORÇAMENTO                  */
+/* ========================================================= */
+/*
+    As imagens são reduzidas antes de serem salvas para evitar
+    crescimento excessivo do banco. Elas ficam vinculadas ao
+    orçamento e são impressas somente a partir da página seguinte.
+*/
+
+window._orcImagensEdicao = window._orcImagensEdicao || [];
+
+window.selecionarImagensOrcamento = function(input){
+    const arquivos = Array.from(input?.files || []);
+    if(!arquivos.length) return;
+
+    arquivos.forEach(arquivo => {
+        if(!arquivo.type.startsWith('image/')) return;
+
+        const leitor = new FileReader();
+        leitor.onload = function(e){
+            const img = new Image();
+            img.onload = function(){
+                const max = 1600;
+                let largura = img.width;
+                let altura = img.height;
+                const escala = Math.min(1, max / Math.max(largura, altura));
+                largura = Math.round(largura * escala);
+                altura = Math.round(altura * escala);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = largura;
+                canvas.height = altura;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, largura, altura);
+                ctx.drawImage(img, 0, 0, largura, altura);
+
+                window._orcImagensEdicao.push({
+                    nome: arquivo.name || 'imagem',
+                    legenda: '',
+                    dataUrl: canvas.toDataURL('image/jpeg', 0.86)
+                });
+                renderizarImagensOrcamentoEdicao();
+            };
+            img.src = e.target.result;
+        };
+        leitor.readAsDataURL(arquivo);
+    });
+
+    input.value = '';
+};
+
+window.renderizarImagensOrcamentoEdicao = function(){
+    const area = document.getElementById('orc-imagens-preview');
+    if(!area) return;
+
+    const imagens = window._orcImagensEdicao || [];
+    if(!imagens.length){
+        area.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:10px 0;">Nenhuma imagem adicionada.</div>';
+        return;
+    }
+
+    area.innerHTML = imagens.map((img, i) => `
+        <div style="display:grid;grid-template-columns:110px 1fr auto;gap:12px;align-items:center;padding:10px;border:1px solid #e5e7eb;border-radius:10px;margin-top:10px;background:#fff;">
+            <img src="${img.dataUrl}" style="width:110px;height:78px;object-fit:contain;border-radius:7px;background:#f3f4f6;">
+            <div>
+                <div style="font-size:12px;font-weight:700;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${img.nome || `Imagem ${i+1}`}</div>
+                <input type="text" value="${String(img.legenda || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="Legenda opcional (ex.: Fachada atual)" oninput="atualizarLegendaImagemOrcamento(${i}, this.value)" style="width:100%;">
+            </div>
+            <button type="button" class="btn-del" onclick="removerImagemOrcamento(${i})" title="Remover imagem">✕</button>
+        </div>
+    `).join('');
+};
+
+window.atualizarLegendaImagemOrcamento = function(index, valor){
+    if(window._orcImagensEdicao?.[index]){
+        window._orcImagensEdicao[index].legenda = valor || '';
+    }
+};
+
+window.removerImagemOrcamento = function(index){
+    window._orcImagensEdicao.splice(index, 1);
+    renderizarImagensOrcamentoEdicao();
+};
+
+window.blocoImagensOrcamentoFormulario = function(){
+    return `
+        <hr>
+        <div style="margin-top:10px;">
+            <h3 style="margin-bottom:6px;">🖼️ Imagens / Referências do Projeto</h3>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:10px;">
+                As imagens serão impressas como anexo visual a partir de uma nova página.
+            </div>
+            <input id="orc-imagens-input" type="file" accept="image/*" multiple style="display:none" onchange="selecionarImagensOrcamento(this)">
+            <button type="button" class="btn-action" onclick="document.getElementById('orc-imagens-input').click()">+ Adicionar Imagem</button>
+            <div id="orc-imagens-preview"></div>
+        </div>
+    `;
+};
+
+window.renderAnexoImagensOrcamento = function(o){
+    const imagens = Array.isArray(o?.imagens) ? o.imagens.filter(x => x?.dataUrl) : [];
+    if(!imagens.length) return '';
+
+    const cards = imagens.map((img, i) => `
+        <div class="orc-anexo-card" style="border:1px solid #d1d5db;border-radius:10px;padding:10px;background:#fff;break-inside:avoid;page-break-inside:avoid;">
+            <div style="height:245px;display:flex;align-items:center;justify-content:center;background:#f8fafc;border-radius:7px;overflow:hidden;">
+                <img src="${img.dataUrl}" style="width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;">
+            </div>
+            ${img.legenda ? `<div style="font-size:12px;text-align:center;margin-top:8px;font-weight:600;">${String(img.legenda).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+        </div>
+    `).join('');
+
+    return `
+        <section class="orc-anexo-imagens page-break" style="background:#fff;padding:0;font-family:Arial,sans-serif;color:#111;">
+            <div style="border-bottom:3px solid #2f2a2c;padding-bottom:12px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;">
+                <div>
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">WN Comunicação Visual</div>
+                    <div style="font-size:22px;font-weight:800;margin-top:3px;">ANEXO VISUAL</div>
+                </div>
+                <div style="text-align:right;font-size:12px;line-height:1.5;">
+                    <strong>Orçamento nº ${o.codigo || '-'}</strong><br>
+                    ${o.cliente || ''}
+                </div>
+            </div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:14px;">Imagens e referências vinculadas à proposta comercial.</div>
+            <div class="orc-anexo-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
+                ${cards}
+            </div>
+        </section>
+    `;
 };
 
 /* ========================================================= */
@@ -1931,7 +2128,7 @@ async function () {
         });
     });
 
-    let total =
+    let totalOriginal =
         itens.reduce(
 
             (acc, item) =>
@@ -1953,9 +2150,32 @@ async function () {
         temNota === 'nao'
     ) {
 
-        total =
-            total * 1.12;
+        totalOriginal =
+            totalOriginal * 1.12;
     }
+
+    /* ========================================================= */
+    /* 08.1 DESCONTO EM VALOR                                   */
+    /* ========================================================= */
+    /*
+        O desconto é informado diretamente em reais.
+
+        O sistema preserva:
+        - totalOriginal: valor após a regra de nota e antes do desconto
+        - desconto: valor concedido ao cliente
+        - total: valor final efetivamente cobrado
+    */
+
+    const desconto =
+        obterDescontoOrcamento(
+            totalOriginal
+        );
+
+    const total =
+        Math.max(
+            0,
+            totalOriginal - desconto
+        );
 
     const novoOrcamento = {
 
@@ -2040,6 +2260,13 @@ async function () {
             .value,
 
         itens,
+
+        imagens:
+            JSON.parse(JSON.stringify(window._orcImagensEdicao || [])),
+
+        totalOriginal,
+
+        desconto,
 
         total
     };
@@ -2221,6 +2448,88 @@ function (el) {
 };
 
 /* ========================================================= */
+/* 10.1 DESCONTO DO ORÇAMENTO                              */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* obterDescontoOrcamento */
+/* Lê o desconto informado em reais e limita ao valor total. */
+/* --------------------------------------------------------- */
+
+window.obterDescontoOrcamento =
+function (totalOriginal = Infinity) {
+
+    const campo =
+        document.getElementById(
+            'orc-desconto'
+        );
+
+    if (!campo) {
+
+        return 0;
+    }
+
+    /*
+        Aceita tanto:
+        300,00
+        quanto:
+        300.00
+
+        Também remove R$, espaços e separadores de milhar.
+    */
+
+    let texto =
+        String(
+            campo.value || ''
+        )
+        .trim()
+        .replace(/R\$/gi, '')
+        .replace(/\s/g, '');
+
+    if (
+        texto.includes(',')
+    ) {
+
+        texto =
+            texto
+            .replace(/\./g, '')
+            .replace(',', '.');
+    }
+
+    texto =
+        texto.replace(
+            /[^0-9.-]/g,
+            ''
+        );
+
+    let desconto =
+        Number(texto || 0);
+
+    if (
+        !Number.isFinite(desconto)
+        ||
+        desconto < 0
+    ) {
+
+        desconto = 0;
+    }
+
+    const limite =
+        Number(totalOriginal);
+
+    if (
+        Number.isFinite(limite)
+        &&
+        desconto > limite
+    ) {
+
+        desconto = limite;
+    }
+
+    return desconto;
+};
+
+/* ========================================================= */
 /* 11. CALCULAR TOTAL DO ORÇAMENTO                         */
 /* ========================================================= */
 
@@ -2284,30 +2593,63 @@ function () {
         )
         ?.value || 'sim';
 
-    let totalFinal =
+    /*
+        totalOriginal representa o valor comercial antes
+        do desconto. A regra atual de nota continua sendo
+        aplicada antes do desconto.
+    */
+
+    let totalOriginal =
         subtotal;
 
     if (
         temNota === 'nao'
     ) {
 
-        totalFinal =
+        totalOriginal =
             subtotal * 1.12;
     }
 
-    document
-        .getElementById(
-            'orc-total'
-        )
-        .innerText =
-
-        formatarMoeda(
-            totalFinal
+    const desconto =
+        obterDescontoOrcamento(
+            totalOriginal
         );
+
+    const totalFinal =
+        Math.max(
+            0,
+            totalOriginal - desconto
+        );
+
+    const campoTotalOriginal =
+        document.getElementById(
+            'orc-total-original'
+        );
+
+    if (campoTotalOriginal) {
+
+        campoTotalOriginal.innerText =
+            formatarMoeda(
+                totalOriginal
+            );
+    }
+
+    const campoTotalFinal =
+        document.getElementById(
+            'orc-total'
+        );
+
+    if (campoTotalFinal) {
+
+        campoTotalFinal.innerText =
+            formatarMoeda(
+                totalFinal
+            );
+    }
 
     atualizarTextoImposto(
         subtotal,
-        totalFinal
+        totalOriginal
     );
 };
 
@@ -2772,6 +3114,51 @@ ${itensHTML}
 
 </table>
 
+${
+Number(o.desconto || 0) > 0
+?
+`
+<div style="
+background:#fff;
+border-left:3px solid #8b8b8b;
+border-right:3px solid #8b8b8b;
+padding:10px 20px;
+text-align:right;
+font-size:16px;
+line-height:1.8;
+">
+
+<div>
+<strong>VALOR TOTAL:</strong>
+${formatarMoeda(
+    o.totalOriginal !== undefined
+    ? o.totalOriginal
+    : Number(o.total || 0) + Number(o.desconto || 0)
+)}
+</div>
+
+<div style="color:#b91c1c;">
+<strong>DESCONTO CONCEDIDO:</strong>
+- ${formatarMoeda(o.desconto || 0)}
+</div>
+
+</div>
+
+<div style="
+background:#8b8b8b;
+color:#fff;
+text-align:right;
+padding:10px 20px;
+font-size:30px;
+font-weight:bold;
+">
+
+VALOR FINAL: ${formatarMoeda(o.total)}
+
+</div>
+`
+:
+`
 <div style="
 background:#8b8b8b;
 color:#fff;
@@ -2784,6 +3171,8 @@ font-weight:bold;
 ${formatarMoeda(o.total)}
 
 </div>
+`
+}
 
 </div>
 
@@ -2866,6 +3255,8 @@ COM CHEQUES
 </div>
 
 </div>
+
+${renderAnexoImagensOrcamento(o)}
 
 ${
 o.preContrato === 'sim'
@@ -3139,7 +3530,18 @@ body{
 .page-break{
 
     page-break-before:always;
+    break-before:page;
 
+}
+
+.orc-anexo-imagens{
+    page-break-before:always;
+    break-before:page;
+}
+
+.orc-anexo-card{
+    break-inside:avoid;
+    page-break-inside:avoid;
 }
 
 table{
@@ -3272,6 +3674,8 @@ window.editarOrcamento = function(index){
         ordenarClientesOrcamento(
             db.clientes || []
         );
+
+    window._orcImagensEdicao = JSON.parse(JSON.stringify(o.imagens || []));
 
     configModal({
 
@@ -3610,12 +4014,72 @@ oninput="
 autoResize(this)
 ">${o.observacoes || ''}</textarea>
 
-<h2 style="
+${blocoImagensOrcamentoFormulario()}
+
+<!-- DESCONTO / TOTAIS -->
+
+<div style="
 margin-top:20px;
+display:flex;
+flex-direction:column;
+align-items:flex-end;
+gap:10px;
+">
+
+<div style="
+font-size:18px;
+font-weight:600;
+">
+
+Valor Total:
+
+<span id="orc-total-original">
+
+${formatarMoeda(
+o.totalOriginal !== undefined
+? o.totalOriginal
+: Number(o.total || 0) + Number(o.desconto || 0)
+)}
+
+</span>
+
+</div>
+
+<div style="
+display:flex;
+align-items:center;
+gap:10px;
+">
+
+<label
+for="orc-desconto"
+style="
+margin:0;
+font-weight:600;
+">
+Desconto (R$):
+</label>
+
+<input
+id="orc-desconto"
+type="text"
+inputmode="decimal"
+value="${Number(o.desconto || 0).toFixed(2).replace('.', ',')}"
+placeholder="0,00"
+oninput="calcularTotalOrcamento()"
+style="
+width:150px;
 text-align:right;
 ">
 
-Total:
+</div>
+
+<h2 style="
+margin:0;
+text-align:right;
+">
+
+Valor com Desconto:
 
 <span id="orc-total">
 
@@ -3626,6 +4090,8 @@ o.total || 0
 </span>
 
 </h2>
+
+</div>
 `
     });
 
@@ -3736,7 +4202,7 @@ async function(index){
 
     });
 
-    let total =
+    let totalOriginal =
         itens.reduce(
 
             (acc,item)=>
@@ -3759,10 +4225,25 @@ async function(index){
         temNota === 'nao'
     ){
 
-        total =
-            total * 1.12;
+        totalOriginal =
+            totalOriginal * 1.12;
 
     }
+
+    /* ========================================================= */
+    /* 18.1 DESCONTO EM VALOR                                   */
+    /* ========================================================= */
+
+    const desconto =
+        obterDescontoOrcamento(
+            totalOriginal
+        );
+
+    const total =
+        Math.max(
+            0,
+            totalOriginal - desconto
+        );
 
     const statusAnterior =
         normalizarStatusOrcamento(
@@ -3778,6 +4259,8 @@ async function(index){
         );
 
     db.orcamentos[index] = {
+
+        ...db.orcamentos[index],
 
         codigo:
             db.orcamentos[index]?.codigo,
@@ -3836,6 +4319,13 @@ async function(index){
             ).value,
 
         itens,
+
+        imagens:
+            JSON.parse(JSON.stringify(window._orcImagensEdicao || [])),
+
+        totalOriginal,
+
+        desconto,
 
         total
     };
@@ -3977,6 +4467,21 @@ function(index){
                     original.itens || []
                 )
             ),
+
+        imagens:
+            JSON.parse(
+                JSON.stringify(
+                    original.imagens || []
+                )
+            ),
+
+        totalOriginal:
+            original.totalOriginal !== undefined
+            ? original.totalOriginal
+            : Number(original.total || 0) + Number(original.desconto || 0),
+
+        desconto:
+            Number(original.desconto || 0),
 
         total:
             original.total || 0

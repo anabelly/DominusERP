@@ -323,6 +323,29 @@ window.db = {
 
     ordensServico:[],
 
+    /*
+        SOLICITAÇÕES INTERNAS DE MATERIAIS
+
+        Cada registro guarda todo o ciclo do pedido:
+        - quem solicitou;
+        - data/hora da solicitação;
+        - material, quantidade e finalidade;
+        - status Pendente, Entregue ou Negado;
+        - quem atendeu/negou;
+        - data/hora do atendimento;
+        - justificativa quando negado.
+    */
+    solicitacoes:[],
+
+    /* Recados e ocorrências internas. */
+    recadosOcorrencias:[],
+
+    /* Registros de retrabalho vinculados à operação/comercial. */
+    retrabalhos:[],
+
+    /* Acompanhamentos administrativos de pós-venda. */
+    posVendas:[],
+
     recibos:[],
 
     tiposProduto:[],
@@ -400,7 +423,10 @@ window.db = {
 
     ultimoOrcamento:3687,
 
-    ultimaOS:0
+    ultimaOS:0,
+
+    /* Último número utilizado no código SOL-0001, SOL-0002... */
+    ultimaSolicitacao:0
 
 };
 
@@ -552,6 +578,43 @@ async function(){
 
                     saved.ordensServico
                     || [],
+
+
+                /*
+                    SOLICITAÇÕES
+
+                    Bancos criados antes deste módulo não possuem
+                    solicitacoes. Nesse caso iniciamos uma lista vazia
+                    sem alterar nenhum dado já existente.
+                */
+                solicitacoes:
+
+                    Array.isArray(
+                        saved.solicitacoes
+                    )
+                    ?
+                    saved.solicitacoes
+                    :
+                    [],
+
+
+                recadosOcorrencias:
+
+                    Array.isArray(saved.recadosOcorrencias)
+                    ? saved.recadosOcorrencias
+                    : [],
+
+                retrabalhos:
+
+                    Array.isArray(saved.retrabalhos)
+                    ? saved.retrabalhos
+                    : [],
+
+                posVendas:
+
+                    Array.isArray(saved.posVendas)
+                    ? saved.posVendas
+                    : [],
 
 
                 recibos:
@@ -767,6 +830,13 @@ async function(){
                 ultimaOS:
 
                     saved.ultimaOS
+                    || 0,
+
+
+                /* Sequência própria das solicitações internas. */
+                ultimaSolicitacao:
+
+                    saved.ultimaSolicitacao
                     || 0
 
             };

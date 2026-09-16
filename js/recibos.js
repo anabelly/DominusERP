@@ -2294,7 +2294,12 @@ window.renderRecibos = function () {
                         window.filtroOrigemRecibosAtual
                     );
                 }
-            );
+            ).sort((a,b)=>{
+                const na=Number(String(a.registro?.numero||'').replace(/\D/g,''))||0;
+                const nb=Number(String(b.registro?.numero||'').replace(/\D/g,''))||0;
+                if(nb!==na)return nb-na;
+                return b.indiceReal-a.indiceReal;
+            });
 
     let html = `
 

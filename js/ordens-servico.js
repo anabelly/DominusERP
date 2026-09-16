@@ -217,8 +217,8 @@ function corStatus(status) {
     const map = {
         'Aberta': '#f59e0b',
         'Em Produção': '#3b82f6',
-        'Concluída': '#10b981',
-        'Finalizada': '#22c55e',
+        'Concluída': '#16a34a',
+        'Finalizada': '#6b7280',
         'Cancelada': '#ef4444',
         'Atrasada': '#dc2626'
     };
@@ -656,7 +656,12 @@ function renderGridOS() {
 
     console.log('Filtro atual:', filtroOS);
 
-    let dados = [...listaOS];
+    let dados = [...listaOS].sort((a,b)=>{
+        const ca=String(a.codigo||'').match(/(\d+)/); const cb=String(b.codigo||'').match(/(\d+)/);
+        const na=ca?Number(ca[1]):0, nb=cb?Number(cb[1]):0;
+        if(nb!==na)return nb-na;
+        return String(b.dataEmissao||'').localeCompare(String(a.dataEmissao||''));
+    });
 
     /* FILTRO STATUS */
 
@@ -1741,6 +1746,40 @@ async function salvarOS() {
 
             console.error(
                 'Função criarTermoServicoDaOS não encontrada.'
+            );
+        }
+    }
+
+    /*
+        PÓS-VENDA AUTOMÁTICO
+
+        Ao entrar em Finalizada pela primeira vez, a OS cria um
+        acompanhamento de Pós-venda para 7 dias depois. O módulo
+        de Pós-venda também cria o compromisso correspondente na
+        Agenda com prioridade Baixa.
+    */
+    if(
+        os.status === 'Finalizada'
+        &&
+        statusAnterior !== 'Finalizada'
+    ){
+        if(
+            typeof window.criarPosVendaDaOS ===
+                'function'
+        ){
+            try{
+                await window.criarPosVendaDaOS(os);
+            }
+            catch(erro){
+                console.error(
+                    'Erro ao criar Pós-venda automático da OS:',
+                    erro
+                );
+            }
+        }
+        else{
+            console.error(
+                'Função criarPosVendaDaOS não encontrada.'
             );
         }
     }

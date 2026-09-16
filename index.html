@@ -62,10 +62,68 @@ if(
     <!-- SIDEBAR -->
     <!-- ========================= -->
 
-    <nav class="sidebar">
+    <nav class="sidebar sidebar-setorizada">
+
+        <style>
+            /* ===================================================== */
+            /* MENU SETORIZADO - DOMINUS ERP                         */
+            /* Apenas visual. As permissões continuam no app.js.     */
+            /* ===================================================== */
+            .sidebar-setorizada{
+                overflow-y:auto;
+                overflow-x:hidden;
+                scrollbar-width:thin;
+            }
+
+            .sidebar-setorizada .nav-group{
+                position:relative;
+                margin:18px 10px 7px;
+                padding:8px 10px 7px 13px;
+                color:#64748b;
+                font-size:9px;
+                line-height:1.15;
+                font-weight:950;
+                text-transform:uppercase;
+                letter-spacing:.11em;
+                border-top:1px solid #e5e7eb;
+            }
+
+            .sidebar-setorizada .nav-group::before{
+                content:'';
+                position:absolute;
+                left:0;
+                top:7px;
+                bottom:6px;
+                width:3px;
+                border-radius:99px;
+                background:#ff1f2d;
+            }
+
+            .sidebar-setorizada .nav-group:first-of-type{
+                margin-top:8px;
+                border-top:0;
+            }
+
+            .sidebar-setorizada .nav-item{
+                margin:2px 8px;
+                border-radius:9px;
+                transition:background .16s ease, color .16s ease, transform .16s ease;
+            }
+
+            .sidebar-setorizada .nav-item:hover{
+                transform:translateX(2px);
+            }
+
+            .sidebar-setorizada .nav-item.active{
+                box-shadow:0 4px 12px rgba(255,31,45,.12);
+            }
+
+            .sidebar-setorizada #usuario-logado-box{
+                margin:18px 8px 8px !important;
+            }
+        </style>
 
         <div class="logo">
-
             <img
                 src="logo.png"
                 style="
@@ -75,157 +133,123 @@ if(
                         saturate(1.2)
                         drop-shadow(0 3px 6px rgba(0,0,0,0.25));
                 ">
-
         </div>
 
-        <!-- DASH -->
+        <!-- ===================================================== -->
+        <!-- VISÃO GERAL                                           -->
+        <!-- ===================================================== -->
+        <div class="nav-group">🏠 Visão Geral</div>
 
-        <div
-            class="nav-item active"
-            onclick="navigate('dash')">
-
+        <div class="nav-item active" onclick="navigate('dash')">
             🏠 Dashboard
-
         </div>
 
-        <!-- OPERAÇÕES -->
-
-        <div class="nav-group">
-            Operações
-        </div>
-
-        <div
-            class="nav-item"
-            onclick="navigate('estoque')">
-
-            📦 Estoque
-
-        </div>
-
-        <!-- ADMINISTRATIVO -->
-
-        <div class="nav-group">
-            Administrativo
-        </div>
-
-        <div
-            class="nav-item"
-            onclick="navigate('clientes')">
-
-            👤 Clientes
-
-        </div>
-
-        <div
-            class="nav-item"
-            onclick="navigate('fornecedores')">
-
-            🏭 Fornecedores
-
-        </div>
-
-        <div
-            class="nav-item"
-            onclick="navigate('funcionarios')">
-
-            👷 Funcionários
-
-        </div>
-
-        <div
-            class="nav-item"
-            onclick="navigate('agenda')">
-
+        <div class="nav-item" onclick="navigate('agenda')">
             📅 Agenda
-
         </div>
 
-        <div
-            class="nav-item"
-            onclick="navigate('orcamentos')">
+        <div class="nav-item" onclick="navigate('recados-ocorrencias')">
+            🗒️ Recados / Ocorrências
+        </div>
 
+        <!-- ===================================================== -->
+        <!-- OPERAÇÕES                                             -->
+        <!-- ===================================================== -->
+        <div class="nav-group">⚙️ Operações</div>
+
+        <div class="nav-item" onclick="navigate('ordens-servico')">
+            🛠️ Ordens de Serviço
+        </div>
+
+        <div class="nav-item" onclick="navigate('solicitacoes')">
+            📦 Solicitações
+        </div>
+
+        <div class="nav-item" onclick="navigate('estoque')">
+            📦 Estoque
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- COMERCIAL                                             -->
+        <!-- ===================================================== -->
+        <div class="nav-group">💼 Comercial</div>
+
+        <div class="nav-item" onclick="navigate('clientes')">
+            👤 Clientes
+        </div>
+
+        <div class="nav-item" onclick="navigate('orcamentos')">
             📄 Orçamentos
-
         </div>
 
-        <div
-    class="nav-item"
-    onclick="navigate('ordens-servico')">
-
-    🛠️ Ordens de Serviço
-
-        </div>
-
-        <div
-            class="nav-item"
-            onclick="navigate('recibos')">
-
+        <div class="nav-item" onclick="navigate('recibos')">
             🧾 Recibos / Comprovantes
-
         </div>
 
-        <div
-            class="nav-item"
-            onclick="navigate('financeiro')">
-
-            💰 Fluxo Financeiro
-
-        </div>
-
-        <div
-            class="nav-item"
-            onclick="navigate('centro-custos')">
-
+        <div class="nav-item" onclick="navigate('centro-custos')">
             🧮 Centro de Custos
-
         </div>
 
-        <div
-            class="nav-item"
-            onclick="navigate('relatorios')">
+        <div class="nav-item" onclick="navigate('retrabalhos')">
+            💸 Registro de Retrabalho
+        </div>
 
+        <!-- ===================================================== -->
+        <!-- FINANCEIRO                                            -->
+        <!-- ===================================================== -->
+        <div class="nav-group">💼 Administrativo / Financeiro</div>
+
+        <div class="nav-item" onclick="navigate('financeiro')">
+            💰 Fluxo Financeiro
+        </div>
+
+        <div class="nav-item" onclick="navigate('relatorios')">
             📊 Relatórios
-
         </div>
 
-        <!-- SISTEMA -->
-
-        <div class="nav-group">
-            Sistema
+        <div class="nav-item" onclick="navigate('pos-venda')">
+            ☎️ Pós-venda
         </div>
 
-        <div
-            class="nav-item"
-            onclick="navigate('usuarios')">
+        <!-- ===================================================== -->
+        <!-- RH / DEPARTAMENTO PESSOAL                             -->
+        <!-- Ponto e Uniformes/EPI permanecem dentro Funcionários. -->
+        <!-- ===================================================== -->
+        <div class="nav-group">👥 RH / Departamento Pessoal</div>
 
+        <div class="nav-item" onclick="navigate('funcionarios')">
+            👷 Funcionários
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- COMPRAS                                               -->
+        <!-- ===================================================== -->
+        <div class="nav-group">🤝 Compras</div>
+
+        <div class="nav-item" onclick="navigate('fornecedores')">
+            🏭 Fornecedores
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- SISTEMA                                               -->
+        <!-- ===================================================== -->
+        <div class="nav-group">🛠️ Sistema</div>
+
+        <div class="nav-item" onclick="navigate('usuarios')">
             🔐 Cadastro de Logins
-
         </div>
 
-        <div
-            class="nav-item"
-            onclick="navigate('backup')">
-
+        <div class="nav-item" onclick="navigate('backup')">
             💾 Backup / Restauração
-
         </div>
 
-        <div
-    class="nav-item"
-    onclick="navigate('atualizacao')">
+        <div class="nav-item" onclick="navigate('atualizacao')">
+            🔄 Atualização
+        </div>
 
-    🔄 Atualização
-
-</div>
-
-<div
-    class="nav-item"
-    onclick="navigate('sobre')">
-
-    ℹ️ Sobre
-
-</div>
-
+        <div class="nav-item" onclick="navigate('sobre')">
+            ℹ️ Sobre
+        </div>
 
 <div
     id="usuario-logado-box"
@@ -378,13 +402,13 @@ if(
 
 <!-- APP PRIMEIRO -->
 
-<script src="js/app.js"></script>
+<script src="js/app.js?v=20260916-1343"></script>
 
 <!-- PÁGINAS -->
 
 <script src="js/usuarios.js"></script>
 
-<script src="js/dashboard.js"></script>
+<script src="js/dashboard.js?v=20260916-3"></script>
 
 <script src="js/clientes.js"></script>
 
@@ -406,9 +430,17 @@ if(
 
 <script src="js/assistente-orcamentos-local.js?v=20260821-1"></script>
 
-<script src="js/ordens-servico.js"></script>
+<script src="js/ordens-servico.js?v=20260916-posvenda2"></script>
 
-<script src="js/recibos.js"></script>
+<!-- SOLICITAÇÕES INTERNAS -->
+<script src="js/solicitacoes.js?v=20260916-1343"></script>
+
+<!-- NOVOS MÓDULOS INTERNOS -->
+<script src="js/recados-ocorrencias.js?v=20260916-3"></script>
+<script src="js/retrabalhos.js?v=20260916-3"></script>
+<script src="js/pos-venda.js?v=20260916-3"></script>
+
+<script src="js/recibos.js?v=20260916-ordem"></script>
 
 <script src="js/relatorios.js"></script>
 

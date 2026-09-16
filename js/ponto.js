@@ -19,7 +19,9 @@
     10. DSR
     11. Resumo mensal
     12. Fechamento e reabertura de mês
-    13. Exportação do espelho de ponto em PDF
+    13. Compensação automática diária entre atrasos e horas excedentes
+    14. Observações complementares por competência
+    15. Exportação do espelho de ponto em PDF em uma única folha
 
     IMPORTANTE:
     Apenas comentários e organização visual foram alterados.
@@ -263,6 +265,14 @@ function garantirEstruturaPonto(func) {
 
     if (!func.fechamentosPonto || typeof func.fechamentosPonto !== 'object') {
         func.fechamentosPonto = {};
+    }
+
+    /*
+        Observações complementares do espelho de ponto, separadas
+        por competência no formato AAAA-MM.
+    */
+    if (!func.observacoesPonto || typeof func.observacoesPonto !== 'object') {
+        func.observacoesPonto = {};
     }
 
     if (!Array.isArray(func.feriadosPonto)) {
@@ -2624,49 +2634,81 @@ function minutosTrabalhadosENoturnosPonto(reg, exigirQuatroMarcacoes, regras) {
     const possuiAlguma = [entrada, almocoSaida, almocoVolta, saida]
         .some(v => v !== null);
 
+    /*
+        DIAS ÚTEIS COM JORNADA PADRÃO
+
+        A apuração é feita por períodos independentes:
+        - manhã: Entrada -> Saída Almoço
+        - tarde: Volta Almoço -> Saída
+
+        Se existir pelo menos uma marcação no dia e faltar uma das
+        marcações de um período, aquele período é considerado NÃO
+        TRABALHADO. Assim, uma marcação parcial permite calcular o
+        atraso sem transformar dias totalmente vazios em atraso.
+
+        Exemplos:
+        - somente Volta Almoço + Saída preenchidos:
+          manhã = 0 minuto trabalhado;
+        - somente Entrada + Saída Almoço preenchidos:
+          tarde = 0 minuto trabalhado;
+        - nenhuma marcação em dia útil normal:
+          o dia permanece sem atraso e sem hora extra.
+    */
+    if (exigirQuatroMarcacoes) {
+        let manha = 0;
+        let tarde = 0;
+        let noturnos = 0;
+
+        if (entrada !== null && almocoSaida !== null) {
+            const calculado = minutosEntrePonto(entrada, almocoSaida);
+
+            if (calculado !== null && calculado <= 900) {
+                manha = Math.max(0, calculado);
+                noturnos += minutosNoturnosIntervaloPonto(
+                    entrada,
+                    almocoSaida,
+                    regras
+                );
+            }
+        }
+
+        if (almocoVolta !== null && saida !== null) {
+            const calculado = minutosEntrePonto(almocoVolta, saida);
+
+            if (calculado !== null && calculado <= 900) {
+                tarde = Math.max(0, calculado);
+                noturnos += minutosNoturnosIntervaloPonto(
+                    almocoVolta,
+                    saida,
+                    regras
+                );
+            }
+        }
+
+        return {
+            completo: true,
+            vazio: !possuiAlguma,
+            minutos: Math.max(0, manha + tarde),
+            noturnos: Math.max(0, noturnos),
+            marcacoesIncompletas:
+                entrada === null ||
+                almocoSaida === null ||
+                almocoVolta === null ||
+                saida === null
+        };
+    }
+
+    /*
+        Finais de semana e feriados não possuem carga normal obrigatória.
+        Por isso, só há cálculo quando existem marcações suficientes para
+        identificar o período efetivamente trabalhado.
+    */
     if (!possuiAlguma) {
         return {
             completo: false,
             vazio: true,
             minutos: 0,
             noturnos: 0
-        };
-    }
-
-    if (exigirQuatroMarcacoes) {
-        if (
-            entrada === null ||
-            almocoSaida === null ||
-            almocoVolta === null ||
-            saida === null
-        ) {
-            return {
-                completo: false,
-                vazio: false,
-                minutos: 0,
-                noturnos: 0
-            };
-        }
-
-        const manha = minutosEntrePonto(entrada, almocoSaida);
-        const tarde = minutosEntrePonto(almocoVolta, saida);
-
-        if (manha === null || tarde === null || manha > 900 || tarde > 900) {
-            return {
-                completo: false,
-                vazio: false,
-                minutos: 0,
-                noturnos: 0
-            };
-        }
-
-        return {
-            completo: true,
-            vazio: false,
-            minutos: Math.max(0, manha + tarde),
-            noturnos:
-                minutosNoturnosIntervaloPonto(entrada, almocoSaida, regras) +
-                minutosNoturnosIntervaloPonto(almocoVolta, saida, regras)
         };
     }
 
@@ -2802,6 +2844,27 @@ function calcularPontoDia(func, reg, data) {
         regras
     );
 
+    /*
+        REGRA PARA DIAS SEM MARCAÇÃO:
+
+        - Se o dia estiver TOTALMENTE em branco, não existe atraso,
+          hora extra nem desconto automático. Isso evita, por exemplo,
+          que um funcionário admitido no meio do mês acumule atrasos
+          nos dias anteriores à admissão.
+
+        - Se existir PELO MENOS UMA marcação no dia útil, o dia passa
+          a ser apurado normalmente. Nesse caso, períodos não
+          preenchidos são considerados não trabalhados e entram no
+          saldo do dia.
+
+        Exemplos:
+        - somente 13:30 e 18:00 preenchidos: a manhã entra como atraso;
+        - somente 07:45 e 12:00 preenchidos: a tarde entra como atraso;
+        - nenhuma marcação: atraso e extra permanecem como "-".
+
+        Faltas continuam sendo descontadas exclusivamente pela regra
+        própria de falta, tratada acima.
+    */
     if (trabalho.vazio || !trabalho.completo) {
         reg.atraso = '-';
         reg.extra = '-';
@@ -2854,19 +2917,40 @@ function calcularPontoDia(func, reg, data) {
         const almocoVoltaReal = minutosHoraPonto(reg.almocoVolta);
         const saidaReal = minutosHoraPonto(reg.saida);
 
-        const variacoes = [
-            entradaReal - entradaPadrao,
-            almocoSaidaReal - almocoSaidaPadrao,
-            almocoVoltaReal - almocoVoltaPadrao,
-            saidaReal - saidaPadrao
-        ];
+        const marcacoesCompletas =
+            entradaReal !== null &&
+            almocoSaidaReal !== null &&
+            almocoVoltaReal !== null &&
+            saidaReal !== null;
+
+        const variacoes = marcacoesCompletas
+            ? [
+                entradaReal - entradaPadrao,
+                almocoSaidaReal - almocoSaidaPadrao,
+                almocoVoltaReal - almocoVoltaPadrao,
+                saidaReal - saidaPadrao
+            ]
+            : [];
 
         const toleranciaMarcacao = Math.max(0, numeroPonto(regras.toleranciaMarcacaoMin));
         const toleranciaDia = Math.max(0, numeroPonto(regras.toleranciaDiaMin));
 
-        const todasDentro = variacoes.every(v => Math.abs(v) <= toleranciaMarcacao);
-        const totalVariacoes = variacoes.reduce((a, v) => a + Math.abs(v), 0);
+        const todasDentro =
+            marcacoesCompletas &&
+            variacoes.every(v => Math.abs(v) <= toleranciaMarcacao);
 
+        const totalVariacoes = variacoes.reduce(
+            (a, v) => a + Math.abs(v),
+            0
+        );
+
+        /*
+            Tolerância do art. 58, §1º, da CLT:
+            até 5 minutos por marcação, limitado a 10 minutos no dia.
+
+            A tolerância só é aplicada quando as quatro marcações existem.
+            Campo em branco não é tratado como pequena variação de ponto.
+        */
         if (todasDentro && totalVariacoes <= toleranciaDia) {
             saldoDia = 0;
         }
@@ -3645,6 +3729,24 @@ window.abrirPontoFuncionario = function (idx) {
         </table>
     </div>
 
+    <!-- OBSERVAÇÕES COMPLEMENTARES -->
+
+    <div class="content-card" style="padding:14px;">
+        <label style="display:block;margin-bottom:7px;font-weight:800;">
+            Observações complementares do ponto
+        </label>
+
+        <textarea
+            id="ponto-observacoes-mes"
+            rows="3"
+            ${mesFechado ? 'disabled' : ''}
+            placeholder="Adicione informações complementares desta competência, se necessário."
+            onblur="salvarObservacaoPonto(${idx}, '${mesKey}', this.value)"
+            style="width:100%;resize:vertical;min-height:72px;">${escaparHTMLPonto(
+                func.observacoesPonto?.[mesKey] || ''
+            )}</textarea>
+    </div>
+
     <!-- RESUMO FINANCEIRO PRINCIPAL - SOMENTE VALORES -->
 
     <div style="
@@ -4109,6 +4211,31 @@ async function (
 };
 
 /* ========================================================= */
+/* 15.1 OBSERVAÇÕES COMPLEMENTARES DO PONTO                 */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* salvarObservacaoPonto */
+/* Salva a observação complementar da competência atual. */
+/* --------------------------------------------------------- */
+
+window.salvarObservacaoPonto = async function (idx, mesKey, valor) {
+    const func = db.funcionarios[idx];
+    if (!func) return;
+
+    garantirEstruturaPonto(func);
+
+    if (func.mesesFechados?.[mesKey]) {
+        return;
+    }
+
+    func.observacoesPonto[mesKey] = String(valor || '').trim();
+
+    await save();
+};
+
+
+/* ========================================================= */
 /* 16. FECHAR MÊS                                          */
 /* ========================================================= */
 
@@ -4137,6 +4264,7 @@ window.fecharMes = async function (idx, mesKey) {
     func.mesesFechados[mesKey] = true;
     func.fechamentosPonto[mesKey] = {
         ...JSON.parse(JSON.stringify(resumo)),
+        observacao: String(func.observacoesPonto?.[mesKey] || '').trim(),
         fechadoEm: new Date().toISOString()
     };
 
@@ -4587,6 +4715,15 @@ window.exportarPontoPDF = async function (idx) {
             '-'
         );
 
+    const observacaoPonto =
+        escaparHTMLPonto(
+            resumo?.observacao
+            ||
+            func.observacoesPonto?.[mesKey]
+            ||
+            ''
+        );
+
     const linhasHTML =
         linhas.map(
             linha => {
@@ -4697,9 +4834,11 @@ window.exportarPontoPDF = async function (idx) {
 
         .pagina{
             width:210mm;
-            min-height:297mm;
+            height:297mm;
+            max-height:297mm;
+            overflow:hidden;
             margin:0 auto;
-            padding:12mm 11mm 10mm;
+            padding:8mm 9mm 7mm;
             background:#fff;
             box-shadow:
                 0 12px 35px
@@ -4793,7 +4932,7 @@ window.exportarPontoPDF = async function (idx) {
         /* ================================================= */
 
         .tabela-wrap{
-            margin-top:12px;
+            margin-top:8px;
             border:1px solid #dbe3ed;
             border-radius:9px;
             overflow:hidden;
@@ -4816,8 +4955,8 @@ window.exportarPontoPDF = async function (idx) {
         }
 
         tbody td{
-            padding:4px 3px;
-            min-height:20px;
+            padding:2.7px 3px;
+            min-height:16px;
             border-right:1px solid #e5e7eb;
             border-bottom:1px solid #e5e7eb;
             font-size:7px;
@@ -4860,8 +4999,8 @@ window.exportarPontoPDF = async function (idx) {
         /* ================================================= */
 
         .resumo{
-            margin-top:12px;
-            padding:11px;
+            margin-top:8px;
+            padding:8px;
             border:1px solid #dbe3ed;
             border-radius:10px;
             background:#f8fafc;
@@ -4905,13 +5044,31 @@ window.exportarPontoPDF = async function (idx) {
             line-height:1.4;
         }
 
+        .observacoes-ponto{
+            margin-top:8px;
+            padding:7px 9px;
+            border:1px solid #dbe3ed;
+            border-radius:8px;
+            background:#fff;
+            font-size:7px;
+            line-height:1.35;
+            min-height:27px;
+        }
+
+        .observacoes-ponto strong{
+            display:block;
+            margin-bottom:3px;
+            font-size:7.5px;
+            color:#172033;
+        }
+
         /* ================================================= */
         /* ASSINATURA                                       */
         /* ================================================= */
 
         .assinatura{
             width:260px;
-            margin:28px auto 0;
+            margin:15px auto 0;
             padding-top:6px;
             border-top:1px solid #475569;
             text-align:center;
@@ -4946,7 +5103,9 @@ window.exportarPontoPDF = async function (idx) {
 
             .pagina{
                 width:210mm;
-                min-height:297mm;
+                height:297mm;
+                max-height:297mm;
+                overflow:hidden;
                 margin:0;
                 box-shadow:none;
             }
@@ -5177,6 +5336,20 @@ window.exportarPontoPDF = async function (idx) {
             </div>
 
         </div>
+
+
+        <!-- OBSERVAÇÕES COMPLEMENTARES -->
+
+        ${
+            observacaoPonto
+                ? `
+                    <div class="observacoes-ponto">
+                        <strong>Observações complementares</strong>
+                        ${observacaoPonto.replace(/\n/g, '<br>')}
+                    </div>
+                `
+                : ''
+        }
 
 
         <!-- ASSINATURA -->
