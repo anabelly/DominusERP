@@ -183,20 +183,9 @@ registerPage('dash', function () {
         0
     );
 
-    /*
-        SALDO PROJETADO DO MÊS
-
-        O projetado precisa representar o movimento financeiro completo
-        do mês, e não apenas o que ainda está em aberto.
-
-        Fórmula:
-        (a receber em aberto + recebido no mês)
-        -
-        (a pagar em aberto + pago no mês)
-
-        O cálculo de saldoProjetado é feito logo abaixo, depois que
-        recebidoMes e pagoMes forem apurados.
-    */
+    const saldoProjetado =
+        totalReceberAberto -
+        totalPagarAberto;
 
     const recebidoMes = contasReceber
         .filter(
@@ -225,18 +214,6 @@ registerPage('dash', function () {
     const saldoRealizadoMes =
         recebidoMes -
         pagoMes;
-
-    const totalReceberProjetado =
-        totalReceberAberto +
-        recebidoMes;
-
-    const totalPagarProjetado =
-        totalPagarAberto +
-        pagoMes;
-
-    const saldoProjetado =
-        totalReceberProjetado -
-        totalPagarProjetado;
 
     /* ===================================================== */
     /* 04. ORÇAMENTOS                                       */
@@ -790,7 +767,7 @@ registerPage('dash', function () {
         <div>
 
             <h1 class="dash-title">
-                Visão Geral do Negócio
+                🏠 Visão Geral do Negócio
             </h1>
 
             <div class="dash-subtitle">
@@ -800,13 +777,6 @@ registerPage('dash', function () {
                 )}
             </div>
 
-        </div>
-
-        <div style="position:relative;min-width:330px;max-width:520px;flex:1;display:flex;justify-content:flex-end;padding-right:58px;">
-            <div style="position:relative;width:100%;max-width:440px;">
-                <input id="dash-consulta-global" type="search" placeholder="🔎 Pesquisar no Dominus..." oninput="pesquisarDominusDashboard(this.value)" autocomplete="off" style="width:100%;height:44px;border:1px solid #dbe2ea;border-radius:13px;padding:0 15px;font-size:12px;box-shadow:0 5px 15px rgba(15,23,42,.06);background:#fff;">
-                <div id="dash-consulta-resultados" style="display:none;position:absolute;right:0;top:50px;width:100%;max-height:430px;overflow:auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 20px 45px rgba(15,23,42,.18);z-index:30000;"></div>
-            </div>
         </div>
 
     </div>
@@ -883,7 +853,7 @@ registerPage('dash', function () {
             </div>
 
             <div class="dash-kpi-note">
-                (Em aberto + recebido) menos (em aberto + pago)
+                A receber no mês menos a pagar no mês
             </div>
 
         </div>
@@ -1635,119 +1605,3 @@ registerPage('dash', function () {
 `;
 
 });
-
-
-/* ========================================================= */
-/* CENTRAL DE CONSULTA RÁPIDA - SOMENTE DASHBOARD            */
-/* ========================================================= */
-window.pesquisarDominusDashboard = function(termo){
-    const box = document.getElementById('dash-consulta-resultados');
-    if(!box) return;
-
-    const q = String(termo || '').trim().toLowerCase();
-    if(q.length < 2){
-        box.style.display = 'none';
-        box.innerHTML = '';
-        return;
-    }
-
-    const banco = window.db || {};
-    const escapar = valor => String(valor ?? '')
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#039;');
-
-    const resultados = [];
-    const adicionar = (modulo,icone,titulo,resumo,pagina,obj) => {
-        let texto = '';
-        try{ texto = JSON.stringify(obj || {}).toLowerCase(); }
-        catch(e){ texto = String(titulo || '').toLowerCase(); }
-        if(texto.includes(q)) {
-            const chave = String(
-                obj?.codigo ?? obj?.numero ?? obj?.id ?? obj?.cliente ?? titulo ?? termo
-            );
-            resultados.push({modulo,icone,titulo,resumo,pagina,chave});
-        }
-    };
-
-    (banco.clientes || []).forEach(x => adicionar(
-        'Clientes','👤',x.nome || x.fantasia || x.nomeCompleto || 'Cliente',
-        x.telefone || x.email || x.cnpj || x.cpf || 'Cadastro de cliente','clientes',x
-    ));
-    (banco.orcamentos || []).forEach(x => adicionar(
-        'Orçamentos','📄',`#${x.codigo || '-'} — ${x.cliente || ''}`,
-        `Status: ${x.status || '-'}`,'orcamentos',x
-    ));
-    (banco.ordensServico || []).forEach(x => adicionar(
-        'Ordens de Serviço','🛠️',`${x.codigo || x.numero || x.id || 'OS'} — ${x.cliente || ''}`,
-        `Status: ${x.status || '-'}`,'ordens-servico',x
-    ));
-    (banco.financeiro || []).forEach(x => adicionar(
-        'Financeiro','💰',x.descricao || x.nome || x.cliente || 'Lançamento',
-        `${x.tipo || x.tipoFluxo || ''}${x.status ? ' · '+x.status : ''}`,'financeiro',x
-    ));
-    (banco.recibos || []).forEach(x => adicionar(
-        'Recibos','🧾',`Recibo ${x.numero || ''} — ${x.cliente || ''}`,
-        x.origem || 'Comprovante','recibos',x
-    ));
-    (banco.solicitacoes || []).forEach(x => adicionar(
-        'Solicitações','📋',`${x.codigo || 'Solicitação'} — ${x.material || ''}`,
-        `Status: ${x.status || '-'}`,'solicitacoes',x
-    ));
-    (banco.retrabalhos || []).forEach(x => adicionar(
-        'Retrabalhos','💸',`${x.os || 'Retrabalho'} — ${x.cliente || ''}`,
-        `${x.motivo || ''}${x.status ? ' · '+x.status : ''}`,'retrabalhos',x
-    ));
-    (banco.posVendas || []).forEach(x => adicionar(
-        'Pós-venda','☎️',`${x.cliente || 'Cliente'}${x.os ? ' — '+x.os : ''}`,
-        x.situacao || 'Acompanhamento','pos-venda',x
-    ));
-
-    const lista = resultados.slice(0,8);
-    box.style.display = 'block';
-    box.innerHTML = lista.length
-        ? `<div style="padding:10px 12px;border-bottom:1px solid #eef2f7;font-size:9px;color:#64748b;font-weight:900;text-transform:uppercase;letter-spacing:.05em">${resultados.length} resultado(s) encontrado(s)${resultados.length>8?' · mostrando os 8 primeiros':''}</div>`
-          + lista.map(r => `
-            <div style="padding:11px 12px;border-bottom:1px solid #f1f5f9;background:#fff;display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center">
-                <div style="width:32px;height:32px;border-radius:9px;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:17px">${r.icone}</div>
-                <div style="min-width:0">
-                    <div style="font-size:9px;color:#94a3b8;font-weight:900;text-transform:uppercase">${escapar(r.modulo)}</div>
-                    <strong style="display:block;color:#111827;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${escapar(r.titulo)}</strong>
-                    <div style="color:#64748b;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${escapar(r.resumo || '')}</div>
-                </div>
-                <button type="button" onclick="abrirResultadoConsultaDashboard('${r.pagina}','${escapar(r.chave).replace("&#039;","")}')" style="border:0;background:#111827;color:#fff;padding:8px 10px;border-radius:9px;font-size:9px;font-weight:850;cursor:pointer;white-space:nowrap">Abrir tela →</button>
-            </div>`).join('')
-        : `<div style="padding:24px;text-align:center;color:#94a3b8;font-size:11px">Nenhum resultado encontrado para <strong>${escapar(termo)}</strong>.</div>`;
-};
-
-/* Abre o módulo do resultado, localiza o registro consultado e o destaca. */
-window.abrirResultadoConsultaDashboard = async function(pagina,chave){
-    const alvo=String(chave||'').trim().toLowerCase();
-    if(pagina==='orcamentos') window.filtroStatusOrcamentoAtual='';
-    if(pagina==='recibos') window.filtroOrigemRecibosAtual='Todos';
-    await navigate(pagina,false);
-    const localizar=()=>{
-        const raiz=document.getElementById('view-port');
-        if(!raiz||!alvo)return;
-        const candidatos=[...raiz.querySelectorAll('tbody tr, article, .content-card > div, .pv-card, .rt-card')];
-        const el=candidatos.find(e=>String(e.innerText||'').toLowerCase().includes(alvo));
-        if(!el)return;
-        el.scrollIntoView({behavior:'smooth',block:'center'});
-        const anterior=el.style.cssText;
-        let n=0;
-        const piscar=()=>{
-            el.style.transition='background .18s, box-shadow .18s, outline .18s';
-            el.style.background=n%2===0?'#fff3cd':'';
-            el.style.outline=n%2===0?'3px solid #f59e0b':'';
-            el.style.boxShadow=n%2===0?'0 0 0 6px rgba(245,158,11,.16)':'';
-            n++;
-            if(n<6)setTimeout(piscar,260);
-            else setTimeout(()=>{el.style.cssText=anterior;},300);
-        };
-        piscar();
-    };
-    setTimeout(localizar,120);
-    setTimeout(localizar,500);
-};

@@ -411,7 +411,7 @@ window.renderOrcamentos = function () {
                 font-size:28px;
                 font-weight:700;
             ">
-                Orçamentos
+                📄 Orçamentos
             </div>
 
             <div style="
@@ -734,7 +734,7 @@ window.renderOrcamentos = function () {
                     padding:6px 10px;
                     font-size:12px;
                     background:#2563eb !important;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="visualizarOrcamento(${idx})">
 
                 👁 Visualizar
@@ -747,7 +747,7 @@ window.renderOrcamentos = function () {
                     background:#f59e0b;
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="editarOrcamento(${idx})">
 
                 ✏ Editar
@@ -760,7 +760,7 @@ window.renderOrcamentos = function () {
                     background:#7c3aed;
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#f3e8ff !important;color:#7e22ce !important;border:1px solid #e9d5ff !important;box-shadow:none !important;"
                 onclick="duplicarOrcamento(${idx})">
 
                 📄 Duplicar
@@ -772,7 +772,7 @@ window.renderOrcamentos = function () {
                 style="
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="excluirOrcamento(${idx})">
 
                 🗑 Excluir
@@ -1317,7 +1317,7 @@ Nenhum orçamento encontrado
                     padding:6px 10px;
                     font-size:12px;
                     background:#2563eb !important;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="visualizarOrcamento(${idx})">
 
                 👁 Visualizar
@@ -1330,7 +1330,7 @@ Nenhum orçamento encontrado
                     background:#f59e0b;
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="editarOrcamento(${idx})">
 
                 ✏ Editar
@@ -1343,7 +1343,7 @@ Nenhum orçamento encontrado
                     background:#7c3aed;
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#f3e8ff !important;color:#7e22ce !important;border:1px solid #e9d5ff !important;box-shadow:none !important;"
                 onclick="duplicarOrcamento(${idx})">
 
                 📄 Duplicar
@@ -1355,7 +1355,7 @@ Nenhum orçamento encontrado
                 style="
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="excluirOrcamento(${idx})">
 
                 🗑 Excluir
@@ -1948,7 +1948,7 @@ window.renderizarImagensOrcamentoEdicao = function(){
                 <div style="font-size:12px;font-weight:700;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${img.nome || `Imagem ${i+1}`}</div>
                 <input type="text" value="${String(img.legenda || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="Legenda opcional (ex.: Fachada atual)" oninput="atualizarLegendaImagemOrcamento(${i}, this.value)" style="width:100%;">
             </div>
-            <button type="button" class="btn-del" onclick="removerImagemOrcamento(${i})" title="Remover imagem">✕</button>
+            <button type="button" class="btn-del" onclick="removerImagemOrcamento(${i})" title="Remover imagem" style="background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;">✕</button>
         </div>
     `).join('');
 };

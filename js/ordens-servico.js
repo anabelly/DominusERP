@@ -448,7 +448,7 @@ function renderOrdensServico() {
                 margin-bottom:15px;
             ">
 
-                <h2>Ordens de Serviço</h2>
+                <h2>🛠️ Ordens de Serviço</h2>
 
                 <button
                     class="btn-action"
@@ -467,7 +467,8 @@ function renderOrdensServico() {
                 id="grid-os"
                 style="
                     width:100%;
-                    overflow-x:auto;
+                    max-width:100%;
+                    overflow-x:hidden;
                 "
             >
                 ${renderGridOS()}
@@ -753,14 +754,15 @@ function renderGridOS() {
                     </th>
 
                     <th style="white-space:nowrap;">
-                        Entrega
-                    </th>
-
-                    <th style="white-space:nowrap;">
                         Status
                     </th>
 
-                    <th style="white-space:nowrap;">
+                    <th style="
+                        white-space:nowrap;
+                        width:34%;
+                        text-align:left;
+                        padding-left:4px;
+                    ">
                         Ações
                     </th>
 
@@ -820,12 +822,7 @@ function renderGridOS() {
 
                             <td style="
                                 white-space:nowrap;
-                            ">
-                                ${os.dataEntrega || '-'}
-                            </td>
-
-                            <td style="
-                                white-space:nowrap;
+                                padding-right:2px;
                             ">
 
                                 <span style="
@@ -844,15 +841,17 @@ function renderGridOS() {
 
                             <td style="
                                 white-space:nowrap;
-                                min-width:330px;
+                                padding-left:4px;
+                                padding-right:0;
                             ">
 
                                 <div style="
                                     display:flex;
+                                    gap:8px;
+                                    justify-content:flex-start;
                                     align-items:center;
-                                    gap:6px;
                                     flex-wrap:nowrap;
-                                    white-space:nowrap;
+                                    min-width:max-content;
                                 ">
 
                                     <button
@@ -861,10 +860,11 @@ function renderGridOS() {
                                             background:#eff6ff;
                                             color:#2563eb;
                                             border:none;
-                                            padding:7px 10px;
+                                            padding:6px 10px;
                                             border-radius:8px;
                                             cursor:pointer;
                                             font-weight:600;
+                                            font-size:12px;
                                             white-space:nowrap;
                                             flex-shrink:0;
                                         "
@@ -878,10 +878,11 @@ function renderGridOS() {
                                             background:#fef3c7;
                                             color:#b45309;
                                             border:none;
-                                            padding:7px 10px;
+                                            padding:6px 10px;
                                             border-radius:8px;
                                             cursor:pointer;
                                             font-weight:600;
+                                            font-size:12px;
                                             white-space:nowrap;
                                             flex-shrink:0;
                                         "
@@ -895,10 +896,11 @@ function renderGridOS() {
                                             background:#dcfce7;
                                             color:#15803d;
                                             border:none;
-                                            padding:7px 10px;
+                                            padding:6px 10px;
                                             border-radius:8px;
                                             cursor:pointer;
                                             font-weight:600;
+                                            font-size:12px;
                                             white-space:nowrap;
                                             flex-shrink:0;
                                         "
@@ -912,10 +914,11 @@ function renderGridOS() {
                                             background:#fee2e2;
                                             color:#dc2626;
                                             border:none;
-                                            padding:7px 10px;
+                                            padding:6px 10px;
                                             border-radius:8px;
                                             cursor:pointer;
                                             font-weight:600;
+                                            font-size:12px;
                                             white-space:nowrap;
                                             flex-shrink:0;
                                         "

@@ -351,6 +351,20 @@ window.db = {
     tiposProduto:[],
 
     /*
+        UNIFORMES E EPIs
+
+        Mantém produtos, estoque e movimentações do módulo de RH.
+        Este campo precisa fazer parte da estrutura central do banco
+        para não desaparecer quando loadDB() reconstruir window.db.
+    */
+    uniformesEPI:{
+        versao:1,
+        inicializadoPlanilhaV2:false,
+        produtos:[],
+        movimentacoes:[]
+    },
+
+    /*
         AGENDA
 
         Os compromissos precisam fazer parte da estrutura central
@@ -627,6 +641,52 @@ async function(){
 
                     saved.tiposProduto
                     || [],
+
+
+                /*
+                    UNIFORMES E EPIs
+
+                    O módulo salva db.uniformesEPI junto com o restante
+                    do banco. Aqui precisamos reconstruir esse campo ao
+                    carregar a API; caso contrário, as movimentações são
+                    descartadas no próximo loadDB().
+                */
+
+                uniformesEPI:
+
+                    (
+                        saved.uniformesEPI
+                        &&
+                        typeof saved.uniformesEPI === 'object'
+                        &&
+                        !Array.isArray(saved.uniformesEPI)
+                    )
+                    ?
+                    {
+                        versao:
+                            saved.uniformesEPI.versao
+                            || 1,
+
+                        inicializadoPlanilhaV2:
+                            !!saved.uniformesEPI.inicializadoPlanilhaV2,
+
+                        produtos:
+                            Array.isArray(saved.uniformesEPI.produtos)
+                            ? saved.uniformesEPI.produtos
+                            : [],
+
+                        movimentacoes:
+                            Array.isArray(saved.uniformesEPI.movimentacoes)
+                            ? saved.uniformesEPI.movimentacoes
+                            : []
+                    }
+                    :
+                    {
+                        versao:1,
+                        inicializadoPlanilhaV2:false,
+                        produtos:[],
+                        movimentacoes:[]
+                    },
 
 
                 /*

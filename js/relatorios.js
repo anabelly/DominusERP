@@ -64,7 +64,7 @@ window.renderRelatorios = function () {
                 font-size:28px;
                 font-weight:700;
             ">
-                Relatórios Gerenciais
+                📊 Relatórios Gerenciais
             </div>
 
             <div style="

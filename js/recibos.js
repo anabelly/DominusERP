@@ -2312,136 +2312,58 @@ gap:20px;
     <!-- TOPO -->
 
     <div style="
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:15px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        flex-wrap:wrap;
+        gap:15px;
     ">
 
         <div>
 
             <div style="
-            font-size:28px;
-            font-weight:700;
+                font-size:28px;
+                font-weight:700;
             ">
-
-                Recibos / Comprovantes
-
+                🧾 Recibos / Comprovantes
             </div>
 
             <div style="
-            color:#6b7280;
-            margin-top:5px;
+                color:#6b7280;
+                margin-top:5px;
             ">
-
                 Recibos, comprovantes e termos de serviço
-
             </div>
 
         </div>
 
         <div style="
-        display:flex;
-        gap:10px;
-        flex-wrap:wrap;
-        align-items:end;
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
         ">
 
-            <div style="
-                min-width:180px;
-            ">
-
-                <label style="
-                    display:block;
-                    margin-bottom:5px;
-                    font-size:11px;
-                    color:#64748b;
-                    font-weight:700;
-                ">
-                    Origem
-                </label>
-
-                <select
-                    id="filtro-origem-recibos"
-                    onchange="
-                        window.filtroOrigemRecibosAtual = this.value;
-                        navigate('recibos', false);
-                    "
-                    style="
-                        min-width:180px;
-                    "
-                >
-
-                    <option
-                        value="Todos"
-                        ${
-                            window.filtroOrigemRecibosAtual === 'Todos'
-                            ? 'selected'
-                            : ''
-                        }
-                    >
-                        Todas
-                    </option>
-
-                    <option
-                        value="Orçamento"
-                        ${
-                            window.filtroOrigemRecibosAtual === 'Orçamento'
-                            ? 'selected'
-                            : ''
-                        }
-                    >
-                        Orçamento
-                    </option>
-
-                    <option
-                        value="Termo"
-                        ${
-                            window.filtroOrigemRecibosAtual === 'Termo'
-                            ? 'selected'
-                            : ''
-                        }
-                    >
-                        Termo
-                    </option>
-
-                    <option
-                        value="Recibo"
-                        ${
-                            window.filtroOrigemRecibosAtual === 'Recibo'
-                            ? 'selected'
-                            : ''
-                        }
-                    >
-                        Recibo
-                    </option>
-
-                </select>
-
-            </div>
-
             <button
-            class="btn-action"
-            onclick="abrirConsultaRecibos()">
+                class="btn-action"
+                onclick="abrirConsultaRecibos()">
 
                 🔍 Consultar
 
             </button>
 
             <button
-            class="btn-action"
-            style="background:#2563eb;"
-            onclick="abrirGerarReciboOrcamento()">
+                class="btn-action"
+                style="background:#2563eb;"
+                onclick="abrirGerarReciboOrcamento()">
 
                 📄 Gerar de Orçamento
 
             </button>
 
             <button
-            class="btn-action"
-            style="background:#16a34a;"
-            onclick="abrirModalRecibo()">
+                class="btn-action"
+                style="background:#16a34a;"
+                onclick="abrirModalRecibo()">
 
                 + Novo Recibo/Termo
 
@@ -2450,6 +2372,85 @@ gap:20px;
         </div>
 
     </div>
+
+
+    <!-- FILTRO DE ORIGEM -->
+
+    <div style="
+        width:180px;
+        margin-top:10px;
+        margin-left:auto;
+    ">
+
+        <label style="
+            display:block;
+            margin-bottom:5px;
+            font-size:11px;
+            color:#64748b;
+            font-weight:700;
+        ">
+            Origem
+        </label>
+
+        <select
+            id="filtro-origem-recibos"
+            onchange="
+                window.filtroOrigemRecibosAtual = this.value;
+                navigate('recibos', false);
+            "
+            style="
+                width:100%;
+            "
+        >
+
+            <option
+                value="Todos"
+                ${
+                    window.filtroOrigemRecibosAtual === 'Todos'
+                    ? 'selected'
+                    : ''
+                }
+            >
+                Todas
+            </option>
+
+            <option
+                value="Orçamento"
+                ${
+                    window.filtroOrigemRecibosAtual === 'Orçamento'
+                    ? 'selected'
+                    : ''
+                }
+            >
+                Orçamento
+            </option>
+
+            <option
+                value="Termo"
+                ${
+                    window.filtroOrigemRecibosAtual === 'Termo'
+                    ? 'selected'
+                    : ''
+                }
+            >
+                Termo
+            </option>
+
+            <option
+                value="Recibo"
+                ${
+                    window.filtroOrigemRecibosAtual === 'Recibo'
+                    ? 'selected'
+                    : ''
+                }
+            >
+                Recibo
+            </option>
+
+        </select>
+
+    </div>
+
 
     <!-- TABELA -->
 
@@ -2586,7 +2587,7 @@ style="
 padding:6px 10px;
 font-size:12px;
 background:#2563eb !important;
-"
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
 onclick="visualizarRecibo(${idx})">
 
 👁 Visualizar
@@ -2599,7 +2600,7 @@ style="
 background:#f59e0b;
 padding:6px 10px;
 font-size:12px;
-"
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
 onclick="editarRecibo(${idx})">
 
 ✏ Editar
@@ -2612,7 +2613,7 @@ style="
 background:#7c3aed;
 padding:6px 10px;
 font-size:12px;
-"
+background:#dcfce7 !important;color:#15803d !important;border:1px solid #bbf7d0 !important;box-shadow:none !important;"
 onclick="imprimirDocumentoRecibo(${idx})">
 
 🖨 Imprimir
@@ -2624,7 +2625,7 @@ class="btn-del"
 style="
 padding:6px 10px;
 font-size:12px;
-"
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
 onclick="excluirRecibo(${idx})">
 
 🗑 Excluir
@@ -3126,7 +3127,7 @@ style="
 padding:6px 10px;
 font-size:12px;
 background:#2563eb !important;
-"
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
 onclick="visualizarRecibo(${idx})">
 
 👁 Visualizar
@@ -3137,7 +3138,7 @@ onclick="visualizarRecibo(${idx})">
 class="btn-action"
 style="
 background:#f59e0b;
-"
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
 onclick="editarRecibo(${idx})">
 
 ✏ Editar
@@ -3148,7 +3149,7 @@ onclick="editarRecibo(${idx})">
 class="btn-action"
 style="
 background:#7c3aed;
-"
+background:#dcfce7 !important;color:#15803d !important;border:1px solid #bbf7d0 !important;box-shadow:none !important;"
 onclick="imprimirDocumentoRecibo(${idx})">
 
 🖨 Imprimir
@@ -3157,7 +3158,7 @@ onclick="imprimirDocumentoRecibo(${idx})">
 
 <button
 class="btn-del"
-onclick="excluirRecibo(${idx})">
+onclick="excluirRecibo(${idx})" style="background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;">
 
 🗑 Excluir
 

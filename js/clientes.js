@@ -179,7 +179,7 @@ const clientesTela =
                 font-size:28px;
                 font-weight:700;
             ">
-                Clientes
+                👤 Clientes
             </div>
 
             <div style="
@@ -338,7 +338,7 @@ const clientesTela =
                     background:#2563eb !important;
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="visualizarCliente(${idx})">
 
                 👁 Visualizar
@@ -351,7 +351,7 @@ const clientesTela =
                     background:#f59e0b;
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="editarCliente(${idx})">
 
                 ✏ Editar
@@ -363,7 +363,7 @@ const clientesTela =
                 style="
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="excluirCliente(${idx})">
 
                 🗑 Excluir
@@ -1464,7 +1464,7 @@ clientes.forEach(
                     background:#2563eb !important;
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="
                     visualizarCliente(
                         ${idx}
@@ -1481,7 +1481,7 @@ clientes.forEach(
                     background:#f59e0b;
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="
                     editarCliente(
                         ${idx}
@@ -1497,7 +1497,7 @@ clientes.forEach(
                 style="
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="
                     excluirCliente(
                         ${idx}

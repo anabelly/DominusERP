@@ -2904,7 +2904,7 @@ registerPage('funcionarios', function () {
                     font-size:28px;
                     margin-bottom:5px;
                 ">
-                    Funcionários
+                    👷 Funcionários
                 </h1>
 
                 <p style="
@@ -8354,6 +8354,116 @@ function formatarDataUniformeEPI(data) {
 
 
 /* --------------------------------------------------------- */
+/* ajustarTamanhoModalUniformesEPI                           */
+/* Amplia somente a janela de Uniformes/EPIs e restaura      */
+/* o tamanho original quando o modal for fechado.            */
+/* --------------------------------------------------------- */
+
+function ajustarTamanhoModalUniformesEPI() {
+    const modal = document.getElementById('modal-global');
+
+    if (!modal) return;
+
+    const painel =
+        modal.querySelector(':scope > .content-card')
+        ||
+        modal.querySelector('.content-card');
+
+    if (!painel) return;
+
+    /*
+        Guarda o estilo original apenas uma vez enquanto este modal
+        estiver aberto. Assim os outros modais do ERP não ficam grandes.
+    */
+    if (!Object.prototype.hasOwnProperty.call(
+        painel.dataset,
+        'uniformesEpiEstiloOriginal'
+    )) {
+        painel.dataset.uniformesEpiEstiloOriginal =
+            painel.getAttribute('style') || '';
+    }
+
+    /*
+        Este modal precisa aproveitar praticamente toda a largura da
+        janela porque as tabelas de Produtos e Movimentações possuem
+        muitas colunas. Usamos !important porque o content-card global
+        pode possuir max-width definido no CSS do sistema.
+    */
+    painel.style.setProperty(
+        'width',
+        'calc(100vw - 8px)',
+        'important'
+    );
+
+    painel.style.setProperty(
+        'max-width',
+        'none',
+        'important'
+    );
+
+    painel.style.setProperty(
+        'min-width',
+        '0',
+        'important'
+    );
+
+    painel.style.setProperty(
+        'box-sizing',
+        'border-box',
+        'important'
+    );
+
+    painel.style.setProperty(
+        'padding',
+        '14px',
+        'important'
+    );
+
+    painel.style.setProperty(
+        'max-height',
+        '98vh',
+        'important'
+    );
+
+    painel.style.setProperty(
+        'overflow-y',
+        'auto',
+        'important'
+    );
+
+    painel.style.setProperty(
+        'overflow-x',
+        'hidden',
+        'important'
+    );
+
+    const observador = new MutationObserver(() => {
+        if (!modal.classList.contains('hidden')) return;
+
+        const original =
+            painel.dataset.uniformesEpiEstiloOriginal ?? '';
+
+        if (original) {
+            painel.setAttribute('style', original);
+        } else {
+            painel.removeAttribute('style');
+        }
+
+        delete painel.dataset.uniformesEpiEstiloOriginal;
+        observador.disconnect();
+    });
+
+    observador.observe(
+        modal,
+        {
+            attributes:true,
+            attributeFilter:['class']
+        }
+    );
+}
+
+
+/* --------------------------------------------------------- */
 /* abrirUniformesEPIFuncionario                              */
 /* Abre a área principal de Uniformes e EPIs.                */
 /* --------------------------------------------------------- */
@@ -8372,6 +8482,7 @@ window.abrirUniformesEPIFuncionario = function () {
         }
     });
 
+    ajustarTamanhoModalUniformesEPI();
     renderUniformesEPI();
 };
 
@@ -8549,8 +8660,31 @@ function htmlProdutosUniformesEPI() {
                     <td><span style="background:${cor};color:#fff;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;">${r.status}</span></td>
                     <td>
                         <div style="display:flex;gap:6px;white-space:nowrap;">
-                            <button type="button" class="btn-action" style="padding:6px 9px;background:#f59e0b;" onclick="editarProdutoUniformeEPI('${produto.id}')">Editar</button>
-                            <button type="button" class="btn-del" style="padding:6px 9px;" onclick="excluirProdutoUniformeEPI('${produto.id}')">Excluir</button>
+                            <button
+                                type="button"
+                                class="btn-action"
+                                style="
+                                    padding:6px 9px;
+                                    background:#fef3c7;
+                                    color:#b45309;
+                                    border:1px solid #fde68a;
+                                    box-shadow:none;
+                                "
+                                onclick="editarProdutoUniformeEPI('${produto.id}')"
+                            >✏ Editar</button>
+
+                            <button
+                                type="button"
+                                class="btn-del"
+                                style="
+                                    padding:6px 9px;
+                                    background:#fee2e2;
+                                    color:#dc2626;
+                                    border:1px solid #fecaca;
+                                    box-shadow:none;
+                                "
+                                onclick="excluirProdutoUniformeEPI('${produto.id}')"
+                            >🗑 Excluir</button>
                         </div>
                     </td>
                 </tr>
@@ -8567,8 +8701,8 @@ function htmlProdutosUniformesEPI() {
             <button type="button" class="btn-action" style="background:#16a34a;" onclick="novoProdutoUniformeEPI()">+ Novo Produto</button>
         </div>
 
-        <div style="overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
-            <table style="width:100%;border-collapse:collapse;min-width:1250px;">
+        <div style="overflow-x:hidden;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
+            <table style="width:100%;border-collapse:collapse;table-layout:auto;">
                 <thead>
                     <tr>
                         <th>Produto / Tamanho</th>
@@ -8745,9 +8879,46 @@ function htmlMovimentacoesUniformesEPI() {
                     <td>${escaparHTMLFuncionario(mov.situacao || '-')}</td>
                     <td>
                         <div style="display:flex;gap:6px;white-space:nowrap;">
-                            <button type="button" class="btn-action" style="padding:6px 9px;background:#f59e0b;" onclick="editarMovimentacaoUniformeEPI('${mov.id}')">Editar</button>
-                            ${pendente ? `<button type="button" class="btn-action" style="padding:6px 9px;background:#16a34a;" onclick="devolverMovimentacaoUniformeEPI('${mov.id}')">Devolver</button>` : ''}
-                            <button type="button" class="btn-del" style="padding:6px 9px;" onclick="excluirMovimentacaoUniformeEPI('${mov.id}')">Excluir</button>
+                            <button
+                                type="button"
+                                class="btn-action"
+                                style="
+                                    padding:6px 9px;
+                                    background:#fef3c7;
+                                    color:#b45309;
+                                    border:1px solid #fde68a;
+                                    box-shadow:none;
+                                "
+                                onclick="editarMovimentacaoUniformeEPI('${mov.id}')"
+                            >✏ Editar</button>
+
+                            ${pendente ? `
+                                <button
+                                    type="button"
+                                    class="btn-action"
+                                    style="
+                                        padding:6px 9px;
+                                        background:#dcfce7;
+                                        color:#15803d;
+                                        border:1px solid #bbf7d0;
+                                        box-shadow:none;
+                                    "
+                                    onclick="devolverMovimentacaoUniformeEPI('${mov.id}')"
+                                >↩ Devolver</button>
+                            ` : ''}
+
+                            <button
+                                type="button"
+                                class="btn-del"
+                                style="
+                                    padding:6px 9px;
+                                    background:#fee2e2;
+                                    color:#dc2626;
+                                    border:1px solid #fecaca;
+                                    box-shadow:none;
+                                "
+                                onclick="excluirMovimentacaoUniformeEPI('${mov.id}')"
+                            >🗑 Excluir</button>
                         </div>
                     </td>
                 </tr>
@@ -8764,8 +8935,8 @@ function htmlMovimentacoesUniformesEPI() {
             <button type="button" class="btn-action" style="background:#16a34a;" onclick="novaMovimentacaoUniformeEPI()">+ Nova Movimentação</button>
         </div>
 
-        <div style="overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
-            <table style="width:100%;border-collapse:collapse;min-width:1300px;">
+        <div style="overflow-x:hidden;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
+            <table style="width:100%;border-collapse:collapse;table-layout:auto;">
                 <thead>
                     <tr>
                         <th>Data da retirada</th>

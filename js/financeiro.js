@@ -376,7 +376,7 @@ const periodoReceber =
                 font-size:28px;
                 font-weight:700;
             ">
-                Fluxo Financeiro
+                💰 Fluxo Financeiro
             </div>
 
             <div style="
@@ -627,7 +627,9 @@ window.renderTabelaFinanceiro = function (
             gap:6px;
             align-items:center;
             flex-wrap:nowrap;
-            justify-content:center;
+            justify-content:flex-start;
+            width:238px;
+            min-width:238px;
         ">
 
             ${
@@ -641,9 +643,10 @@ window.renderTabelaFinanceiro = function (
                 padding:6px 10px;
                 font-size:12px;
                 white-space:nowrap;
-                width:85px;
+                width:105px;
+                min-width:105px;
                 height:32px;
-            "
+background:#dcfce7 !important;color:#15803d !important;border:1px solid #bbf7d0 !important;box-shadow:none !important;"
             onclick="darBaixaFinanceiro(${indexReal})">
 
             ✔ ${tipo}
@@ -651,46 +654,55 @@ window.renderTabelaFinanceiro = function (
         </button>
     `
     : `
-        <div style="
-            color:#16a34a;
-            font-size:12px;
-            font-weight:600;
-            white-space:nowrap;
-            width:85px;
-            height:32px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-        ">
-            ✔ ${status}
-        </div>
+        <button
+            class="btn-action"
+            style="
+                background:#16a34a;
+                padding:6px 10px;
+                font-size:12px;
+                white-space:nowrap;
+                width:105px;
+                min-width:105px;
+                height:32px;
+background:#dcfce7 !important;color:#15803d !important;border:1px solid #bbf7d0 !important;box-shadow:none !important;"
+            onclick="desfazerBaixaFinanceiro(${indexReal})"
+            title="Desfazer ${status}"
+        >
+            ↩ ${status}
+        </button>
     `
 }
 
             <button
-                class="btn-del"
+                class="btn-action"
                 style="
-                    padding:6px 10px;
+                    background:#f59e0b;
+                    padding:6px 8px;
                     font-size:12px;
                     white-space:nowrap;
-                "
-                onclick="excluirLancamento(${indexReal})">
+                    width:69px;
+                    min-width:69px;
+                    height:32px;
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
+                onclick="editarLancamento(${indexReal})">
 
-                Excluir
+                ✏ Editar
 
             </button>
 
             <button
-                class="btn-action"
+                class="btn-del"
                 style="
-                    background:#ef4444;
-                    padding:6px 10px;
+                    padding:6px 8px;
                     font-size:12px;
                     white-space:nowrap;
-                "
-                onclick="editarLancamento(${indexReal})">
+                    width:58px;
+                    min-width:58px;
+                    height:32px;
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
+                onclick="excluirLancamento(${indexReal})">
 
-                ➖ Editar
+                Excluir
 
             </button>
 
@@ -710,12 +722,15 @@ window.renderTabelaFinanceiro = function (
 
     </div>
 
-    <div style="
-    display:flex;
-    justify-content:center;
-    gap:10px;
-    margin-top:20px;
-">
+    <div
+        id="financeiro-nav-${tipo}"
+        style="
+            display:flex;
+            justify-content:center;
+            gap:10px;
+            margin-top:20px;
+        "
+    >
 
     <button
         class="btn-action"
@@ -758,6 +773,31 @@ window.alterarSemanaFinanceiro = function (
     direcao
 ) {
 
+    /*
+        Guarda a posição vertical do navegador semanal antes
+        de renderizar novamente a tela.
+
+        Assim, mesmo que a nova semana tenha mais ou menos
+        lançamentos, os botões permanecem visualmente na mesma
+        altura e podem ser clicados novamente sem nova rolagem.
+    */
+
+    const idNavegacao =
+        `financeiro-nav-${tipo}`;
+
+    const navegacaoAntes =
+        document.getElementById(
+            idNavegacao
+        );
+
+    const topoAntes =
+        navegacaoAntes
+            ? navegacaoAntes
+                .getBoundingClientRect()
+                .top
+            : null;
+
+
     if (tipo === 'Pagar') {
 
         window.financeiroSemanaOffsetPagar +=
@@ -769,7 +809,113 @@ window.alterarSemanaFinanceiro = function (
             direcao;
     }
 
-    navigate('financeiro');
+
+    navigate(
+        'financeiro',
+        false
+    );
+
+
+    /*
+        Aguarda a nova tabela ser colocada na tela e compensa
+        somente a diferença de posição do navegador semanal.
+    */
+
+    requestAnimationFrame(() => {
+
+        requestAnimationFrame(() => {
+
+            if (topoAntes === null) {
+                return;
+            }
+
+            const navegacaoDepois =
+                document.getElementById(
+                    idNavegacao
+                );
+
+            if (!navegacaoDepois) {
+                return;
+            }
+
+            const topoDepois =
+                navegacaoDepois
+                    .getBoundingClientRect()
+                    .top;
+
+            const diferenca =
+                topoDepois -
+                topoAntes;
+
+            if (
+                Math.abs(diferenca) <
+                1
+            ) {
+                return;
+            }
+
+            /*
+                Primeiro tenta ajustar o elemento que realmente
+                está rolando. Isso funciona tanto com a página
+                inteira quanto com um container interno do ERP.
+            */
+
+            let elemento =
+                navegacaoDepois.parentElement;
+
+            let containerRolagem =
+                null;
+
+            while (
+                elemento &&
+                elemento !==
+                    document.body
+            ) {
+
+                const estilo =
+                    window.getComputedStyle(
+                        elemento
+                    );
+
+                const overflowY =
+                    estilo.overflowY;
+
+                if (
+                    (
+                        overflowY === 'auto'
+                        ||
+                        overflowY === 'scroll'
+                    )
+                    &&
+                    elemento.scrollHeight >
+                    elemento.clientHeight
+                ) {
+
+                    containerRolagem =
+                        elemento;
+
+                    break;
+                }
+
+                elemento =
+                    elemento.parentElement;
+            }
+
+
+            if (containerRolagem) {
+
+                containerRolagem.scrollTop +=
+                    diferenca;
+
+            } else {
+
+                window.scrollBy(
+                    0,
+                    diferenca
+                );
+            }
+        });
+    });
 };
 
 /* ========================================================= */
@@ -1116,6 +1262,58 @@ closeModal();
 navigate('financeiro', false);
         }
     });
+};
+
+
+/* --------------------------------------------------------- */
+/* desfazerBaixaFinanceiro                                   */
+/* Volta um lançamento Pago/Recebido para Pendente.          */
+/* --------------------------------------------------------- */
+
+window.desfazerBaixaFinanceiro =
+async function(idx){
+
+    const lanc =
+        db.financeiro[idx];
+
+    if (!lanc) {
+        return;
+    }
+
+    if (
+        lanc.status !== 'Pago'
+        &&
+        lanc.status !== 'Recebido'
+    ) {
+        return;
+    }
+
+    const acao =
+        lanc.tipo === 'Receber'
+            ? 'recebimento'
+            : 'pagamento';
+
+    const confirmar =
+        confirm(
+            `Deseja desfazer o ${acao} deste lançamento?`
+        );
+
+    if (!confirmar) {
+        return;
+    }
+
+    lanc.status =
+        'Pendente';
+
+    lanc.dataPagamento =
+        null;
+
+    await save();
+
+    navigate(
+        'financeiro',
+        false
+    );
 };
 /* ========================================================= */
 /* 06. EXCLUIR LANÇAMENTO                                   */
@@ -1856,9 +2054,9 @@ window.renderTabelaConsultaFinanceiro = function() {
     <td>${status}</td>
     <td>
         <div style="display:flex; gap:6px; justify-content:center; flex-wrap:nowrap;">
-            <button class="btn-action" style="background:#16a34a; padding:6px 10px; font-size:12px;" onclick="darBaixaFinanceiroConsulta(${idx})">✔</button>
-            <button class="btn-action" style="background:#2563eb; padding:6px 10px; font-size:12px;" onclick="editarLancamentoConsulta(${idx})">✏</button>
-            <button class="btn-del" style="padding:6px 10px; font-size:12px;" onclick="excluirLancamentoConsulta(${idx})">X</button>
+            <button class="btn-action" style="background:#16a34a; padding:6px 10px; font-size:12px;background:#dcfce7 !important;color:#15803d !important;border:1px solid #bbf7d0 !important;box-shadow:none !important;" onclick="darBaixaFinanceiroConsulta(${idx})">✔</button>
+            <button class="btn-action" style="background:#2563eb; padding:6px 10px; font-size:12px;background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;" onclick="editarLancamentoConsulta(${idx})">✏</button>
+            <button class="btn-del" style="padding:6px 10px; font-size:12px;background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;" onclick="excluirLancamentoConsulta(${idx})">X</button>
         </div>
     </td>
 </tr>`;

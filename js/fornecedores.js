@@ -192,7 +192,7 @@ const fornecedoresTela =
                 font-size:28px;
                 font-weight:700;
             ">
-                Fornecedores
+                🏭 Fornecedores
             </div>
 
             <div style="
@@ -340,7 +340,7 @@ const fornecedoresTela =
                     padding:6px 10px;
                     font-size:12px;
                     background:#2563eb !important;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="visualizarFornecedor(${idx})">
 
                 👁 Visualizar
@@ -353,7 +353,7 @@ const fornecedoresTela =
                     padding:6px 10px;
                     font-size:12px;
                     background:#f59e0b;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="editarFornecedor(${idx})">
 
                 ✏ Editar
@@ -365,7 +365,7 @@ const fornecedoresTela =
                 style="
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="excluirFornecedor(${idx})">
 
                 🗑 Remover
@@ -1483,7 +1483,7 @@ function () {
                     background:#2563eb !important;
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="
                     visualizarFornecedor(
                         ${idx}
@@ -1500,7 +1500,7 @@ function () {
                     background:#f59e0b;
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="
                     editarFornecedor(
                         ${idx}
@@ -1516,7 +1516,7 @@ function () {
                 style="
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="
                     excluirFornecedor(
                         ${idx}

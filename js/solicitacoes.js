@@ -1,4 +1,4 @@
-console.log('Solicitações Dominus carregado - versão 20260916-ICON-FIX');
+console.log('Solicitações Dominus carregado - versão 20260916-1343');
 
 /* ========================================================= */
 /* DOMINUS ERP - SOLICITAÇÕES INTERNAS                       */
@@ -321,69 +321,15 @@ window.renderSolicitacoes = function(){
             .sol-btn-negado{ background:#dc2626; }
 
             .sol-tabela-wrap{
-                width:100%;
-                overflow-x:hidden;
+                overflow:auto;
                 border:1px solid #e2e8f0;
                 border-radius:13px;
             }
 
-            /*
-                HISTÓRICO RESPONSIVO
-                -----------------------------------------------------
-                A tabela ocupa somente a largura disponível da tela.
-                Antes havia min-width:1050px, o que obrigava arrastar
-                horizontalmente para alcançar o botão Excluir.
-            */
             .sol-tabela{
                 width:100%;
                 border-collapse:collapse;
-                table-layout:fixed;
-                min-width:0;
-            }
-
-            .sol-tabela th,
-            .sol-tabela td{
-                white-space:normal;
-                overflow-wrap:anywhere;
-                word-break:normal;
-            }
-
-            .sol-tabela th:nth-child(1),
-            .sol-tabela td:nth-child(1){ width:7%; }
-
-            .sol-tabela th:nth-child(2),
-            .sol-tabela td:nth-child(2){ width:12%; }
-
-            .sol-tabela th:nth-child(3),
-            .sol-tabela td:nth-child(3){ width:15%; }
-
-            .sol-tabela th:nth-child(4),
-            .sol-tabela td:nth-child(4){ width:6%; }
-
-            .sol-tabela th:nth-child(5),
-            .sol-tabela td:nth-child(5){ width:10%; }
-
-            .sol-tabela th:nth-child(6),
-            .sol-tabela td:nth-child(6){ width:9%; }
-
-            .sol-tabela th:nth-child(7),
-            .sol-tabela td:nth-child(7){ width:12%; }
-
-            .sol-tabela th:nth-child(8),
-            .sol-tabela td:nth-child(8){ width:11%; }
-
-            .sol-tabela th:nth-child(9),
-            .sol-tabela td:nth-child(9){ width:18%; }
-
-            .sol-tabela td:nth-child(9) > div{
-                flex-wrap:nowrap !important;
-                align-items:center;
-            }
-
-            .sol-tabela td:nth-child(9) button{
-                padding:6px 7px !important;
-                font-size:9px !important;
-                white-space:nowrap;
+                min-width:1050px;
             }
 
             .sol-tabela th{
@@ -424,7 +370,7 @@ window.renderSolicitacoes = function(){
             ">
                 <div>
                     <h1 style="margin:0;font-size:28px;">
-                        📦 Solicitações
+                        📩 Solicitações
                     </h1>
 
                     <div style="margin-top:6px;color:#64748b;font-size:12px;">
@@ -1537,14 +1483,7 @@ window.atualizarNotificacaoSolicitacoes = function(){
         return;
     }
 
-    /*
-        IMPORTANTE: o CSS inicial do próprio componente possui
-        #solicitacoes-notificacao-root { display:none; }.
-        Portanto, usar display='' NÃO vence essa regra e o botão
-        continuava invisível mesmo com solicitações pendentes.
-        Quando houver pendência, forçamos explicitamente display:block.
-    */
-    root.style.display = 'block';
+    root.style.display = '';
 
     const badge = document.getElementById('solicitacoes-notificacao-badge');
     const painel = document.getElementById('solicitacoes-notificacao-painel');

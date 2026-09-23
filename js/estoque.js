@@ -300,7 +300,7 @@ window.renderEstoque = function () {
                 font-size:28px;
                 font-weight:700;
             ">
-                Controle de Estoque
+                📦 Controle de Estoque
             </div>
 
             <div style="
@@ -457,7 +457,7 @@ window.renderEstoque = function () {
                     padding:6px 10px;
                     font-size:12px;
                     background:#2563eb !important;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="visualizarProduto(${idx})">
 
                 👁 Visualizar
@@ -470,7 +470,7 @@ window.renderEstoque = function () {
                     background:#f59e0b;
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="editarProduto(${idx})">
 
                 ✏ Editar
@@ -482,7 +482,7 @@ window.renderEstoque = function () {
                 style="
                     padding:6px 10px;
                     font-size:12px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="excluirProduto(${idx})">
 
                 🗑 Excluir
@@ -1498,7 +1498,7 @@ window.filtrarProdutosConsulta = function () {
                     padding:5px 8px;
                     font-size:11px;
                     background:#2563eb !important;
-                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                 onclick="visualizarProduto(${idx})">
 
                 👁 Visualizar
@@ -1511,7 +1511,7 @@ window.filtrarProdutosConsulta = function () {
                     background:#f59e0b;
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="editarProduto(${idx})">
 
                 ✏ Editar
@@ -1523,7 +1523,7 @@ window.filtrarProdutosConsulta = function () {
                 style="
                     padding:5px 8px;
                     font-size:11px;
-                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                 onclick="excluirProduto(${idx})">
 
                 🗑 Excluir
@@ -1946,7 +1946,7 @@ function renderTabelaXMLImportados(
                                                     padding:6px 9px;
                                                     font-size:11px;
                                                     background:#2563eb;
-                                                "
+background:#eff6ff !important;color:#2563eb !important;border:1px solid #bfdbfe !important;box-shadow:none !important;"
                                                 onclick="visualizarXMLImportado(${indiceReal})">
 
                                                 👁
@@ -1959,7 +1959,7 @@ function renderTabelaXMLImportados(
                                                     padding:6px 9px;
                                                     font-size:11px;
                                                     background:#f59e0b;
-                                                "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                                                 onclick="editarXMLImportado(${indiceReal})">
 
                                                 ✏
@@ -1971,7 +1971,7 @@ function renderTabelaXMLImportados(
                                                 style="
                                                     padding:6px 9px;
                                                     font-size:11px;
-                                                "
+background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                                                 onclick="removerXMLImportado(${indiceReal})">
 
                                                 🗑

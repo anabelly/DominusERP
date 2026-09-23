@@ -50,126 +50,95 @@ window.renderBackup = function () {
     return `
 
 <div style="
-display:flex;
-gap:22px;
-flex-wrap:wrap;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    max-width:980px;
+    margin:0 auto;
+    color:#111827;
 ">
 
-    <!-- BACKUP -->
-
-    <div class="content-card" style="
-        flex:1;
-        min-width:360px;
-        padding:30px;
+    <!-- CABEÇALHO -->
+    <div style="
+        background:#ffffff;
+        border:1px solid #e5e7eb;
+        border-radius:18px;
+        padding:24px 26px;
+        position:relative;
+        overflow:hidden;
     ">
 
         <div style="
-            font-size:32px;
-            font-weight:800;
-            margin-bottom:30px;
-        ">
-
-            Backup & Restauração
-
-        </div>
+            position:absolute;
+            left:0;
+            top:0;
+            bottom:0;
+            width:5px;
+            background:#ef233c;
+        "></div>
 
         <div style="
-            display:grid;
-            grid-template-columns:
-                repeat(auto-fit,minmax(320px,1fr));
-            gap:22px;
+            display:flex;
+            align-items:center;
+            gap:20px;
         ">
 
-            <!-- CARD BACKUP -->
-
-            <div class="content-card" style="
-                padding:26px;
+            <div style="
+                width:100px;
+                min-width:100px;
+                height:80px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                padding:10px;
+                border-radius:14px;
+                background:#fffafb;
+                border:1px solid #f8d7dd;
             ">
 
-                <div style="
-                    font-size:16px;
-                    font-weight:700;
-                    margin-bottom:14px;
-                ">
-
-                    📤 Fazer Backup
-
-                </div>
-
-                <div style="
-                    color:#6b7280;
-                    margin-bottom:22px;
-                    line-height:1.6;
-                ">
-
-                    Salve todos os dados do sistema
-                    em um arquivo seguro.
-
-                </div>
-
-                <button
-                    class="btn-action"
+                <img
+                    src="dominus.png"
+                    alt="Dominus ERP"
                     style="
-                        background:#ef4444;
+                        width:100%;
+                        max-width:88px;
+                        max-height:66px;
+                        object-fit:contain;
+                        display:block;
                     "
-                    onclick="baixarBackup()">
-
-                    Baixar Backup
-
-                </button>
+                >
 
             </div>
 
-            <!-- CARD RESTAURAÇÃO -->
-
-            <div class="content-card" style="
-                padding:26px;
-            ">
+            <div>
 
                 <div style="
-                    font-size:16px;
-                    font-weight:700;
-                    margin-bottom:14px;
+                    color:#ef233c;
+                    font-size:11px;
+                    font-weight:900;
+                    text-transform:uppercase;
+                    letter-spacing:.1em;
+                    margin-bottom:6px;
                 ">
-
-                    📥 Restaurar Backup
-
+                    Segurança
                 </div>
 
+                <h1 style="
+                    margin:0;
+                    font-size:28px;
+                    font-weight:900;
+                    color:#111827;
+                ">
+                    Backup & Restauração
+                </h1>
+
                 <div style="
+                    margin-top:7px;
                     color:#6b7280;
-                    margin-bottom:14px;
-                    line-height:1.6;
+                    font-size:13px;
                 ">
-
-                    Selecione um arquivo
-                    de backup para restaurar
-                    os dados.
-
+                    Salve ou restaure os dados do Dominus ERP.
                 </div>
-
-                <input
-                    type="file"
-                    id="backup-file"
-                    accept=".json"
-                    style="
-                        width:100%;
-                        margin-bottom:18px;
-                        padding:12px;
-                        border:1px solid #d1d5db;
-                        border-radius:10px;
-                    ">
-
-                <button
-                    class="btn-action"
-                    style="
-                        background:#f59e0b;
-                    "
-                    onclick="restaurarBackup()">
-
-                    Restaurar Dados
-
-                </button>
 
             </div>
 
@@ -177,7 +146,285 @@ flex-wrap:wrap;
 
     </div>
 
+
+    <!-- AÇÕES -->
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+        gap:16px;
+    ">
+
+        <!-- BAIXAR BACKUP -->
+        <div style="
+            background:#ffffff;
+            border:1px solid #e5e7eb;
+            border-radius:16px;
+            padding:24px;
+            display:flex;
+            flex-direction:column;
+        ">
+
+            <div style="
+                font-size:17px;
+                font-weight:900;
+                color:#111827;
+            ">
+                💾 Baixar Backup
+            </div>
+
+            <div style="
+                margin-top:7px;
+                color:#6b7280;
+                font-size:12px;
+                line-height:1.6;
+            ">
+                Crie uma cópia de segurança com os dados atuais do Dominus ERP.
+                Guarde o arquivo em um local seguro para poder recuperar suas
+                informações sempre que necessário.
+            </div>
+
+            <div style="flex:1; min-height:58px;"></div>
+
+            <button
+                class="btn-action"
+                onclick="baixarBackup()"
+                style="
+                    margin-top:auto;
+                    width:100%;
+                    background:#2563eb;
+                    color:#ffffff;
+                    border:1px solid #2563eb;
+                    padding:12px 18px;
+                    border-radius:10px;
+                    font-size:13px;
+                    font-weight:900;
+                    cursor:pointer;
+                    box-shadow:0 5px 14px rgba(37,99,235,.18);
+                "
+            >
+                ⬇ Baixar Backup
+            </button>
+
+        </div>
+
+
+        <!-- RESTAURAR BACKUP -->
+        <div style="
+            background:#ffffff;
+            border:1px solid #e5e7eb;
+            border-radius:16px;
+            padding:24px;
+            display:flex;
+            flex-direction:column;
+        ">
+
+            <div style="
+                font-size:17px;
+                font-weight:900;
+                color:#111827;
+            ">
+                📤 Restaurar Backup
+            </div>
+
+            <div style="
+                margin-top:7px;
+                color:#6b7280;
+                font-size:12px;
+                line-height:1.6;
+            ">
+                Recupere informações salvas anteriormente selecionando um arquivo
+                de backup do Dominus ERP. A restauração substituirá os dados
+                atuais pelos dados presentes no arquivo escolhido.
+            </div>
+
+            <input
+                type="file"
+                id="backup-file"
+                accept=".json"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    margin-top:18px;
+                    padding:10px 12px;
+                    border:1px solid #d1d5db;
+                    border-radius:10px;
+                    background:#ffffff;
+                    color:#374151;
+                    font-size:12px;
+                "
+            >
+
+            <button
+                class="btn-action"
+                onclick="restaurarBackup()"
+                style="
+                    margin-top:auto;
+                    width:100%;
+                    background:#ef233c;
+                    color:#ffffff;
+                    border:1px solid #ef233c;
+                    padding:12px 18px;
+                    border-radius:10px;
+                    font-size:13px;
+                    font-weight:900;
+                    cursor:pointer;
+                    box-shadow:0 5px 14px rgba(239,35,60,.18);
+                "
+            >
+                ⬆ Restaurar Backup
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- BOAS PRÁTICAS -->
+    <div style="
+        background:#ffffff;
+        border:1px solid #e5e7eb;
+        border-radius:16px;
+        padding:22px 24px;
+    ">
+
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:10px;
+            margin-bottom:16px;
+        ">
+
+            <div style="
+                width:4px;
+                height:20px;
+                border-radius:999px;
+                background:#ef233c;
+            "></div>
+
+            <h2 style="
+                margin:0;
+                font-size:18px;
+                font-weight:900;
+                color:#111827;
+            ">
+                Boas práticas
+            </h2>
+
+        </div>
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+            gap:12px;
+        ">
+
+            <div style="
+                padding:15px;
+                border-radius:12px;
+                background:#fafafa;
+                border:1px solid #eceff3;
+            ">
+                <div style="
+                    color:#ef233c;
+                    font-size:10px;
+                    font-weight:900;
+                ">
+                    01
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    font-size:13px;
+                    font-weight:800;
+                    color:#111827;
+                ">
+                    Faça backups periódicos
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    color:#6b7280;
+                    font-size:11px;
+                    line-height:1.5;
+                ">
+                    Gere uma nova cópia sempre que houver alterações importantes.
+                </div>
+            </div>
+
+
+            <div style="
+                padding:15px;
+                border-radius:12px;
+                background:#fafafa;
+                border:1px solid #eceff3;
+            ">
+                <div style="
+                    color:#ef233c;
+                    font-size:10px;
+                    font-weight:900;
+                ">
+                    02
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    font-size:13px;
+                    font-weight:800;
+                    color:#111827;
+                ">
+                    Guarde em local seguro
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    color:#6b7280;
+                    font-size:11px;
+                    line-height:1.5;
+                ">
+                    Mantenha uma cópia fora do computador principal.
+                </div>
+            </div>
+
+
+            <div style="
+                padding:15px;
+                border-radius:12px;
+                background:#fafafa;
+                border:1px solid #eceff3;
+            ">
+                <div style="
+                    color:#ef233c;
+                    font-size:10px;
+                    font-weight:900;
+                ">
+                    03
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    font-size:13px;
+                    font-weight:800;
+                    color:#111827;
+                ">
+                    Confira antes de restaurar
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    color:#6b7280;
+                    font-size:11px;
+                    line-height:1.5;
+                ">
+                    A restauração substitui os dados atuais do sistema.
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
 </div>
+
 `;
 };
 

@@ -331,14 +331,14 @@ window.renderCentroCustos = function () {
 
                         <button
                             class="btn-action"
-                            style="background:#2563eb;"
+                            style="background:#2563eb;background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                             onclick="abrirModalCombustivelCC('${item.id}')">
                             Editar
                         </button>
 
                         <button
                             class="btn-action"
-                            style="background:#dc2626;"
+                            style="background:#dc2626;background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                             onclick="excluirCombustivelCC('${item.id}')">
                             Excluir
                         </button>
@@ -405,14 +405,14 @@ window.renderCentroCustos = function () {
 
                             <button
                                 class="btn-action"
-                                style="background:#2563eb;"
+                                style="background:#2563eb;background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                                 onclick="abrirModalVeiculoCC('${item.id}')">
                                 Editar
                             </button>
 
                             <button
                                 class="btn-action"
-                                style="background:#dc2626;"
+                                style="background:#dc2626;background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                                 onclick="excluirVeiculoCC('${item.id}')">
                                 Excluir
                             </button>
@@ -464,14 +464,14 @@ window.renderCentroCustos = function () {
 
                         <button
                             class="btn-action"
-                            style="background:#2563eb;"
+                            style="background:#2563eb;background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                             onclick="abrirModalEquipamentoCC('${item.id}')">
                             Editar
                         </button>
 
                         <button
                             class="btn-action"
-                            style="background:#dc2626;"
+                            style="background:#dc2626;background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;"
                             onclick="excluirEquipamentoCC('${item.id}')">
                             Excluir
                         </button>
@@ -564,7 +564,7 @@ window.renderCentroCustos = function () {
 
                 <button
                     class="btn-action"
-                    style="background:#2563eb;"
+                    style="background:#2563eb;background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                     onclick="abrirModalEnderecoCC()">
                     Editar
                 </button>
@@ -621,7 +621,7 @@ window.renderCentroCustos = function () {
 
                 <button
                     class="btn-action"
-                    style="background:#2563eb;"
+                    style="background:#2563eb;background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                     onclick="abrirModalMaoDeObraCC()">
                     Editar
                 </button>
@@ -865,7 +865,7 @@ window.renderCentroCustos = function () {
 
             <button
                 class="btn-action"
-                style="background:#2563eb;"
+                style="background:#2563eb;background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                 onclick="abrirModalParametrosCC()">
                 Editar
             </button>

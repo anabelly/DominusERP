@@ -356,7 +356,7 @@ function (){
                                             background:#f59e0b;
                                             padding:7px 10px;
                                             font-size:11px;
-                                        "
+background:#fef3c7 !important;color:#b45309 !important;border:1px solid #fde68a !important;box-shadow:none !important;"
                                         onclick="editarUsuarioSistema('${usuario.id}')"
                                     >
                                         ✏ Editar
@@ -372,7 +372,7 @@ function (){
                                         "
                                         onclick="excluirUsuarioSistema('${usuario.id}')"
                                         ${ehAtual ? 'disabled' : ''}
-                                    >
+                                     style="background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fecaca !important;box-shadow:none !important;">
                                         Excluir
                                     </button>
 

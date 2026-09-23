@@ -9,7 +9,16 @@ function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function dataMaisDias(dias){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+dias);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function dataBR(v){if(!v)return '-';const p=String(v).split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:v;}
 function nomeCliente(c){return c?.nome||c?.fantasia||c?.razaoSocial||c?.nomeCompleto||'';}
-function btn(cor){return `border:0;background:${cor};color:#fff;padding:8px 12px;border-radius:9px;font-size:10px;font-weight:850;cursor:pointer;box-shadow:0 4px 10px rgba(15,23,42,.12)`;}
+function btn(cor){
+    const estilos={
+        '#16a34a':{bg:'#dcfce7',txt:'#15803d',borda:'#bbf7d0'},
+        '#f59e0b':{bg:'#fef3c7',txt:'#b45309',borda:'#fde68a'},
+        '#dc2626':{bg:'#fee2e2',txt:'#dc2626',borda:'#fecaca'},
+        '#2563eb':{bg:'#eff6ff',txt:'#2563eb',borda:'#bfdbfe'}
+    };
+    const e=estilos[cor]||{bg:'#f8fafc',txt:'#475569',borda:'#e2e8f0'};
+    return `border:1px solid ${e.borda};background:${e.bg};color:${e.txt};padding:8px 12px;border-radius:9px;font-size:10px;font-weight:850;cursor:pointer;box-shadow:none`;
+}
 window.renderPosVenda=function(){
     garantir();
     const l=[...window.db.posVendas].sort((a,b)=>String(a.proximoContato||a.dataContato||'9999').localeCompare(String(b.proximoContato||b.dataContato||'9999')));
@@ -41,7 +50,7 @@ ${l.map(x=>{
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
           ${!realizado?`<button type="button" onclick="realizarContatoPosVenda('${esc(x.id)}')" style="${btn('#16a34a')}">✓ Contato realizado</button>`:''}
-          <button type="button" onclick="editarPosVenda('${esc(x.id)}')" style="${btn('#2563eb')}">✎ Editar</button>
+          <button type="button" onclick="editarPosVenda('${esc(x.id)}')" style="${btn('#f59e0b')}">✎ Editar</button>
           <button type="button" onclick="excluirPosVenda('${esc(x.id)}')" style="${btn('#dc2626')}">🗑 Excluir</button>
         </div>
       </div>
