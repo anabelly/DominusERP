@@ -314,21 +314,33 @@ window.renderEstoque = function () {
 
         <div style="
             display:flex;
-            gap:10px;
+            gap:8px;
             flex-wrap:wrap;
+            justify-content:flex-end;
+            margin-left:auto;
         ">
 
             <button
                 class="btn-action"
+                style="padding:10px 15px;font-size:12px;white-space:nowrap;"
                 onclick="abrirConsultaProduto()">
 
-                🔍 Consultar Produto
+                🔍 Consultar
 
             </button>
 
             <button
                 class="btn-action"
-                style="background:#2563eb;"
+                style="padding:10px 15px;font-size:12px;white-space:nowrap;background:#475569;"
+                onclick="abrirGerenciarTiposProduto()">
+
+                🗂️ Tipos
+
+            </button>
+
+            <button
+                class="btn-action"
+                style="padding:10px 15px;font-size:12px;white-space:nowrap;background:#2563eb;"
                 onclick="importarXML()">
 
                 📄 Importar XML
@@ -337,7 +349,7 @@ window.renderEstoque = function () {
 
             <button
                 class="btn-action"
-                style="background:#7c3aed;"
+                style="padding:10px 15px;font-size:12px;white-space:nowrap;background:#7c3aed;"
                 onclick="abrirXMLImportados()">
 
                 🧾 XML Importados
@@ -346,7 +358,7 @@ window.renderEstoque = function () {
 
             <button
                 class="btn-action"
-                style="background:#16a34a;"
+                style="padding:10px 15px;font-size:12px;white-space:nowrap;background:#16a34a;"
                 onclick="abrirNovoProduto()">
 
                 + Novo Produto
@@ -1118,7 +1130,7 @@ window.editarProduto = function (idx) {
     Abre um modal com filtros por:
     - período
     - fornecedor
-    - tipo
+    - tipo de produto
     - descrição
 */
 
@@ -1219,7 +1231,7 @@ window.abrirConsultaProduto = function () {
         <div>
 
             <label>
-                Tipo
+                Tipo de produto
             </label>
 
             <select id="filtro-tipo">
@@ -2017,6 +2029,59 @@ function (
         return;
     }
 
+    // A lista pertence ao histórico da nota, não ao estoque atual.
+    // Os dados do estoque podem mudar depois da importação.
+    const materiais = Array.isArray(item.itens)
+        ? item.itens
+        : [];
+
+    const formatarQuantidadeXML = valor =>
+        Number(valor || 0).toLocaleString('pt-BR', {
+            maximumFractionDigits: 4
+        });
+
+    const linhasMateriais = materiais.map((material, indiceMaterial) => {
+        const quantidade = Number(material.quantidade || 0);
+        const valorUnitario = Number(material.valorUnitario || 0);
+        const valorTotal = Number(material.valorTotal || 0);
+
+        return `
+            <tr>
+                <td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center;">${indiceMaterial + 1}</td>
+                <td style="padding:10px;border-bottom:1px solid #e5e7eb;">${escaparHTMLXML(material.codigo || '-')}</td>
+                <td style="padding:10px;border-bottom:1px solid #e5e7eb;white-space:normal;min-width:230px;">${escaparHTMLXML(material.descricao || '-')}</td>
+                <td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatarQuantidadeXML(quantidade)}</td>
+                <td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center;">${escaparHTMLXML(material.unidade || '-')}</td>
+                <td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;">${formatarMoeda(valorUnitario)}</td>
+                <td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;">${formatarMoeda(valorTotal)}</td>
+            </tr>`;
+    }).join('');
+
+    const tabelaMateriais = materiais.length
+        ? `
+            <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:10px;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                    <thead style="background:#f8fafc;color:#334155;">
+                        <tr>
+                            <th style="padding:11px 10px;text-align:center;">#</th>
+                            <th style="padding:11px 10px;text-align:left;">Código XML</th>
+                            <th style="padding:11px 10px;text-align:left;">Material / Descrição</th>
+                            <th style="padding:11px 10px;text-align:right;">Quantidade</th>
+                            <th style="padding:11px 10px;text-align:center;">Un.</th>
+                            <th style="padding:11px 10px;text-align:right;">Valor unitário</th>
+                            <th style="padding:11px 10px;text-align:right;">Valor total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${linhasMateriais}</tbody>
+                </table>
+            </div>`
+        : `
+            <div style="padding:14px;border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:10px;line-height:1.5;font-size:12px;">
+                A lista de materiais não foi armazenada na importação desta nota.
+                Isso pode ocorrer com XMLs importados antes desta atualização.
+                Para recuperar os itens dessa nota, é necessário consultar seu arquivo XML original.
+            </div>`;
+
     const html = `
 
 <div style="
@@ -2135,6 +2200,13 @@ function (
                     item.importadoEm
                 )
             )}">
+    </div>
+
+    <div style="grid-column:1 / -1;margin-top:10px;">
+        <h3 style="margin:0 0 12px;color:#ff1f2d;font-size:17px;">
+            📦 Materiais da nota fiscal (${materiais.length || Number(item.quantidadeItens || 0)})
+        </h3>
+        ${tabelaMateriais}
     </div>
 
 </div>
@@ -3333,6 +3405,12 @@ function obterItensXML(xml, fornecedorNome) {
 
                 indiceXML:
                     indice,
+
+                codigoXML:
+                    textoTagXML(prodXML, 'cProd'),
+
+                unidadeXML:
+                    textoTagXML(prodXML, 'uCom'),
 
                 descricaoOriginal:
                     descricao,
@@ -4845,6 +4923,18 @@ function registrarHistoricoImportacaoXML(
         quantidadeItens:
             sessao.itens.length,
 
+        // Guarda uma fotografia dos materiais da NF para consultas futuras.
+        // Não modifica os produtos cadastrados nem as quantidades em estoque.
+        itens:
+            sessao.itens.map(produto => ({
+                codigo: String(produto.codigoXML || ''),
+                descricao: String(produto.descricaoOriginal || produto.descricao || ''),
+                quantidade: Number(produto.quantidade || 0),
+                unidade: String(produto.unidadeXML || ''),
+                valorUnitario: Number(produto.valor || 0),
+                valorTotal: Number(produto.valorTotal || 0)
+            })),
+
         quantidadeDuplicatas:
             sessao.duplicatas.length,
 
@@ -4981,6 +5071,161 @@ async function () {
     }
 };
 
+
+/* ========================================================= */
+/* 11.1 GERENCIAR TIPOS DE PRODUTO - CADASTRO E EDIÇÃO      */
+/* ========================================================= */
+/*
+    O banco atual guarda os tipos como strings no array
+    db.tiposProduto e os produtos vinculam-se pelo campo tipo.
+    Ao editar uma categoria, todos os produtos associados são
+    atualizados para que a consulta continue encontrando-os.
+    Não excluímos tipos aqui para não deixar vínculos órfãos.
+*/
+
+function escaparHTMLGerenciarTipo(valor) {
+    return String(valor ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function chaveGerenciarTipo(valor) {
+    return String(valor || '')
+        .trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('pt-BR');
+}
+
+window.abrirGerenciarTiposProduto = function () {
+    if (!Array.isArray(db.tiposProduto)) db.tiposProduto = [];
+    if (!Array.isArray(db.produtos)) db.produtos = [];
+    ordenarTiposProdutoAlfabeticamente();
+
+    const linhas = db.tiposProduto.map((tipo, indice) => {
+        const quantidade = db.produtos.filter(p =>
+            chaveGerenciarTipo(p.tipo) === chaveGerenciarTipo(tipo)
+        ).length;
+        return `
+            <tr>
+                <td style="padding:12px;border-bottom:1px solid #e5e7eb;">
+                    ${escaparHTMLGerenciarTipo(tipo)}
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:center;">
+                    ${quantidade}
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #e5e7eb;text-align:right;">
+                    <button type="button" class="btn-action" style="background:#2563eb;"
+                        onclick="editarTipoProdutoGerenciado(${indice})">✏️ Editar</button>
+                </td>
+            </tr>`;
+    }).join('');
+
+    configModal({
+        title: 'Gerenciar Tipos de Produto',
+        body: `
+            <div style="display:flex;flex-direction:column;gap:16px;">
+                <div style="color:#64748b;font-size:13px;">
+                    Cadastre novos tipos e edite os existentes. A edição atualiza
+                    automaticamente os produtos vinculados.
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:220px;">
+                        <label for="gerenciar-tipo-novo">Novo tipo de produto</label>
+                        <input id="gerenciar-tipo-novo" maxlength="100"
+                            placeholder="Ex.: Lonas, Adesivos, Placas PVC">
+                    </div>
+                    <button type="button" class="btn-action" style="background:#16a34a;"
+                        onclick="cadastrarTipoProdutoGerenciado()">+ Cadastrar tipo</button>
+                </div>
+                <div style="overflow-x:auto;max-height:410px;overflow-y:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr>
+                            <th style="text-align:left;">Tipo de produto</th>
+                            <th style="text-align:center;">Produtos</th>
+                            <th style="text-align:right;">Ações</th>
+                        </tr></thead>
+                        <tbody>${linhas || `<tr><td colspan="3" style="padding:20px;text-align:center;color:#64748b;">Nenhum tipo cadastrado.</td></tr>`}</tbody>
+                    </table>
+                </div>
+            </div>`,
+        confirmText: 'Fechar',
+        onConfirm: () => closeModal()
+    });
+};
+
+window.cadastrarTipoProdutoGerenciado = async function () {
+    const campo = document.getElementById('gerenciar-tipo-novo');
+    const nome = String(campo?.value || '').trim();
+    if (!nome) return alert('Informe o nome do tipo de produto.');
+    if (tipoProdutoJaExiste(nome)) return alert('Esse tipo de produto já está cadastrado.');
+
+    db.tiposProduto.push(nome);
+    ordenarTiposProdutoAlfabeticamente();
+    try {
+        await save();
+        abrirGerenciarTiposProduto();
+    } catch (erro) {
+        db.tiposProduto = db.tiposProduto.filter(x => x !== nome);
+        console.error('Erro ao salvar tipo de produto:', erro);
+        alert('Não foi possível salvar. Tente novamente.');
+    }
+};
+
+window.editarTipoProdutoGerenciado = function (indice) {
+    ordenarTiposProdutoAlfabeticamente();
+    const tipoAntigo = db.tiposProduto[indice];
+    if (typeof tipoAntigo !== 'string') return abrirGerenciarTiposProduto();
+
+    const relacionados = (db.produtos || []).filter(p =>
+        chaveGerenciarTipo(p.tipo) === chaveGerenciarTipo(tipoAntigo)
+    ).length;
+
+    configModal({
+        title: 'Editar Tipo de Produto',
+        body: `
+            <label for="tipo-produto-edicao">Nome do tipo</label>
+            <input id="tipo-produto-edicao" maxlength="100"
+                value="${escaparHTMLGerenciarTipo(tipoAntigo)}">
+            <p style="margin-top:12px;color:#64748b;font-size:12px;">
+                ${relacionados} produto(s) vinculado(s) serão atualizados com o novo nome.
+            </p>`,
+        confirmText: 'Salvar alteração',
+        onConfirm: async () => {
+            const novoNome = String(document.getElementById('tipo-produto-edicao')?.value || '').trim();
+            if (!novoNome) return alert('O nome do tipo não pode ficar vazio.');
+            if (chaveGerenciarTipo(novoNome) !== chaveGerenciarTipo(tipoAntigo)
+                && tipoProdutoJaExiste(novoNome)) {
+                return alert('Já existe outro tipo com esse nome.');
+            }
+            const posicao = db.tiposProduto.findIndex(x => x === tipoAntigo);
+            if (posicao < 0) return alert('Este tipo não foi encontrado. Abra o gerenciamento novamente.');
+            const alterados = [];
+            db.produtos.forEach(produto => {
+                if (chaveGerenciarTipo(produto.tipo) === chaveGerenciarTipo(tipoAntigo)) {
+                    alterados.push([produto, produto.tipo]);
+                    produto.tipo = novoNome;
+                }
+            });
+            db.tiposProduto[posicao] = novoNome;
+            ordenarTiposProdutoAlfabeticamente();
+            try {
+                await save();
+                abrirGerenciarTiposProduto();
+            } catch (erro) {
+                db.tiposProduto = db.tiposProduto.filter(x => x !== novoNome);
+                db.tiposProduto.push(tipoAntigo);
+                ordenarTiposProdutoAlfabeticamente();
+                alterados.forEach(([produto, tipo]) => { produto.tipo = tipo; });
+                console.error('Erro ao atualizar tipo de produto:', erro);
+                alert('A alteração não pôde ser salva.');
+            }
+        }
+    });
+};
 
 /* ========================================================= */
 /* 12. REGISTRAR PÁGINA NO SISTEMA                          */

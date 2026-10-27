@@ -203,8 +203,8 @@ function minutosEntrePonto(inicio, fim) {
 function regrasPadraoPonto() {
     return {
         divisorMensal: 220,
-        toleranciaMarcacaoMin: 5,
-        toleranciaDiaMin: 10,
+        toleranciaMarcacaoMin: 0,
+        toleranciaDiaMin: 0,
 
         extraSemanaPrimeirosMin: 120,
         extraSemanaPrimeirosPercentual: 50,
@@ -245,6 +245,14 @@ function garantirRegrasPonto(func) {
             func.regrasPonto[chave] = padrao[chave];
         }
     });
+
+    /*
+        REGRA FIXA DA EMPRESA:
+        qualquer minuto positivo ou negativo entra no saldo.
+        Não aplicar tolerância automática do relógio de ponto.
+    */
+    func.regrasPonto.toleranciaMarcacaoMin = 0;
+    func.regrasPonto.toleranciaDiaMin = 0;
 
     return func.regrasPonto;
 }
@@ -2422,9 +2430,10 @@ window.abrirRegrasPontoFuncionario = function (idx) {
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;">
 
             <div style="grid-column:1 / -1;padding:12px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#854d0e;font-size:12px;line-height:1.5;">
-                Os valores abaixo começam com os mínimos legais e com a mesma distribuição usada na planilha-base enviada:
-                dias úteis com as primeiras 2h extras a 50%, excedente a 100%; sábado com as primeiras 4h a 50%, excedente a 100%;
-                domingo e feriado a 100%. Convenção ou acordo coletivo pode prever regra mais favorável, por isso estes campos são editáveis.
+                Regra da empresa: o saldo é apurado desde o primeiro minuto, sem tolerância automática.
+                Assim, 1 minuto além da jornada entra como hora extra e 1 minuto abaixo da jornada entra como saldo negativo/desconto.
+                A distribuição 50% / 100% segue a planilha-base: dias úteis com as primeiras 2h extras a 50% e excedente a 100%;
+                sábado com as primeiras 4h a 50% e excedente a 100%; domingo e feriado a 100% quando não houver folga compensatória.
             </div>
 
             <div>
@@ -2448,13 +2457,13 @@ window.abrirRegrasPontoFuncionario = function (idx) {
             </div>
 
             <div>
-                <label>Tolerância por marcação (min)</label>
-                <input id="reg-tolerancia-marcacao" type="number" min="0" step="1" value="${numeroPonto(r.toleranciaMarcacaoMin)}">
+                <label>Tolerância por marcação (fixa)</label>
+                <input id="reg-tolerancia-marcacao" type="number" value="0" disabled>
             </div>
 
             <div>
-                <label>Tolerância máxima no dia (min)</label>
-                <input id="reg-tolerancia-dia" type="number" min="0" step="1" value="${numeroPonto(r.toleranciaDiaMin)}">
+                <label>Tolerância máxima no dia (fixa)</label>
+                <input id="reg-tolerancia-dia" type="number" value="0" disabled>
             </div>
 
             <div>
@@ -2517,8 +2526,8 @@ window.abrirRegrasPontoFuncionario = function (idx) {
         onConfirm: async function () {
             const novo = {
                 divisorMensal: Math.max(1, numeroPonto(document.getElementById('reg-divisor').value)),
-                toleranciaMarcacaoMin: Math.max(0, numeroPonto(document.getElementById('reg-tolerancia-marcacao').value)),
-                toleranciaDiaMin: Math.max(0, numeroPonto(document.getElementById('reg-tolerancia-dia').value)),
+                toleranciaMarcacaoMin: 0,
+                toleranciaDiaMin: 0,
 
                 extraSemanaPrimeirosMin: Math.max(0, numeroPonto(document.getElementById('reg-semana-faixa').value)),
                 extraSemanaPrimeirosPercentual: Math.max(0, numeroPonto(document.getElementById('reg-semana-primeiro-pct').value)),
@@ -2655,6 +2664,40 @@ function minutosTrabalhadosENoturnosPonto(reg, exigirQuatroMarcacoes, regras) {
           o dia permanece sem atraso e sem hora extra.
     */
     if (exigirQuatroMarcacoes) {
+        /*
+            JORNADA CONTÍNUA SEM MARCAÇÃO DE ALMOÇO
+
+            Quando Entrada e Saída estiverem preenchidas e AMBAS as
+            marcações do almoço estiverem vazias, contabilizamos todo o
+            intervalo como tempo trabalhado. Não descontamos o almoço
+            presumido; o saldo positivo diante da jornada esperada entra
+            nas horas extras pelo cálculo diário já existente.
+
+            Exemplo (jornada padrão 07:45–12:00 / 13:30–18:00):
+            07:45 até 18:00 sem pausa = 10h15 trabalhadas;
+            jornada esperada = 8h45; saldo = 1h30 extra.
+
+            Se apenas UMA marcação do almoço faltar, permanece a regra
+            original de períodos independentes e marcações incompletas.
+        */
+        if (
+            entrada !== null &&
+            saida !== null &&
+            almocoSaida === null &&
+            almocoVolta === null
+        ) {
+            const periodoContinuo = minutosEntrePonto(entrada, saida);
+            if (periodoContinuo !== null && periodoContinuo <= 1440) {
+                return {
+                    completo: true,
+                    vazio: false,
+                    minutos: Math.max(0, periodoContinuo),
+                    noturnos: Math.max(0, minutosNoturnosIntervaloPonto(entrada, saida, regras)),
+                    marcacoesIncompletas: false
+                };
+            }
+        }
+
         let manha = 0;
         let tarde = 0;
         let noturnos = 0;
@@ -2699,9 +2742,21 @@ function minutosTrabalhadosENoturnosPonto(reg, exigirQuatroMarcacoes, regras) {
     }
 
     /*
-        Finais de semana e feriados não possuem carga normal obrigatória.
-        Por isso, só há cálculo quando existem marcações suficientes para
-        identificar o período efetivamente trabalhado.
+        FINAIS DE SEMANA E FERIADOS
+
+        A planilha-base apura os períodos de trabalho de forma independente.
+        Isso é importante porque, em sábado/domingo/feriado, o funcionário
+        pode trabalhar somente pela manhã ou somente à tarde.
+
+        Exemplos válidos:
+        - Entrada + Saída Almoço;
+        - Volta Almoço + Saída;
+        - os quatro horários;
+        - Entrada + Saída, quando for uma marcação contínua sem intervalo.
+
+        Antes, esta parte exigia obrigatoriamente o primeiro e o ÚLTIMO
+        campo (Entrada + Saída). Assim um sábado trabalhado somente pela
+        manhã ficava com 0 hora extra mesmo com as marcações preenchidas.
     */
     if (!possuiAlguma) {
         return {
@@ -2712,32 +2767,188 @@ function minutosTrabalhadosENoturnosPonto(reg, exigirQuatroMarcacoes, regras) {
         };
     }
 
-    if (entrada === null || saida === null) {
-        return {
-            completo: false,
-            vazio: false,
-            minutos: 0,
-            noturnos: 0
-        };
+    let total = 0;
+    let noturno = 0;
+    let periodosValidos = 0;
+
+    /*
+        1º período: Entrada -> Saída Almoço
+    */
+    if (
+        entrada !== null
+        &&
+        almocoSaida !== null
+    ) {
+
+        const periodo =
+            minutosEntrePonto(
+                entrada,
+                almocoSaida
+            );
+
+        if (
+            periodo !== null
+            &&
+            periodo <= 900
+        ) {
+
+            total +=
+                Math.max(
+                    0,
+                    periodo
+                );
+
+            noturno +=
+                minutosNoturnosIntervaloPonto(
+                    entrada,
+                    almocoSaida,
+                    regras
+                );
+
+            periodosValidos++;
+        }
     }
 
-    let total = minutosEntrePonto(entrada, saida);
-    let noturno = minutosNoturnosIntervaloPonto(entrada, saida, regras);
+    /*
+        2º período: Volta Almoço -> Saída
+    */
+    if (
+        almocoVolta !== null
+        &&
+        saida !== null
+    ) {
 
-    if (almocoSaida !== null && almocoVolta !== null) {
-        const intervalo = minutosEntrePonto(almocoSaida, almocoVolta);
+        const periodo =
+            minutosEntrePonto(
+                almocoVolta,
+                saida
+            );
 
-        if (intervalo !== null && intervalo <= total) {
-            total -= intervalo;
-            noturno -= minutosNoturnosIntervaloPonto(almocoSaida, almocoVolta, regras);
+        if (
+            periodo !== null
+            &&
+            periodo <= 900
+        ) {
+
+            total +=
+                Math.max(
+                    0,
+                    periodo
+                );
+
+            noturno +=
+                minutosNoturnosIntervaloPonto(
+                    almocoVolta,
+                    saida,
+                    regras
+                );
+
+            periodosValidos++;
+        }
+    }
+
+    /*
+        Compatibilidade para jornada contínua:
+        se não existir nenhum par completo, mas Entrada e Saída estiverem
+        preenchidas, calcula o intervalo total e desconta o intervalo de
+        almoço quando os dois campos dele também existirem.
+    */
+    if (
+        periodosValidos === 0
+        &&
+        entrada !== null
+        &&
+        saida !== null
+    ) {
+
+        let periodo =
+            minutosEntrePonto(
+                entrada,
+                saida
+            );
+
+        let periodoNoturno =
+            minutosNoturnosIntervaloPonto(
+                entrada,
+                saida,
+                regras
+            );
+
+        if (
+            periodo !== null
+            &&
+            almocoSaida !== null
+            &&
+            almocoVolta !== null
+        ) {
+
+            const intervalo =
+                minutosEntrePonto(
+                    almocoSaida,
+                    almocoVolta
+                );
+
+            if (
+                intervalo !== null
+                &&
+                intervalo <= periodo
+            ) {
+
+                periodo -=
+                    intervalo;
+
+                periodoNoturno -=
+                    minutosNoturnosIntervaloPonto(
+                        almocoSaida,
+                        almocoVolta,
+                        regras
+                    );
+            }
+        }
+
+        if (
+            periodo !== null
+            &&
+            periodo >= 0
+            &&
+            periodo <= 1440
+        ) {
+
+            total =
+                Math.max(
+                    0,
+                    periodo
+                );
+
+            noturno =
+                Math.max(
+                    0,
+                    periodoNoturno
+                );
+
+            periodosValidos =
+                1;
         }
     }
 
     return {
-        completo: true,
-        vazio: false,
-        minutos: Math.max(0, total),
-        noturnos: Math.max(0, noturno)
+        completo:
+            periodosValidos > 0,
+
+        vazio:
+            false,
+
+        minutos:
+            Math.max(
+                0,
+                total
+            ),
+
+        noturnos:
+            Math.max(
+                0,
+                noturno
+            )
     };
 }
 
@@ -2912,49 +3123,11 @@ function calcularPontoDia(func, reg, data) {
 
         let saldoDia = trabalho.minutos - jornadaEsperada;
 
-        const entradaReal = minutosHoraPonto(reg.entrada);
-        const almocoSaidaReal = minutosHoraPonto(reg.almocoSaida);
-        const almocoVoltaReal = minutosHoraPonto(reg.almocoVolta);
-        const saidaReal = minutosHoraPonto(reg.saida);
-
-        const marcacoesCompletas =
-            entradaReal !== null &&
-            almocoSaidaReal !== null &&
-            almocoVoltaReal !== null &&
-            saidaReal !== null;
-
-        const variacoes = marcacoesCompletas
-            ? [
-                entradaReal - entradaPadrao,
-                almocoSaidaReal - almocoSaidaPadrao,
-                almocoVoltaReal - almocoVoltaPadrao,
-                saidaReal - saidaPadrao
-            ]
-            : [];
-
-        const toleranciaMarcacao = Math.max(0, numeroPonto(regras.toleranciaMarcacaoMin));
-        const toleranciaDia = Math.max(0, numeroPonto(regras.toleranciaDiaMin));
-
-        const todasDentro =
-            marcacoesCompletas &&
-            variacoes.every(v => Math.abs(v) <= toleranciaMarcacao);
-
-        const totalVariacoes = variacoes.reduce(
-            (a, v) => a + Math.abs(v),
-            0
-        );
-
         /*
-            Tolerância do art. 58, §1º, da CLT:
-            até 5 minutos por marcação, limitado a 10 minutos no dia.
-
-            A tolerância só é aplicada quando as quatro marcações existem.
-            Campo em branco não é tratado como pequena variação de ponto.
+            REGRA FIXA DA EMPRESA:
+            não existe faixa de tolerância no cálculo do saldo.
+            O saldo diário é considerado integralmente desde o primeiro minuto.
         */
-        if (todasDentro && totalVariacoes <= toleranciaDia) {
-            saldoDia = 0;
-        }
-
         if (saldoDia < 0) {
             atrasoMinutos = Math.abs(saldoDia);
         } else if (saldoDia > 0) {
@@ -3617,11 +3790,15 @@ window.abrirPontoFuncionario = function (idx) {
             ">
     </td>
 
-    <td style="color:#dc2626;font-weight:bold;">
+    <td
+        id="ponto-atraso-${idx}-${data}"
+        style="color:#dc2626;font-weight:bold;">
         ${reg.falta || ferias ? '-' : (reg.atraso || '-')}
     </td>
 
-    <td style="color:#16a34a;font-weight:bold;">
+    <td
+        id="ponto-extra-${idx}-${data}"
+        style="color:#16a34a;font-weight:bold;">
         ${reg.falta || ferias ? '-' : (reg.extra || '-')}
     </td>
 
@@ -3765,12 +3942,14 @@ window.abrirPontoFuncionario = function (idx) {
                 Desconto por atrasos
             </div>
 
-            <div style="
-                font-size:30px;
-                font-weight:800;
-                color:#dc2626;
-                margin-top:12px;
-            ">
+            <div
+                id="ponto-resumo-atrasos-${idx}"
+                style="
+                    font-size:30px;
+                    font-weight:800;
+                    color:#dc2626;
+                    margin-top:12px;
+                ">
                 ${formatarMoedaPonto(valores.descontoAtrasos)}
             </div>
         </div>
@@ -3785,12 +3964,14 @@ window.abrirPontoFuncionario = function (idx) {
                 Desconto por faltas
             </div>
 
-            <div style="
-                font-size:30px;
-                font-weight:800;
-                color:#b91c1c;
-                margin-top:12px;
-            ">
+            <div
+                id="ponto-resumo-faltas-${idx}"
+                style="
+                    font-size:30px;
+                    font-weight:800;
+                    color:#b91c1c;
+                    margin-top:12px;
+                ">
                 ${formatarMoedaPonto(valores.descontoFaltasTotal)}
             </div>
 
@@ -3813,12 +3994,14 @@ window.abrirPontoFuncionario = function (idx) {
                 Horas extras a pagar
             </div>
 
-            <div style="
-                font-size:30px;
-                font-weight:800;
-                color:#16a34a;
-                margin-top:12px;
-            ">
+            <div
+                id="ponto-resumo-extras-${idx}"
+                style="
+                    font-size:30px;
+                    font-weight:800;
+                    color:#16a34a;
+                    margin-top:12px;
+                ">
                 ${formatarMoedaPonto(valores.extrasPagar)}
             </div>
 
@@ -3909,11 +4092,151 @@ window.proximoCampoPonto = function (elemento) {
 /* ========================================================= */
 
 /* --------------------------------------------------------- */
-/* salvarPonto */
-/* Salva a marcação digitada e recalcula o dia. */
+/* atualizarCalculoPontoNaTela                               */
+/* Atualiza linha e resumo mensal sem reabrir o modal.       */
 /* --------------------------------------------------------- */
 
-window.salvarPonto = function (idx, data, campo, valor) {
+function atualizarCalculoPontoNaTela(
+    idx,
+    data,
+    reg
+) {
+
+    /*
+        O cálculo já era executado ao salvar a marcação, porém a tela
+        permanecia com o HTML antigo. Por isso horas extras recém-digitadas
+        podiam ficar invisíveis até fechar e abrir o ponto novamente.
+
+        Aqui atualizamos somente os campos calculados, preservando o foco
+        e a sequência de digitação dos horários.
+    */
+
+    const atrasoEl =
+        document.getElementById(
+            `ponto-atraso-${idx}-${data}`
+        );
+
+    const extraEl =
+        document.getElementById(
+            `ponto-extra-${idx}-${data}`
+        );
+
+    if (atrasoEl) {
+        atrasoEl.textContent =
+            reg?.falta
+                ? '-'
+                : (
+                    reg?.atraso
+                    ||
+                    '-'
+                );
+    }
+
+    if (extraEl) {
+        extraEl.textContent =
+            reg?.falta
+                ? '-'
+                : (
+                    reg?.extra
+                    ||
+                    '-'
+                );
+    }
+
+    const func =
+        db.funcionarios[idx];
+
+    if (!func) {
+        return;
+    }
+
+    const ano =
+        Number(
+            String(data).slice(0,4)
+        );
+
+    const mesZero =
+        Number(
+            String(data).slice(5,7)
+        )
+        -
+        1;
+
+    if (
+        !Number.isFinite(ano)
+        ||
+        !Number.isFinite(mesZero)
+        ||
+        mesZero < 0
+        ||
+        mesZero > 11
+    ) {
+        return;
+    }
+
+    /*
+        Só atualiza os cards se a marcação pertence ao mês atualmente
+        aberto na tela.
+    */
+    if (
+        Number(func.anoPontoSelecionado) !== ano
+        ||
+        Number(func.mesPontoSelecionado) !== mesZero
+    ) {
+        return;
+    }
+
+    const resumo =
+        calcularResumoMesPonto(
+            func,
+            ano,
+            mesZero
+        );
+
+    const atrasoResumoEl =
+        document.getElementById(
+            `ponto-resumo-atrasos-${idx}`
+        );
+
+    const faltasResumoEl =
+        document.getElementById(
+            `ponto-resumo-faltas-${idx}`
+        );
+
+    const extrasResumoEl =
+        document.getElementById(
+            `ponto-resumo-extras-${idx}`
+        );
+
+    if (atrasoResumoEl) {
+        atrasoResumoEl.textContent =
+            formatarMoedaPonto(
+                resumo.valores.descontoAtrasos
+            );
+    }
+
+    if (faltasResumoEl) {
+        faltasResumoEl.textContent =
+            formatarMoedaPonto(
+                resumo.valores.descontoFaltasTotal
+            );
+    }
+
+    if (extrasResumoEl) {
+        extrasResumoEl.textContent =
+            formatarMoedaPonto(
+                resumo.valores.extrasPagar
+            );
+    }
+}
+
+
+/* --------------------------------------------------------- */
+/* salvarPonto */
+/* Salva a marcação digitada, recalcula e atualiza a tela.   */
+/* --------------------------------------------------------- */
+
+window.salvarPonto = async function (idx, data, campo, valor) {
     const func = db.funcionarios[idx];
 
     garantirEstruturaPonto(func);
@@ -3940,9 +4263,30 @@ window.salvarPonto = function (idx, data, campo, valor) {
 
     reg[campo] = valor;
 
-    calcularPontoDia(func, reg, data);
+    calcularPontoDia(
+        func,
+        reg,
+        data
+    );
 
-    save();
+    atualizarCalculoPontoNaTela(
+        idx,
+        data,
+        reg
+    );
+
+    try {
+
+        await save();
+
+    }
+    catch (erro) {
+
+        console.error(
+            'Erro ao salvar marcação do ponto:',
+            erro
+        );
+    }
 };
 
 /* ========================================================= */

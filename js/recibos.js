@@ -1,3 +1,18 @@
+
+/* DOMINUS: exibe Nome Fantasia; usa Razão Social quando vazio.
+   Mantém os valores originais gravados para preservar vínculos. */
+function nomeExibicaoClienteDominus(registroOuNome) {
+    const clientes = Array.isArray(window.db?.clientes) ? window.db.clientes : [];
+    const texto = v => String(v ?? '').trim();
+    const nome = typeof registroOuNome === 'object' && registroOuNome !== null
+        ? '' : texto(registroOuNome);
+    const registro = nome ? clientes.find(c =>
+        [c.nome, c.nomeFantasia, c.razaoSocial, c.codigo]
+            .some(v => texto(v).toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'))
+    ) : registroOuNome;
+    return texto(registro?.nomeFantasia) || texto(registro?.razaoSocial) ||
+           texto(registro?.nome) || nome;
+}
 /* ========================================================= */
 /* DOMINUS ERP - RECIBOS.JS                                  */
 /* ========================================================= */
@@ -964,7 +979,7 @@ async function (
             .find(
                 c =>
                     String(
-                        c.nome || ''
+                        nomeExibicaoClienteDominus(c) || ''
                     ).trim()
                     .toLowerCase()
                     ===
@@ -2537,7 +2552,7 @@ r.data
 
 <td>
 
-${r.cliente || '-'}
+${nomeExibicaoClienteDominus(r.cliente) || '-'}
 
 </td>
 
@@ -3080,7 +3095,7 @@ r.data
 
 <td>
 
-${r.cliente}
+${nomeExibicaoClienteDominus(r.cliente) || '-'}
 
 </td>
 
@@ -3247,7 +3262,7 @@ function(){
                 cliente => `
 
                     <option value="${escaparHTMLTermoServico(
-                        cliente.nome || ''
+                        nomeExibicaoClienteDominus(cliente)
                     )}"></option>
 
                 `
@@ -3607,7 +3622,7 @@ function (
             .find(
                 c =>
                     String(
-                        c.nome || ''
+                        nomeExibicaoClienteDominus(c) || ''
                     ).trim()
                     .toLowerCase()
                     ===
@@ -4183,7 +4198,7 @@ async function(){
             .find(
                 c =>
                     String(
-                        c.nome || ''
+                        nomeExibicaoClienteDominus(c) || ''
                     ).trim()
                     .toLowerCase()
                     ===
@@ -4490,7 +4505,7 @@ options += `
 
 ${o.codigo}
 —
-${o.cliente}
+${nomeExibicaoClienteDominus(o.cliente) || '-'}
 —
 ${formatarMoeda(
 o.total || 0
@@ -5030,7 +5045,7 @@ font-size:12px;
 
 <div>
 <b>Cliente:</b><br>
-${r.cliente || '-'}
+${nomeExibicaoClienteDominus(r.cliente) || '-'}
 </div>
 
 <div>

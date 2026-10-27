@@ -152,11 +152,13 @@ window.renderRelatorios = function () {
 
 ${cardRelatorio(
     '🏷️',
-    'Tipo de Produto',
-    'Consulta por fornecedor e categoria',
-    'tipoProduto'
+    'Relatório de Compras',
+    'Compras por fornecedor, tipo e período',
+    'compras'
 )}
 
+        ${cardRelatorio('📅','Relatório de Projeção','Previsão financeira a partir do próximo mês','projecao')}
+        ${cardRelatorio('💳','Formas de Pagamento','Movimentações por forma e período','formasPagamento')}
     </div>
 
 </div>
@@ -223,25 +225,34 @@ window.cardRelatorio = function (
 /* Abre os filtros necessários ao relatório selecionado. */
 /* --------------------------------------------------------- */
 
+/* Nome de exibição: fantasia > razão social > cadastro legado. */
+function nomeExibicaoRelatorio(cliente) {
+    return String(cliente?.nomeFantasia || '').trim()
+        || String(cliente?.razaoSocial || '').trim()
+        || String(cliente?.nome || '').trim()
+        || String(cliente?.nomeCompleto || '').trim();
+}
+function resolverClienteRelatorio(referencia) {
+    const chave = String(referencia ?? '').trim();
+    const lista = Array.isArray(window.db?.clientes) ? window.db.clientes : [];
+    const encontrado = lista.find(c => [c?.id, c?.codigo, c?.nome, c?.nomeFantasia,
+        c?.razaoSocial, c?.nomeCompleto].some(valor => String(valor ?? '').trim() === chave));
+    return encontrado ? nomeExibicaoRelatorio(encontrado) : chave;
+}
+function escaparClienteRelatorio(valor) {
+    return String(valor ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
 window.abrirRelatorio = function(tipo){
 
     let extraCampo = '';
 
     if(tipo === 'orcamentos'){
 
-    const clientes = [
-
-        ...new Set(
-
-            (db.clientes || [])
-
-            .map(c=>c.nome)
-
-            .filter(Boolean)
-
-        )
-
-    ];
+    const clientes = [...new Set(
+        (db.clientes || []).map(nomeExibicaoRelatorio).filter(Boolean)
+    )].sort((a,b) => a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
 
     /*
         STATUS ATUAIS DOS ORÇAMENTOS
@@ -286,9 +297,9 @@ Todos
 
 ${clientes.map(c=>`
 
-<option value="${c}">
+<option value="${escaparClienteRelatorio(c)}">
 
-${c}
+${escaparClienteRelatorio(c)}
 
 </option>
 
@@ -330,13 +341,13 @@ ${s}
 
 `;
 }
-if(tipo === 'tipoProduto'){
+if(tipo === 'compras' || tipo === 'tipoProduto'){
 
     const fornecedores = [
 
         ...new Set(
 
-            (db.produtos || [])
+            [...(db.xmlImportados || []).map(x=>({fornecedor:x.fornecedor})),...(db.financeiro || []).filter(x=>x.origem==='xml').map(x=>({fornecedor:x.nome})),...(db.produtos || [])]
 
             .map(p=>p.fornecedor)
 
@@ -350,7 +361,7 @@ if(tipo === 'tipoProduto'){
 
         ...new Set(
 
-            (db.produtos || [])
+            [...(db.produtos || []),...(db.tiposProduto || []).map(tipo=>({tipo}))]
 
             .map(p=>p.tipo)
 
@@ -396,7 +407,7 @@ ${f}
 
 <label>
 
-Tipo Produto
+Tipo de Produto
 
 </label>
 
@@ -425,9 +436,21 @@ ${t}
 `;
 }
 
+    if(tipo === 'formasPagamento'){
+        extraCampo = `<div><label>Forma de pagamento ou recebimento</label>
+        <select id="relatorio-forma"><option value="">Todas</option>
+        ${['Dinheiro','Pix','Boleto','Cartão'].map(f=>`<option value="${f}">${f}</option>`).join('')}
+        </select></div>`;
+    }
+    if(tipo === 'projecao'){
+        const hoje = new Date();
+        hoje.setMonth(hoje.getMonth()+1);
+        const mes = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+        extraCampo = `<div><label>Mês de projeção</label><input type="month" id="relatorio-mes-projecao" min="${mes}" value="${mes}"></div>`;
+    }
     if (tipo === 'tipo') {
 
-        const tipos = [
+        const tiposPadrao = [
 
             "Advogado",
             "Água e Saneamento",
@@ -455,6 +478,7 @@ ${t}
             "Software/ERP"
 
         ];
+        const tipos = [...new Set([...(db.tiposContaFinanceiro || []),...tiposPadrao])].sort((a,b)=>a.localeCompare(b,'pt-BR'));
 
         extraCampo = `
 
@@ -510,7 +534,7 @@ ${t}
 
         <input
             type="date"
-            id="relatorio-inicio">
+            id="relatorio-inicio" ${tipo === 'projecao' ? 'disabled' : ''}>
 
     </div>
 
@@ -524,7 +548,7 @@ ${t}
 
         <input
             type="date"
-            id="relatorio-fim">
+            id="relatorio-fim" ${tipo === 'projecao' ? 'disabled' : ''}>
 
     </div>
 
@@ -589,7 +613,7 @@ window.gerarRelatorioOrcamentos = function(){
         dados =
             dados.filter(o=>
 
-                o.cliente === cliente
+                resolverClienteRelatorio(o.cliente) === cliente
 
             );
 
@@ -635,7 +659,7 @@ ${formatarData(
 
 <td>
 
-${o.cliente||'-'}
+${escaparClienteRelatorio(resolverClienteRelatorio(o.cliente) || '-')}
 
 </td>
 
@@ -727,169 +751,118 @@ formatarMoeda(total),
 /* Gera o relatório por tipo de produto. */
 /* --------------------------------------------------------- */
 
-window.gerarRelatorioTipoProduto =
-function(){
+window.gerarRelatorioTipoProduto = function(){ return gerarRelatorioCompras(); };
 
-    let dados =
-        filtrarPeriodoRelatorio(
-            db.produtos,
-            'dataCadastro'
-        );
-
-    const fornecedor =
-        document.getElementById(
-            'relatorio-fornecedor'
-        )?.value || '';
-
-    const tipo =
-        document.getElementById(
-            'relatorio-tipo-produto'
-        )?.value || '';
-
-    if(fornecedor){
-
-        dados =
-            dados.filter(p=>
-
-                p.fornecedor === fornecedor
-
-            );
-
-    }
-
-    if(tipo){
-
-        dados =
-            dados.filter(p=>
-
-                p.tipo === tipo
-
-            );
-
-    }
-
-    let total=0;
-
-    dados.forEach(p=>{
-
-        total +=
-            Number(
-                p.valor||0
-            );
-
+/* ========================================================= */
+/* RELATÓRIOS ADICIONAIS — DOMINUS ERP                       */
+/* ========================================================= */
+function relEsc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function relMoeda(v){return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function relEhCompraCartao(l){return l?.tipo==='Pagar' && (l?.formaPagamento || l?.formaRecebimento)==='Cartão' && String(l?.tipoConta||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()!=='cartao';}
+function relPeriodo(data){const a=document.getElementById('relatorio-inicio')?.value || '';const b=document.getElementById('relatorio-fim')?.value || '';return !!data && (!a || data>=a) && (!b || data<=b);}
+function relExibir(html){const el=document.getElementById('resultado-relatorio');if(el)el.innerHTML=html;}
+function relFinalizar(titulo,cards,cabecalhos,linhas){
+    relExibir(getCabecalhoRelatorio(titulo)+`<div style="display:flex;gap:16px;flex-wrap:wrap;margin:18px 0">${cards.map(c=>cardIndicadorRelatorio(c[0],c[1],'#2563eb')).join('')}</div>`+
+    tabelaProfissionalRelatorio(cabecalhos,linhas||`<tr><td colspan="${cabecalhos.length}" style="text-align:center;padding:24px">Nenhum registro encontrado</td></tr>`)+
+    `<div style="text-align:right;margin:24px 0"><button class="btn-action" onclick="imprimirRelatorio()">🖨 Imprimir</button></div>`+getRodapeRelatorio());
+}
+window.gerarRelatorioCompras=function(){
+    const fornecedorFiltro=String(document.getElementById('relatorio-fornecedor')?.value||'').trim();
+    const tipoFiltro=String(document.getElementById('relatorio-tipo-produto')?.value||'').trim();
+    const normalizar=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+    const numero=v=>{if(typeof v==='number')return Number.isFinite(v)?v:0;const t=String(v??'0').trim();const n=Number(t.includes(',')?t.replace(/\./g,'').replace(',','.'):t);return Number.isFinite(n)?n:0;};
+    const dataISO=v=>{
+        const texto=String(v||'').trim();
+        if(/^\d{4}-\d{2}-\d{2}/.test(texto))return texto.slice(0,10);
+        const br=texto.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        return br?`${br[3]}-${br[2]}-${br[1]}`:'';
+    };
+    const produtos=Array.isArray(db.produtos)?db.produtos:[];
+    const porCodigo=new Map(produtos.map(p=>[String(p.codigo||''),p]));
+    const porDescricao=new Map(produtos.map(p=>[normalizar(p.descricao),p]));
+    const notas=Array.isArray(db.xmlImportados)?db.xmlImportados:[];
+    const financeiro=Array.isArray(db.financeiro)?db.financeiro:[];
+    const linhas=[];
+    const chavesNotas=new Set();
+    const nfsNotas=new Set();
+    const incluir=(registro)=>{
+        if(fornecedorFiltro && normalizar(registro.fornecedor)!==normalizar(fornecedorFiltro))return;
+        if(tipoFiltro && normalizar(registro.categoria)!==normalizar(tipoFiltro))return;
+        if(!relPeriodo(registro.data))return;
+        linhas.push(registro);
+    };
+    notas.forEach(nota=>{
+        const chave=String(nota.chave||'').trim();
+        if(chave)chavesNotas.add(chave);
+        nfsNotas.add(`${normalizar(nota.numeroNota)}|${normalizar(nota.fornecedor)}`);
+        const data=dataISO(nota.dataEmissao)||dataISO(nota.importadoEm);
+        const fornecedor=String(nota.fornecedor||'');
+        const numeroNota=String(nota.numeroNota||'');
+        const itens=Array.isArray(nota.itens)?nota.itens:[];
+        if(itens.length){
+            itens.forEach(item=>{
+                const produto=porCodigo.get(String(item.codigo||''))||porDescricao.get(normalizar(item.descricao));
+                const categoria=String(item.tipo||produto?.tipo||'');
+                const quantidade=numero(item.quantidade);
+                const unitario=numero(item.valorUnitario??item.valor);
+                const total=numero(item.valorTotal??(quantidade*unitario));
+                incluir({data,nota:numeroNota,fornecedor,descricao:String(item.descricao||'-'),categoria,quantidade,total,semDetalhe:false});
+            });
+        }else{
+            // Notas importadas em versões antigas guardam total, mas não os itens.
+            // Exibe o total da NF sem inventar produtos ou classificações.
+            incluir({data,nota:numeroNota,fornecedor,descricao:'Nota antiga — itens não registrados no histórico',categoria:'',quantidade:null,total:numero(nota.valorNota),semDetalhe:true});
+        }
     });
-
-    let linhas='';
-
-    dados.forEach(p=>{
-
-        linhas += `
-
-<tr>
-
-<td>
-
-${p.codigo||'-'}
-
-</td>
-
-<td>
-
-${p.descricao||'-'}
-
-</td>
-
-<td>
-
-${p.tipo||'-'}
-
-</td>
-
-<td>
-
-${p.fornecedor||'-'}
-
-</td>
-
-<td>
-
-${formatarMoeda(
-    p.valor||0
-)}
-
-</td>
-
-</tr>
-
-`;
-
+    // Recupera compras importadas antes da existência do histórico de XML,
+    // quando restaram somente contas financeiras de origem XML.
+    const grupos=new Map();
+    financeiro.filter(x=>x.origem==='xml' || !!x.chaveXML).forEach(x=>{
+        const chave=String(x.chaveXML||'').trim();
+        const numeroNota=String(x.numeroNota||'').trim();
+        const fornecedor=String(x.nome||'').trim();
+        if(chave && chavesNotas.has(chave))return;
+        if(nfsNotas.has(`${normalizar(numeroNota)}|${normalizar(fornecedor)}`))return;
+        const grupo=chave||`${numeroNota}|${normalizar(fornecedor)}`;
+        if(!grupos.has(grupo))grupos.set(grupo,{data:dataISO(x.dataCadastro)||dataISO(x.vencimento),nota:numeroNota,fornecedor,descricao:'Compra XML antiga — detalhes indisponíveis',categoria:'',quantidade:null,total:0,semDetalhe:true});
+        grupos.get(grupo).total+=numero(x.valor);
     });
-
-    let html =
-        getCabecalhoRelatorio(
-            'TIPO DE PRODUTO'
-        );
-
-    html += `
-
-<div style="
-display:grid;
-grid-template-columns:
-repeat(auto-fit,minmax(240px,1fr));
-gap:20px;
-margin-bottom:30px;
-">
-
-${cardIndicadorRelatorio(
-
-'PRODUTOS',
-
-dados.length,
-
-'#111827'
-
-)}
-
-${cardIndicadorRelatorio(
-
-'TOTAL',
-
-formatarMoeda(total),
-
-'#2563eb'
-
-)}
-
-</div>
-
-`;
-
-    html +=
-        tabelaProfissionalRelatorio(
-
-            [
-
-                'Código',
-
-                'Produto',
-
-                'Tipo',
-
-                'Fornecedor',
-
-                'Valor'
-
-            ],
-
-            linhas
-
-        );
-
-    document.getElementById(
-        'resultado-relatorio'
-    ).innerHTML = html;
+    grupos.forEach(incluir);
+    linhas.sort((a,b)=>a.data.localeCompare(b.data)||a.nota.localeCompare(b.nota));
+    const total=linhas.reduce((valor,x)=>valor+x.total,0);
+    const semDetalhe=linhas.filter(x=>x.semDetalhe).length;
+    relFinalizar('RELATÓRIO DE COMPRAS', [['REGISTROS',linhas.length],['TOTAL DE COMPRAS',relMoeda(total)]],
+        ['Data','NF','Fornecedor','Produto / Material','Tipo de produto','Quantidade','Valor total'],
+        linhas.map(x=>`<tr><td>${relEsc(x.data)}</td><td>${relEsc(x.nota||'-')}</td><td>${relEsc(x.fornecedor||'-')}</td><td>${relEsc(x.descricao)}</td><td>${relEsc(x.categoria||'Não informado')}</td><td>${x.quantidade===null?'-':x.quantidade.toLocaleString('pt-BR')}</td><td>${relMoeda(x.total)}</td></tr>`).join(''));
+    if(semDetalhe){
+        const resultado=document.getElementById('resultado-relatorio');
+        const aviso=document.createElement('div');
+        aviso.style.cssText='padding:12px 16px;margin:12px 0;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;color:#92400e;font-size:12px';
+        aviso.textContent=`${semDetalhe} registro(s) de notas antigas sem detalhamento dos produtos. Seus totais aparecem, mas tipo e quantidade não podem ser recuperados sem o XML original.`;
+        resultado?.querySelector('#print-area')?.appendChild(aviso);
+    }
 };
-
+window.gerarRelatorioFormasPagamento=function(){
+    const forma=document.getElementById('relatorio-forma')?.value||'';
+    const lista=(db.financeiro||[]).filter(x=>relPeriodo(String(x.dataPagamento||x.dataRecebimento||x.vencimento||'').slice(0,10)))
+        .filter(x=>{const f=x.formaPagamento||x.formaRecebimento||'';return !forma||f===forma;});
+    const totalPagar=lista.filter(x=>x.tipo==='Pagar'&&!relEhCompraCartao(x)).reduce((t,x)=>t+Number(x.valor||0),0);
+    const totalReceber=lista.filter(x=>x.tipo==='Receber').reduce((t,x)=>t+Number(x.valor||0),0);
+    relFinalizar('RELATÓRIO POR FORMA DE PAGAMENTO / RECEBIMENTO', [['PAGAMENTOS (SEM DUPLICIDADE)',relMoeda(totalPagar)],['RECEBIMENTOS',relMoeda(totalReceber)]],
+    ['Vencimento','Descrição','Tipo','Forma','Status','Valor'],lista.map(x=>`<tr><td>${relEsc(x.vencimento||'')}</td><td>${relEsc(x.descricao||'')}</td><td>${relEsc(x.tipo)}</td><td>${relEsc(x.formaPagamento||x.formaRecebimento||'Não informada')}</td><td>${relEsc(x.status)}</td><td>${relMoeda(x.valor)}</td></tr>`).join(''));
+};
+window.gerarRelatorioProjecao=function(){
+    const mes=document.getElementById('relatorio-mes-projecao')?.value||'';
+    const hoje=new Date();hoje.setMonth(hoje.getMonth()+1);const minimo=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    if(!/^\d{4}-\d{2}$/.test(mes)||mes<minimo){alert('A projeção somente pode ser emitida a partir do próximo mês.');return;}
+    const dados=(db.financeiro||[]).filter(x=>String(x.vencimento||'').startsWith(mes))
+        .filter(x=>!relEhCompraCartao(x))
+        .filter(x=>x.tipo==='Pagar' ? x.status!=='Pago' : x.status!=='Recebido');
+    const entradas=dados.filter(x=>x.tipo==='Receber').reduce((v,x)=>v+Number(x.valor||0),0);
+    const saidas=dados.filter(x=>x.tipo==='Pagar').reduce((v,x)=>v+Number(x.valor||0),0);
+    relFinalizar(`PROJEÇÃO FINANCEIRA — ${mes.slice(5)}/${mes.slice(0,4)}`,[['RECEITAS PREVISTAS',relMoeda(entradas)],['DESPESAS PREVISTAS',relMoeda(saidas)],['SALDO PROJETADO',relMoeda(entradas-saidas)]],
+    ['Vencimento','Descrição','Tipo','Status','Valor'],dados.sort((a,b)=>String(a.vencimento).localeCompare(String(b.vencimento))).map(x=>`<tr><td>${relEsc(x.vencimento)}</td><td>${relEsc(x.descricao)}</td><td>${relEsc(x.tipo)}</td><td>${relEsc(x.status)}</td><td>${relMoeda(x.valor)}</td></tr>`).join(''));
+};
 /* ========================================================= */
 /* 04. CABEÇALHO DE IMPRESSÃO                              */
 /* ========================================================= */
@@ -1100,8 +1073,15 @@ window.gerarRelatorio = function(tipo){
             break;
 
         case 'tipoProduto':
-        gerarRelatorioTipoProduto();
-        break;
+        case 'compras':
+            gerarRelatorioCompras();
+            break;
+        case 'projecao':
+            gerarRelatorioProjecao();
+            break;
+        case 'formasPagamento':
+            gerarRelatorioFormasPagamento();
+            break;
     }
 };
 
@@ -1199,7 +1179,7 @@ function(){
         dados.filter(
             item =>
                 item.tipo ===
-                'Pagar'
+                'Pagar' && !relEhCompraCartao(item)
         );
 
 
@@ -1665,9 +1645,7 @@ window.gerarContasPagar = function(){
             return false;
         }
 
-        return(
-            l.status !== 'Pago'
-        );
+        return l.status !== 'Pago' && !relEhCompraCartao(l);
     });
 
     renderTabelaRelatorioFinanceiro(
@@ -1746,6 +1724,7 @@ function (
 
     });
 
+    const selecionar = titulo === 'CONTAS A PAGAR' || titulo === 'CONTAS A RECEBER';
     let total = 0;
 
     dados.forEach(l=>{
@@ -1772,7 +1751,7 @@ gap:22px;
 margin-bottom:35px;
 ">
 
-${cardIndicadorRelatorio(
+<div id="rel-kpi-total">${cardIndicadorRelatorio(
 
     'TOTAL GERAL',
 
@@ -1780,9 +1759,9 @@ ${cardIndicadorRelatorio(
 
     '#2563eb'
 
-)}
+)}</div>
 
-${cardIndicadorRelatorio(
+<div id="rel-kpi-quantidade">${cardIndicadorRelatorio(
 
     'LANÇAMENTOS',
 
@@ -1790,7 +1769,7 @@ ${cardIndicadorRelatorio(
 
     '#111827'
 
-)}
+)}</div>
 
 </div>
 `;
@@ -1818,11 +1797,12 @@ Nenhum registro encontrado
 `;
     }
 
-    dados.forEach(l=>{
+    dados.forEach((l,i)=>{
 
         linhas += `
 
-<tr>
+<tr class="${selecionar ? 'rel-selecionavel' : ''}" data-valor="${Number(l.valor||0)}">
+${selecionar ? `<td><input type="checkbox" class="rel-marcar" checked onchange="relAtualizarSelecao()"></td>` : ''}
 
 <td>
 
@@ -1866,7 +1846,7 @@ ${formatarMoeda(
         tabelaProfissionalRelatorio(
 
             [
-
+                ...(selecionar ? ['Selecionar'] : []),
                 'Vencimento',
 
                 'Descrição',
@@ -1890,6 +1870,7 @@ margin-top:35px;
 text-align:right;
 ">
 
+${selecionar ? `<button class="btn-action rel-controle-selecao" onclick="relMarcarTodos(true)">Marcar todos</button> <button class="btn-action rel-controle-selecao" onclick="relMarcarTodos(false)">Desmarcar todos</button> <strong id="rel-total-selecionado" class="rel-controle-selecao" style="margin:0 12px">${relMoeda(total)}</strong>` : ''}
 <button
 class="btn-action"
 onclick="imprimirRelatorio()">
@@ -2391,7 +2372,7 @@ window.gerarDRE = function(){
                 return false;
             }
 
-            return true;
+            return !relEhCompraCartao(item);
         });
 
 
@@ -4190,16 +4171,34 @@ async function(){
     }
 
 
-    const conteudo =
-
-        document.getElementById(
-            'print-area'
-        )?.innerHTML;
+    const areaOriginal = document.getElementById('print-area');
+    const copiaImpressao = areaOriginal?.cloneNode(true);
+    if(copiaImpressao){
+        copiaImpressao.querySelectorAll('tr.rel-selecionavel').forEach(tr=>{
+            if(!tr.querySelector('input.rel-marcar')?.checked)tr.remove();
+            else tr.querySelector('input.rel-marcar')?.closest('td')?.remove();
+        });
+        if(areaOriginal?.querySelector('input.rel-marcar')){
+            copiaImpressao.querySelectorAll('thead tr').forEach(tr=>tr.querySelector('th')?.remove());
+        }
+        copiaImpressao.querySelectorAll('.rel-controle-selecao').forEach(x=>x.remove());
+        const totalArea=copiaImpressao.querySelector('.stat-value');
+        if(totalArea && areaOriginal?.querySelector('.rel-marcar')){
+            const soma=[...areaOriginal.querySelectorAll('tr.rel-selecionavel')].filter(tr=>tr.querySelector('.rel-marcar')?.checked).reduce((n,tr)=>n+Number(tr.dataset.valor||0),0);
+            totalArea.textContent=relMoeda(soma);
+        }
+    }
+    const conteudo = copiaImpressao?.innerHTML;
 
     if(!conteudo) return;
 
 const conteudoCorrigido =
-    conteudo;
+    window.logoBase64
+        ? conteudo.replace(
+            /src=(["'])logo\.png\1/gi,
+            `src="${window.logoBase64}"`
+        )
+        : conteudo;
     /* ========================================================= */
     /* 21. FINALIZAÇÃO DO HTML DOS RELATÓRIOS                  */
     /* ========================================================= */
@@ -4791,3 +4790,16 @@ registerPage(
     'relatorios',
     renderRelatorios
 );
+window.relMarcarTodos=function(marcar){document.querySelectorAll('#resultado-relatorio input.rel-marcar').forEach(x=>x.checked=marcar);relAtualizarSelecao();};
+window.relAtualizarSelecao=function(){
+    const linhas=[...document.querySelectorAll('#resultado-relatorio tr.rel-selecionavel')];
+    const selecionadas=linhas.filter(x=>x.querySelector('input.rel-marcar')?.checked);
+    const total=selecionadas.reduce((s,x)=>s+Number(x.dataset.valor||0),0);
+    const quantidade=selecionadas.length;
+    const rodape=document.getElementById('rel-total-selecionado');
+    if(rodape)rodape.textContent=`Selecionados: ${quantidade} lançamento(s) — ${relMoeda(total)}`;
+    const valorTopo=document.querySelector('#rel-kpi-total .report-card > div:last-child');
+    if(valorTopo)valorTopo.textContent=relMoeda(total);
+    const quantidadeTopo=document.querySelector('#rel-kpi-quantidade .report-card > div:last-child');
+    if(quantidadeTopo)quantidadeTopo.textContent=String(quantidade);
+};

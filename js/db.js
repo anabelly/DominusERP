@@ -319,6 +319,8 @@ window.db = {
 
     financeiro:[],
 
+    tiposContaFinanceiro:[],
+
     orcamentos:[],
 
     ordensServico:[],
@@ -580,6 +582,11 @@ async function(){
 
                     saved.financeiro
                     || [],
+
+                tiposContaFinanceiro:
+                    Array.isArray(saved.tiposContaFinanceiro)
+                    ? saved.tiposContaFinanceiro
+                    : null,
 
 
                 orcamentos:

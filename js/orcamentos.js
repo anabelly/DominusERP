@@ -1,3 +1,18 @@
+
+/* DOMINUS: exibe Nome Fantasia; usa Razão Social quando vazio.
+   Mantém os valores originais gravados para preservar vínculos. */
+function nomeExibicaoClienteDominus(registroOuNome) {
+    const clientes = Array.isArray(window.db?.clientes) ? window.db.clientes : [];
+    const texto = v => String(v ?? '').trim();
+    const nome = typeof registroOuNome === 'object' && registroOuNome !== null
+        ? '' : texto(registroOuNome);
+    const registro = nome ? clientes.find(c =>
+        [c.nome, c.nomeFantasia, c.razaoSocial, c.codigo]
+            .some(v => texto(v).toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'))
+    ) : registroOuNome;
+    return texto(registro?.nomeFantasia) || texto(registro?.razaoSocial) ||
+           texto(registro?.nome) || nome;
+}
 /* ========================================================= */
 /* DOMINUS ERP - ORCAMENTOS.JS                               */
 /* ========================================================= */
@@ -677,7 +692,7 @@ window.renderOrcamentos = function () {
     </td>
 
     <td>
-        ${orcamento.cliente || '-'}
+        ${nomeExibicaoClienteDominus(orcamento.cliente) || '-'}
     </td>
 
     <td>
@@ -1260,7 +1275,7 @@ Nenhum orçamento encontrado
     </td>
 
     <td>
-        ${o.cliente || '-'}
+        ${nomeExibicaoClienteDominus(o.cliente) || '-'}
     </td>
 
     <td>
@@ -1471,7 +1486,7 @@ function () {
 
 <option value="${cliente.nome}">
 
-    ${cliente.nome}
+    ${nomeExibicaoClienteDominus(cliente)}
 
 </option>
 
@@ -2911,7 +2926,7 @@ CLIENTE:
 </td>
 
 <td>
-${o.cliente}
+${nomeExibicaoClienteDominus(o.cliente) || '-'}
 </td>
 
 </tr>
@@ -3309,7 +3324,7 @@ e de outro lado
 
 <strong>
 
-${o.cliente || '-'}
+${nomeExibicaoClienteDominus(o.cliente) || '-'}
 
 </strong>,
 
@@ -3426,7 +3441,7 @@ CONTRATANTE
 
 <br>
 
-${o.cliente}
+${nomeExibicaoClienteDominus(o.cliente) || '-'}
 
 </div>
 
@@ -3721,7 +3736,7 @@ o.cliente === c.nome
 }
 >
 
-${c.nome}
+${nomeExibicaoClienteDominus(c)}
 
 </option>
 

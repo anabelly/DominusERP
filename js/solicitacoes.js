@@ -1483,7 +1483,7 @@ window.atualizarNotificacaoSolicitacoes = function(){
         return;
     }
 
-    root.style.display = '';
+    root.style.display = 'block';
 
     const badge = document.getElementById('solicitacoes-notificacao-badge');
     const painel = document.getElementById('solicitacoes-notificacao-painel');

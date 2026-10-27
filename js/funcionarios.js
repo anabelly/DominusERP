@@ -1590,6 +1590,12 @@ function () {
             </div>
 
         </div>
+        <div id="recibos-lote-opcoes" style="margin-top:10px">
+            <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;cursor:pointer">
+                <input type="checkbox" onchange="alternarReciboExtraFuncionario(this, 1)" style="width:18px;height:18px">
+                Tem mais recibos?
+            </label>
+        </div>
     `;
 
     configModal({
@@ -1701,7 +1707,7 @@ function textoReferenciaReciboFuncionario(
                 'diárias';
 
         return (
-            `referente a ${dados.quantidadeDiarias} ${palavra}, ` +
+            `referente a ${dados.quantidadeDiarias} ${palavra} freelancer, ` +
             `no valor unitário de ${formatarMoeda(dados.valorDiaria)}, ` +
             `da competência ${competenciaTexto}.`
         );
@@ -1885,6 +1891,148 @@ function detalhesReciboFuncionario(
 }
 
 
+/* ========================================================= */
+/* RECIBOS EM LOTE - FUNCIONÁRIOS                            */
+/* ========================================================= */
+
+window.alternarReciboExtraFuncionario = function(checkbox, numero) {
+    const area = document.getElementById('recibos-lote-opcoes');
+    if (!area) return;
+    area.querySelectorAll('.recibo-extra-funcionario').forEach(bloco => {
+        if (Number(bloco.dataset.numero) >= numero) bloco.remove();
+    });
+    if (!checkbox.checked) return;
+    const funcionarios = funcionariosAtivosRecibo();
+    const nomes = funcionarios.map(item => `<option value="${item.index}">${escaparHTMLFuncionario(item.funcionario?.nome || '')}</option>`).join('');
+    const tipos = tiposReciboFuncionario().map(tipo => `<option value="${escaparHTMLFuncionario(tipo)}">${escaparHTMLFuncionario(tipo)}</option>`).join('');
+    const bloco = document.createElement('section');
+    bloco.className = 'recibo-extra-funcionario';
+    bloco.dataset.numero = numero;
+    bloco.style.cssText = 'border:1px solid #cbd5e1;border-radius:14px;padding:18px;margin-top:18px;background:#f8fafc;';
+    bloco.innerHTML = `
+        <h3 style="margin:0 0 15px">🧾 Recibo ${numero + 1}</h3>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px">
+            <div><label>Funcionário *</label><select data-campo="funcionario"><option value="">Selecione...</option>${nomes}</select></div>
+            <div><label>Tipo de Recibo *</label><select data-campo="tipo" onchange="atualizarReciboExtraFuncionario(this)"><option value="">Selecione...</option>${tipos}</select></div>
+            <div><label>Competência *</label><input data-campo="competencia" type="month" value="${competenciaAtualReciboFuncionario()}"></div>
+            <div><label>Data do Recebimento *</label><input data-campo="data" type="date" value="${dataHojeFuncionario()}"></div>
+        </div>
+        <div data-campos-extra style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin-top:14px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding:12px;border-radius:9px;background:white">
+            <strong>Total do recibo</strong><strong data-total-extra style="font-size:19px;color:#dc2626">R$ 0,00</strong>
+        </div>
+        <label style="display:flex;align-items:center;gap:9px;margin-top:15px;cursor:pointer">
+            <input type="checkbox" style="width:18px;height:18px" onchange="alternarReciboExtraFuncionario(this, ${numero + 1})"> Tem mais recibos?
+        </label>`;
+    area.appendChild(bloco);
+};
+
+window.atualizarReciboExtraFuncionario = function(elemento) {
+    const bloco = elemento.closest('.recibo-extra-funcionario');
+    if (!bloco) return;
+    const tipo = bloco.querySelector('[data-campo="tipo"]').value;
+    const campos = bloco.querySelector('[data-campos-extra]');
+    const campo = (nome, titulo, valor = '') => `<div><label>${titulo}</label><input data-valor="${nome}" type="number" min="0" step="0.01" placeholder="0,00" value="${valor}" oninput="recalcularReciboExtraFuncionario(this)"></div>`;
+    if (tipo === 'Salário') campos.innerHTML = campo('valor','Valor do salário') + campo('descontos','Descontos') + campo('bonificacao','Bonificação') + campo('horasExtras','Horas extras');
+    else if (tipo === 'Adiantamento') campos.innerHTML = campo('valor','Valor do adiantamento') + campo('bonificacao','Bonificação');
+    else if (tipo === 'Diária') campos.innerHTML = campo('quantidadeDiarias','Quantidade de diárias',1) + campo('valorDiaria','Valor da diária');
+    else if (tipo === 'Vale Transporte') campos.innerHTML = campo('quantidadePassagens','Quantidade de passagens',1) + campo('valorPassagem','Valor da passagem');
+    else if (tipo === 'Auxílio Combustível') campos.innerHTML = campo('valor','Valor do auxílio combustível');
+    else if (tipo === 'Vale') campos.innerHTML = campo('valor','Valor do vale');
+    else campos.innerHTML = '';
+    recalcularReciboExtraFuncionario(elemento);
+};
+
+function dadosReciboExtraFuncionario(bloco) {
+    const obter = nome => Math.max(0, numeroFuncionario(bloco.querySelector(`[data-valor="${nome}"]`)?.value));
+    const tipo = bloco.querySelector('[data-campo="tipo"]').value;
+    const dados = {
+        tipo, valor:obter('valor'), descontos:obter('descontos'), bonificacao:obter('bonificacao'),
+        horasExtras:obter('horasExtras'), quantidadeDiarias:Math.floor(obter('quantidadeDiarias')),
+        valorDiaria:obter('valorDiaria'), quantidadePassagens:Math.floor(obter('quantidadePassagens')),
+        valorPassagem:obter('valorPassagem')
+    };
+    dados.total = dados.valor;
+    if (tipo === 'Salário') dados.total = dados.valor - dados.descontos + dados.bonificacao + dados.horasExtras;
+    if (tipo === 'Adiantamento') dados.total = dados.valor + dados.bonificacao;
+    if (tipo === 'Diária') dados.total = dados.quantidadeDiarias * dados.valorDiaria;
+    if (tipo === 'Vale Transporte') dados.total = dados.quantidadePassagens * dados.valorPassagem;
+    dados.total = Math.max(0,dados.total);
+    return dados;
+}
+
+window.recalcularReciboExtraFuncionario = function(elemento) {
+    const bloco = elemento.closest('.recibo-extra-funcionario');
+    if (!bloco) return;
+    bloco.querySelector('[data-total-extra]').textContent = formatarMoeda(dadosReciboExtraFuncionario(bloco).total);
+};
+
+async function gerarLoteRecibosFuncionario() {
+    const campo = id => document.getElementById('recibo-funcionario-' + id)?.value || '';
+    const extras = Array.from(document.querySelectorAll('.recibo-extra-funcionario'));
+    const primeiro = {
+        indice:campo('indice'), tipo:campo('tipo'), competencia:campo('competencia'), data:campo('data'),
+        dados:calcularDadosReciboFuncionario()
+    };
+    const recibos = [primeiro, ...extras.map(bloco => ({
+        indice:bloco.querySelector('[data-campo="funcionario"]').value,
+        tipo:bloco.querySelector('[data-campo="tipo"]').value,
+        competencia:bloco.querySelector('[data-campo="competencia"]').value,
+        data:bloco.querySelector('[data-campo="data"]').value,
+        dados:dadosReciboExtraFuncionario(bloco)
+    }))];
+    for (let i=0; i<recibos.length; i++) {
+        const r = recibos[i];
+        const f = r.indice === '' ? null : db.funcionarios[Number(r.indice)];
+        if (!f || f.status !== 'Ativo' || !r.tipo || !r.competencia || !r.data || !(r.dados.total > 0)
+            || (r.tipo === 'Diária' && !(r.dados.quantidadeDiarias > 0 && r.dados.valorDiaria > 0))
+            || (r.tipo === 'Vale Transporte' && !(r.dados.quantidadePassagens > 0 && r.dados.valorPassagem > 0))) {
+            alert(`Verifique funcionário, tipo, datas e valores do recibo ${i+1}.`);
+            return;
+        }
+        r.funcionario = f;
+    }
+    let logo = '';
+    try { if (window.api?.getLogoPath) logo = await window.api.getLogoPath(); } catch(e) { console.warn(e); }
+    const cards = recibos.map((r,i) => {
+        const dados = r.dados;
+        const competencia = formatarCompetenciaReciboFuncionario(r.competencia);
+        const referencia = textoReferenciaReciboFuncionario(dados,competencia);
+        const detalhes = detalhesReciboFuncionario(dados);
+        const pessoa = escaparHTMLFuncionario(r.funcionario.nome || 'Funcionário');
+        return `<section class="recibo-lote">
+            <header><div><div class="ident">RECIBO / ${escaparHTMLFuncionario(r.data.slice(0,4))}</div>
+            <strong>${escaparHTMLFuncionario(tituloTipoReciboFuncionario(r.tipo))}</strong></div>
+            <div class="logo">${logo ? `<img src="${logo}" alt="WN">` : 'WN Comunicação Visual'}</div></header>
+            <div class="declaracao">RECEBI DE <strong>WN COMUNICAÇÃO VISUAL LTDA</strong> A QUANTIA DE:</div>
+            <div class="valor">${formatarMoeda(dados.total)}</div>
+            <div class="referencia">${referencia}</div>
+            ${detalhes ? `<div class="detalhes">${detalhes}</div>` : ''}
+            <div class="rodape"><span><b>Competência:</b> ${escaparHTMLFuncionario(competencia)}</span>
+            <span><b>Data:</b> ${escaparHTMLFuncionario(formatarDataCarreira(r.data))}</span></div>
+            <div class="assinatura"><b>Assinatura:</b><span class="linha"></span><b>${pessoa}</b></div>
+            </section>`;
+    });
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Recibos de Funcionários</title>
+    <style>
+        @page{size:A4 portrait;margin:9mm}
+        *{box-sizing:border-box}html,body{margin:0;background:white;color:#111827;font-family:Arial,sans-serif}
+        body{padding:0}.recibo-lote{border:1px solid #9ca3af;margin:0 0 5mm;padding:0;break-inside:avoid;page-break-inside:avoid}
+        .recibo-lote:not(:last-child){position:relative}
+        .recibo-lote:not(:last-child)::after{content:'✂  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -';position:absolute;top:calc(100% + 1mm);left:0;width:100%;text-align:center;font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden}
+        header{display:grid;grid-template-columns:1fr 40mm;border-bottom:1px solid #cbd5e1;min-height:17mm;text-align:center}header>div:first-child{padding:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px}.ident{font-weight:900;font-size:10px}.logo{border-left:1px solid #cbd5e1;display:flex;align-items:center;justify-content:center;padding:4px;font-size:11px;font-weight:bold}.logo img{max-width:36mm;max-height:14mm;object-fit:contain}
+        .declaracao{text-align:center;font-size:10px;padding:6px 8px 2px}.valor{text-align:center;color:#dc2626;font-size:20px;font-weight:900;padding:3px 0 5px;border-bottom:1px solid #e5e7eb}
+        .referencia{text-align:center;font-size:10px;padding:6px 10px;border-bottom:1px solid #e5e7eb}
+        .detalhes{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;padding:5px 12px;border-bottom:1px solid #e5e7eb}.detail-row{display:flex;justify-content:space-between;font-size:9px;gap:8px}.detail-row span{color:#475569}
+        .rodape{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #e5e7eb;font-size:10px}.rodape span{padding:5px 10px}.rodape span+span{border-left:1px solid #e5e7eb}
+        .assinatura{display:flex;align-items:flex-end;gap:8px;padding:10px 12px 8px;min-height:17mm;font-size:10px}.assinatura .linha{flex:1;border-bottom:1px solid #111827;height:12px}.assinatura b:last-child{text-transform:uppercase}
+    </style></head><body>${cards.join('')}<script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script></body></html>`;
+    if (window.api?.imprimirHTML) { await window.api.imprimirHTML(html); return; }
+    const janela = window.open('','_blank');
+    if (!janela) { alert('Não foi possível abrir a impressão.'); return; }
+    janela.document.write(html); janela.document.close();
+}
+
 /* --------------------------------------------------------- */
 /* gerarReciboAvulsoFuncionario                              */
 /* Gera e abre o recibo pequeno para impressão.              */
@@ -1892,6 +2040,11 @@ function detalhesReciboFuncionario(
 
 window.gerarReciboAvulsoFuncionario =
 async function () {
+
+    // Mantém a emissão original quando só há um recibo.
+    if (document.querySelector('.recibo-extra-funcionario')) {
+        return gerarLoteRecibosFuncionario();
+    }
 
     const indiceTexto =
         document.getElementById(
@@ -7358,8 +7511,8 @@ window.gerarReciboRescisaoFuncionario = async function (
 
     const textoDiarias =
         quantidadeDiarias === 1
-            ? '1 diária de trabalho'
-            : `${quantidadeDiarias} diárias de trabalho`;
+            ? '1 diária freelancer'
+            : `${quantidadeDiarias} diárias freelancer`;
 
     /*
         Se existirem diárias lançadas manualmente no acerto,
@@ -7739,7 +7892,7 @@ window.gerarReciboRescisaoFuncionario = async function (
                 </h1>
 
                 <p>
-                    Pagamento de diárias de trabalho
+                    Pagamento de diárias freelancer
                 </p>
 
             </div>
@@ -8274,8 +8427,41 @@ function funcionariosAtivosUniformesEPI() {
 
 
 /* --------------------------------------------------------- */
+/* movimentacaoPendenteUniformeEPI                           */
+/* Considera pendente somente o item que ainda NÃO voltou.   */
+/* --------------------------------------------------------- */
+
+function movimentacaoPendenteUniformeEPI(mov) {
+    if (!mov) return false;
+
+    const status =
+        String(mov.status || '')
+            .trim()
+            .toLowerCase();
+
+    /*
+        REGRA DE ESTOQUE:
+        - Pendente = produto está com o funcionário e reduz o disponível;
+        - Devolvido = produto voltou e não pode mais reduzir o disponível.
+
+        A data de devolução também serve como segurança para registros
+        antigos que eventualmente estejam com status inconsistente.
+    */
+    if (status === 'devolvido') {
+        return false;
+    }
+
+    if (mov.dataDevolucao) {
+        return false;
+    }
+
+    return status === 'pendente';
+}
+
+
+/* --------------------------------------------------------- */
 /* quantidadePendenteProdutoUniformeEPI                      */
-/* Soma as retiradas que continuam pendentes.                */
+/* Soma somente retiradas que ainda estão fora do estoque.   */
 /* --------------------------------------------------------- */
 
 function quantidadePendenteProdutoUniformeEPI(produto) {
@@ -8284,7 +8470,7 @@ function quantidadePendenteProdutoUniformeEPI(produto) {
 
     return estrutura.movimentacoes
         .filter(mov =>
-            String(mov.status || '').toLowerCase() === 'pendente' &&
+            movimentacaoPendenteUniformeEPI(mov) &&
             (
                 (mov.produtoId && mov.produtoId === produto.id) ||
                 (!mov.produtoId && mov.produtoNome === produto.nome)
@@ -8300,7 +8486,14 @@ function quantidadePendenteProdutoUniformeEPI(produto) {
 /* --------------------------------------------------------- */
 
 function resumoProdutoUniformeEPI(produto) {
-    const estoque = numeroFuncionario(produto?.quantidadeEstoque);
+    // Desgastado: baixa definitiva. Não retorna ao estoque disponível.
+    const estruturaUniformes = garantirEstruturaUniformesEPI();
+    const baixasDesgaste = estruturaUniformes.movimentacoes
+        .filter(mov => String(mov.status || '').toLowerCase() === 'devolvido'
+            && String(mov.situacao || '').toLowerCase() === 'desgastado'
+            && (mov.produtoId === produto?.id || (!mov.produtoId && mov.produtoNome === produto?.nome)))
+        .reduce((soma, mov) => soma + numeroFuncionario(mov.quantidade), 0);
+    const estoque = Math.max(0, numeroFuncionario(produto?.quantidadeEstoque) - baixasDesgaste);
     const minimo = numeroFuncionario(produto?.estoqueMinimo);
     const valor = numeroFuncionario(produto?.valorUnitario);
     const pendente = quantidadePendenteProdutoUniformeEPI(produto);
@@ -8561,7 +8754,7 @@ function htmlDashboardUniformesEPI() {
     const abaixo = produtos.filter(item => item.resumo.status === 'ABAIXO DO MÍNIMO');
     const zerados = produtos.filter(item => item.resumo.status === 'ZERADO');
     const pendencias = estrutura.movimentacoes.filter(
-        mov => String(mov.status || '').toLowerCase() === 'pendente'
+        mov => movimentacaoPendenteUniformeEPI(mov)
     );
 
     const card = (titulo, valor, cor) => `
@@ -8985,7 +9178,7 @@ window.editarMovimentacaoUniformeEPI = function (id) {
 /* Formulário de retirada / edição de movimentação.          */
 /* --------------------------------------------------------- */
 
-function abrirFormularioMovimentacaoUniformeEPI(mov) {
+function abrirFormularioMovimentacaoUniformeEPI(mov, forcarDevolvido = false) {
     const estrutura = garantirEstruturaUniformesEPI();
     const funcionarios = funcionariosAtivosUniformesEPI();
     const produtos = [...estrutura.produtos].sort((a,b) =>
@@ -9039,16 +9232,16 @@ function abrirFormularioMovimentacaoUniformeEPI(mov) {
                 <div>
                     <label>Status</label>
                     <select id="uni-mov-status" onchange="atualizarCamposDevolucaoUniformeEPI()">
-                        <option value="Pendente" ${mov?.status !== 'Devolvido' ? 'selected' : ''}>Pendente</option>
-                        <option value="Devolvido" ${mov?.status === 'Devolvido' ? 'selected' : ''}>Devolvido</option>
+                        <option value="Pendente" ${(!forcarDevolvido && mov?.status !== 'Devolvido') ? 'selected' : ''}>Pendente</option>
+                        <option value="Devolvido" ${(forcarDevolvido || mov?.status === 'Devolvido') ? 'selected' : ''}>Devolvido</option>
                     </select>
                 </div>
-                <div><label>Data da devolução</label><input id="uni-mov-devolucao" type="date" value="${mov?.dataDevolucao || ''}"></div>
+                <div><label>Data da devolução</label><input id="uni-mov-devolucao" type="date" value="${mov?.dataDevolucao || (forcarDevolvido ? dataHojeFuncionario() : '')}"></div>
                 <div>
                     <label>Situação</label>
                     <select id="uni-mov-situacao">
                         <option value="">Selecione...</option>
-                        ${['Suja','Limpo','Inteiro','Quebrado'].map(s => `<option ${mov?.situacao === s ? 'selected' : ''}>${s}</option>`).join('')}
+                        ${['Suja','Limpo','Inteiro','Quebrado','Desgastado'].map(s => `<option ${mov?.situacao === s ? 'selected' : ''}>${s}</option>`).join('')}
                     </select>
                 </div>
             </div>
@@ -9124,9 +9317,28 @@ function abrirFormularioMovimentacaoUniformeEPI(mov) {
             registro.quantidade = qtd;
             registro.estadoProduto = estadoProduto;
             registro.motivo = document.getElementById('uni-mov-motivo')?.value.trim() || '';
-            registro.status = status;
-            registro.dataDevolucao = status === 'Devolvido' ? (document.getElementById('uni-mov-devolucao')?.value || dataHojeFuncionario()) : '';
-            registro.situacao = status === 'Devolvido' ? (document.getElementById('uni-mov-situacao')?.value || '') : '';
+            registro.status =
+                status === 'Devolvido'
+                    ? 'Devolvido'
+                    : 'Pendente';
+
+            registro.dataDevolucao =
+                registro.status === 'Devolvido'
+                    ? (
+                        document.getElementById('uni-mov-devolucao')?.value
+                        ||
+                        dataHojeFuncionario()
+                    )
+                    : '';
+
+            registro.situacao =
+                registro.status === 'Devolvido'
+                    ? (
+                        document.getElementById('uni-mov-situacao')?.value
+                        ||
+                        ''
+                    )
+                    : '';
 
             if (!mov) {
                 estrutura.movimentacoes.push(registro);
@@ -9164,11 +9376,21 @@ window.atualizarCamposDevolucaoUniformeEPI = function () {
 /* --------------------------------------------------------- */
 
 window.devolverMovimentacaoUniformeEPI = function (id) {
-    const mov = garantirEstruturaUniformesEPI().movimentacoes.find(m => m.id === id);
+    const mov =
+        garantirEstruturaUniformesEPI()
+            .movimentacoes
+            .find(m => m.id === id);
+
     if (!mov) return;
-    mov.status = 'Devolvido';
-    mov.dataDevolucao = mov.dataDevolucao || dataHojeFuncionario();
-    abrirFormularioMovimentacaoUniformeEPI(mov);
+
+    /*
+        Apenas abre o formulário já preparado como devolução.
+        O registro original só será alterado depois de clicar em Salvar.
+    */
+    abrirFormularioMovimentacaoUniformeEPI(
+        mov,
+        true
+    );
 };
 
 

@@ -85,11 +85,11 @@ function ordenarClientesPorNome(
     .sort(
         (a, b) =>
             String(
-                a?.nome || ''
+                nomeExibicaoCliente(a)
             )
             .localeCompare(
                 String(
-                    b?.nome || ''
+                    nomeExibicaoCliente(b)
                 ),
                 'pt-BR',
                 {
@@ -298,7 +298,7 @@ const clientesTela =
     </td>
 
     <td>
-        ${cliente.nome || '-'}
+        ${nomeExibicaoCliente(cliente) || '-'}
     </td>
 
     <td>
@@ -515,7 +515,9 @@ window.paginaAnteriorClientes = function(){
 
     Campos disponíveis:
     - código
-    - nome / razão social
+    - razão social
+    - nome fantasia
+    - A/C (pessoa de contato)
     - CPF / CNPJ
     - RG / IE
     - telefone
@@ -533,6 +535,25 @@ window.paginaAnteriorClientes = function(){
 /* abrirNovoCliente */
 /* Monta o formulário usado para cadastro de cliente. */
 /* --------------------------------------------------------- */
+
+/* Campos comerciais separados, preservando compatibilidade com os módulos que usam cliente.nome. */
+function escaparCampoCliente(valor) {
+    return String(valor ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function nomeExibicaoCliente(cliente) {
+    return cliente?.nomeFantasia || cliente?.razaoSocial || cliente?.nome || '';
+}
+function obterDadosIdentificacaoCliente() {
+    const razaoSocial = document.getElementById('cliente-razao-social').value.trim();
+    const nomeFantasia = document.getElementById('cliente-nome-fantasia').value.trim();
+    const ac = document.getElementById('cliente-ac').value.trim();
+    if (!razaoSocial && !nomeFantasia) {
+        alert('Informe a Razão Social ou o Nome Fantasia do cliente.');
+        return null;
+    }
+    return { razaoSocial, nomeFantasia, ac, nome: nomeFantasia || razaoSocial };
+}
 
 window.abrirNovoCliente = function (
     dados = {}
@@ -575,18 +596,24 @@ window.abrirNovoCliente = function (
 
         </div>
 
-        <!-- 04.2 NOME / RAZÃO SOCIAL -->
-
+        <!-- 04.2 RAZÃO SOCIAL, NOME FANTASIA E CONTATO -->
         <div>
-
-            <label>
-                Nome / Razão Social
-            </label>
-
-            <input
-                id="cliente-nome"
-                value="${dados.nome || ''}">
-
+            <label>Razão Social</label>
+            <input id="cliente-razao-social"
+                value="${escaparCampoCliente(dados.razaoSocial ?? dados.nome ?? '')}"
+                placeholder="Razão social ou nome completo">
+        </div>
+        <div>
+            <label>Nome Fantasia</label>
+            <input id="cliente-nome-fantasia"
+                value="${escaparCampoCliente(dados.nomeFantasia ?? '')}"
+                placeholder="Nome pelo qual o cliente é conhecido">
+        </div>
+        <div>
+            <label>A/C — Falar com</label>
+            <input id="cliente-ac"
+                value="${escaparCampoCliente(dados.ac ?? '')}"
+                placeholder="Pessoa de contato">
         </div>
 
         <!-- 04.3 CPF / CNPJ -->
@@ -789,29 +816,15 @@ window.abrirNovoCliente = function (
 
 window.salvarNovoCliente = function () {
 
-    const nome =
-        document
-            .getElementById(
-                'cliente-nome'
-            )
-            .value
-            .trim();
-
-    if (!nome) {
-
-        alert(
-            'Informe o nome do cliente.'
-        );
-
-        return;
-    }
+    const identificacao = obterDadosIdentificacaoCliente();
+    if (!identificacao) return;
 
     const cliente = {
 
         codigo:
             db.clientes.length + 1,
 
-        nome,
+        ...identificacao,
 
         documento:
             document
@@ -1038,10 +1051,9 @@ window.editarCliente = function (idx) {
         'modal-confirm'
     ).onclick = function () {
 
-        cliente.nome =
-            document.getElementById(
-                'cliente-nome'
-            ).value;
+        const identificacao = obterDadosIdentificacaoCliente();
+        if (!identificacao) return;
+        Object.assign(cliente, identificacao);
 
         cliente.documento =
             document.getElementById(
@@ -1339,7 +1351,7 @@ function () {
         clientes =
             clientes.filter(c =>
 
-                (c.nome || '')
+                (`${c.nome || ''} ${c.razaoSocial || ''} ${c.nomeFantasia || ''} ${c.ac || ''}`)
                     .toLowerCase()
                     .includes(nome)
             );
@@ -1432,7 +1444,7 @@ clientes.forEach(
 <tr>
 
     <td>
-        ${cliente.nome || '-'}
+        ${nomeExibicaoCliente(cliente) || '-'}
     </td>
 
     <td>

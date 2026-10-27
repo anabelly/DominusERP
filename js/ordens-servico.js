@@ -1,3 +1,18 @@
+
+/* DOMINUS: exibe Nome Fantasia; usa Razão Social quando vazio.
+   Mantém os valores originais gravados para preservar vínculos. */
+function nomeExibicaoClienteDominus(registroOuNome) {
+    const clientes = Array.isArray(window.db?.clientes) ? window.db.clientes : [];
+    const texto = v => String(v ?? '').trim();
+    const nome = typeof registroOuNome === 'object' && registroOuNome !== null
+        ? '' : texto(registroOuNome);
+    const registro = nome ? clientes.find(c =>
+        [c.nome, c.nomeFantasia, c.razaoSocial, c.codigo]
+            .some(v => texto(v).toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'))
+    ) : registroOuNome;
+    return texto(registro?.nomeFantasia) || texto(registro?.razaoSocial) ||
+           texto(registro?.nome) || nome;
+}
 /* ========================================================= */
 /* DOMINUS ERP - ORDENS-SERVICO.JS                           */
 /* ========================================================= */
@@ -805,7 +820,7 @@ function renderGridOS() {
                             <td style="
                                 white-space:nowrap;
                             ">
-                                ${os.cliente}
+                                ${nomeExibicaoClienteDominus(os.cliente) || '-'}
                             </td>
 
                             <td style="
@@ -1114,7 +1129,7 @@ function renderFormOS() {
             .map((o) => `
 
                 <option value="${o.codigo}">
-                    ${o.codigo} - ${o.cliente}
+                    ${o.codigo} - ${nomeExibicaoClienteDominus(o.cliente) || '-'}
                 </option>
 
             `)
@@ -1150,7 +1165,7 @@ function renderFormOS() {
         ).map(c => `
 
             <option value="${c.nome}">
-                ${c.nome}
+                ${nomeExibicaoClienteDominus(c)}
             </option>
 
         `).join('')}
@@ -1968,7 +1983,7 @@ function visualizarOS(index) {
                 <br>
 
                 <b>
-                    ${os.cliente || '-'}
+                    ${nomeExibicaoClienteDominus(os.cliente) || '-'}
                 </b>
 
             </div>
@@ -2407,7 +2422,7 @@ body {
 
                 <br>
 
-                ${os.cliente || '-'}
+                ${nomeExibicaoClienteDominus(os.cliente) || '-'}
 
             </div>
 

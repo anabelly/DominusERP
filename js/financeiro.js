@@ -1,3 +1,18 @@
+
+/* DOMINUS: exibe Nome Fantasia; usa Razão Social quando vazio.
+   Mantém os valores originais gravados para preservar vínculos. */
+function nomeExibicaoClienteDominus(registroOuNome) {
+    const clientes = Array.isArray(window.db?.clientes) ? window.db.clientes : [];
+    const texto = v => String(v ?? '').trim();
+    const nome = typeof registroOuNome === 'object' && registroOuNome !== null
+        ? '' : texto(registroOuNome);
+    const registro = nome ? clientes.find(c =>
+        [c.nome, c.nomeFantasia, c.razaoSocial, c.codigo]
+            .some(v => texto(v).toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'))
+    ) : registroOuNome;
+    return texto(registro?.nomeFantasia) || texto(registro?.razaoSocial) ||
+           texto(registro?.nome) || nome;
+}
 /* ========================================================= */
 /* DOMINUS ERP - FINANCEIRO.JS                               */
 /* ========================================================= */
@@ -146,6 +161,87 @@ function ordenarFornecedoresFinanceiro(
 /* renderFinanceiro */
 /* Renderiza o fluxo financeiro semanal. */
 /* --------------------------------------------------------- */
+
+/* ========================================================= */
+/* FORMAS DE LIQUIDAÇÃO E TIPOS DE CONTA                      */
+/* ========================================================= */
+const FORMAS_FINANCEIRO = ['Dinheiro', 'Pix', 'Boleto', 'Cartão'];
+const TIPOS_CONTA_FINANCEIRO_PADRAO = [
+    'Advogado','Água e Saneamento','Alarme/Segurança','Aluguel',
+    'Bonificação/Gratificação','Cartão','Comissão','Contabilidade',
+    'Despesa Veículos','Energia Elétrica','Internet/Telefone','IPTU',
+    'IPVA/Licenciamento','Limpeza/Manutenção','Marketing/Anúncios',
+    'Matéria Prima/Estoque','Multa Veículos','Outros','Plano de Saúde',
+    'Pró-Labore','Salários','Seguros','Simples Nacional/Impostos','Software/ERP'
+];
+function escaparFin(v) {
+    return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+       .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function garantirTiposContaFinanceiro() {
+    window.db = window.db || {};
+    if (!Array.isArray(db.tiposContaFinanceiro)) {
+        const existentes = Array.isArray(db.financeiro)
+            ? db.financeiro.map(x => x.tipoConta).filter(Boolean) : [];
+        db.tiposContaFinanceiro = [...TIPOS_CONTA_FINANCEIRO_PADRAO, ...existentes];
+    }
+    const vistos = new Set();
+    db.tiposContaFinanceiro = db.tiposContaFinanceiro.map(x => String(x || '').trim())
+      .filter(x => {const k=x.toLocaleLowerCase('pt-BR');
+          if (!k || vistos.has(k)) return false;
+          vistos.add(k); return true;})
+      .sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+    return db.tiposContaFinanceiro;
+}
+function formaFinanceiro(lanc) { return lanc?.formaPagamento || lanc?.formaRecebimento || ''; }
+function ehCompraCartaoFinanceiro(lanc) {
+    return lanc?.tipo === 'Pagar' && formaFinanceiro(lanc) === 'Cartão' &&
+        String(lanc?.tipoConta || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase() !== 'cartao';
+}
+/* A fatura do cartão, cadastrada no tipo de conta Cartão, continua contabilizada. */
+window.ehCompraCartaoFinanceiro = ehCompraCartaoFinanceiro;
+window.contabilizarPagarFinanceiro = lanc => lanc?.tipo === 'Pagar' && !ehCompraCartaoFinanceiro(lanc);
+function abreviarFormaFinanceiro(lanc) {
+    return ({Dinheiro:'Din',Pix:'Pix',Boleto:'Bol','Cartão':'Car'})[formaFinanceiro(lanc)] || '-';
+}
+function selectFormaFinanceiro(id, atual='', obrigatorio=false) {
+    return `<label>Forma de pagamento / recebimento${obrigatorio?' *':''}</label>
+      <select id="${id}"><option value="">Selecione</option>
+      ${FORMAS_FINANCEIRO.map(x=>`<option value="${x}" ${x===atual?'selected':''}>${x}</option>`).join('')}
+      </select>`;
+}
+function selectTipoContaFinanceiro(id, atual='', todos=false) {
+    const tipos=[...garantirTiposContaFinanceiro()];
+    if(atual && !tipos.includes(atual)) tipos.push(atual);
+    const options = todos ? '<option value="">Todos</option>' : '';
+    return `<select id="${id}">${options}${tipos.map(t=>`<option value="${escaparFin(t)}" ${t===atual?'selected':''}>${escaparFin(t)}</option>`).join('')}</select>`;
+}
+window.abrirTiposContaFinanceiro = function() {
+    const lista = garantirTiposContaFinanceiro();
+    configModal({title:'Tipos de Conta',size:'large',confirmText:'Fechar',
+      body:`<div style="display:flex;gap:8px;margin-bottom:16px;align-items:end;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px"><label>Novo tipo de conta</label>
+        <input id="novo-tipo-conta-fin" placeholder="Digite o tipo de conta"></div>
+        <button type="button" class="btn-action" onclick="cadastrarTipoContaFinanceiro()">+ Cadastrar</button></div>
+        <div style="max-height:360px;overflow:auto"><table style="width:100%"><thead><tr><th>Tipo de conta</th><th>Ação</th></tr></thead><tbody>
+        ${lista.map((t,i)=>`<tr><td>${escaparFin(t)}</td><td><button type="button" class="btn-action" style="padding:6px 12px" onclick="editarTipoContaFinanceiro(${i})">✏ Editar</button></td></tr>`).join('')}
+        </tbody></table></div>`,onConfirm(){closeModal();}});
+};
+window.cadastrarTipoContaFinanceiro = async function() {
+    const campo=document.getElementById('novo-tipo-conta-fin');
+    const nome=campo?.value.trim(); if(!nome){alert('Informe o tipo de conta.');return;}
+    const lista=garantirTiposContaFinanceiro();
+    if(lista.some(x=>x.toLocaleLowerCase('pt-BR')===nome.toLocaleLowerCase('pt-BR'))){alert('Esse tipo já existe.');return;}
+    lista.push(nome); garantirTiposContaFinanceiro(); await save(); abrirTiposContaFinanceiro();
+};
+window.editarTipoContaFinanceiro = async function(index) {
+    const lista=garantirTiposContaFinanceiro(); const antigo=lista[index]; if(!antigo)return;
+    const novo=prompt('Editar tipo de conta:',antigo)?.trim(); if(!novo||novo===antigo)return;
+    if(lista.some(x=>x!==antigo&&x.toLocaleLowerCase('pt-BR')===novo.toLocaleLowerCase('pt-BR'))){alert('Esse tipo já existe.');return;}
+    /* Atualiza vínculos existentes, sem modificar os valores dos lançamentos. */
+    (db.financeiro||[]).forEach(x=>{if(x.tipoConta===antigo)x.tipoConta=novo;});
+    lista[index]=novo; garantirTiposContaFinanceiro(); await save(); abrirTiposContaFinanceiro();
+};
 
 window.renderFinanceiro = function () {
 
@@ -394,6 +490,8 @@ const periodoReceber =
             flex-wrap:wrap;
         ">
 
+            <button class="btn-action" style="background:#64748b" onclick="abrirTiposContaFinanceiro()">⚙ Tipos de Conta</button>
+
             <button
                 class="btn-action"
                 onclick="abrirConsultaFinanceiro()">
@@ -500,6 +598,7 @@ window.renderTabelaFinanceiro = function (
                             ? 'Pagamento'
                             : 'Recebimento'}
                     </th>
+                    <th>Forma</th>
                     <th>Status</th>
                     <th>Ação</th>
 
@@ -516,7 +615,7 @@ window.renderTabelaFinanceiro = function (
 
 <tr>
 
-    <td colspan="7" style="
+    <td colspan="8" style="
         text-align:center;
         padding:30px;
         color:#6b7280;
@@ -587,7 +686,7 @@ window.renderTabelaFinanceiro = function (
     </td>
 
     <td>
-        ${lanc.nome || '-'}
+        ${(lanc.tipo === 'Receber' || lanc.tipoFluxo === 'Receber') ? (nomeExibicaoClienteDominus(lanc.nome) || '-') : (lanc.nome || '-')}
     </td>
 
     <td>
@@ -601,6 +700,8 @@ window.renderTabelaFinanceiro = function (
                 : '-'
         }
     </td>
+
+    <td title="${escaparFin(formaFinanceiro(lanc) || 'Não informada')}">${abreviarFormaFinanceiro(lanc)}</td>
 
     <td>
 
@@ -939,33 +1040,7 @@ window.abrirContaPagar = function (
     /* 04.1 TIPOS DE CONTA DISPONÍVEIS                    */
     /* ===================================================== */
 
-    const tiposConta = [
-
-        "Advogado",
-        "Água e Saneamento",
-        "Alarme/Segurança",
-        "Aluguel",
-        "Bonificação/Gratificação",
-        "Cartão",
-        "Comissão",
-        "Contabilidade",
-        "Despesa Veículos",
-        "Energia Elétrica",
-        "Internet/Telefone",
-        "IPTU",
-        "IPVA/Licenciamento",
-        "Limpeza/Manutenção",
-        "Marketing/Anúncios",
-        "Matéria Prima/Estoque",
-        "Multa Veículos",
-        "Outros",
-        "Plano de Saúde",
-        "Pró-Labore",
-        "Salários",
-        "Seguros",
-        "Simples Nacional/Impostos",
-        "Software/ERP"
-    ];
+    const tiposConta = garantirTiposContaFinanceiro();
 
     const html = `
 
@@ -1042,11 +1117,7 @@ window.abrirContaPagar = function (
         <select id="fin-tipo-conta">
 
             ${tiposConta.map(t => `
-
-                <option value="${t}">
-                    ${t}
-                </option>
-
+                <option value="${escaparFin(t)}" ${dados.tipoConta===t?'selected':''}>${escaparFin(t)}</option>
             `).join('')}
 
         </select>
@@ -1055,6 +1126,10 @@ window.abrirContaPagar = function (
 
     <div>
 
+        ${selectFormaFinanceiro('fin-forma', dados.formaPagamento || '', false)}
+    </div>
+
+    <div>
         <label>Recorrência</label>
 
         <select
@@ -1208,6 +1283,8 @@ window.darBaixaFinanceiro = async function(idx){
 
     </div>
 
+    <div>${selectFormaFinanceiro('fin-forma-baixa',formaFinanceiro(lanc),true)}</div>
+
     <div style="
         background:#f3f4f6;
         padding:15px;
@@ -1245,6 +1322,10 @@ window.darBaixaFinanceiro = async function(idx){
 
             onConfirm: async function(){
 
+            const forma=document.getElementById('fin-forma-baixa')?.value;
+            if (!forma) { alert('Selecione a forma de pagamento ou recebimento.'); return; }
+            if (lanc.tipo === 'Pagar') lanc.formaPagamento=forma;
+            else lanc.formaRecebimento=forma;
             lanc.status =
                 lanc.tipo === 'Receber'
                     ? 'Recebido'
@@ -1413,7 +1494,7 @@ window.editarLancamento = function(idx){
                 <option 
                 value="${c.nome}"
                 ${c.nome === lanc.nome ? 'selected':''}>
-                    ${c.nome}
+                    ${nomeExibicaoClienteDominus(c)}
                 </option>
 
             `).join('')
@@ -1477,6 +1558,9 @@ id="fin-vencimento"
 value="${lanc.vencimento || ''}">
 
 </div>
+<div>${selectFormaFinanceiro('fin-forma-editar',formaFinanceiro(lanc),false)}</div>
+${lanc.tipo==='Pagar' ? `<div><label>Tipo de Conta</label>${selectTipoContaFinanceiro('fin-tipo-conta-editar',lanc.tipoConta)}</div>` : ''}
+
 
 
 </div>
@@ -1518,6 +1602,11 @@ onConfirm: async function(){
 
 
 
+    const formaEditada=document.getElementById('fin-forma-editar')?.value || '';
+    if(lanc.tipo==='Pagar'){
+        lanc.formaPagamento=formaEditada;
+        lanc.tipoConta=document.getElementById('fin-tipo-conta-editar')?.value||lanc.tipoConta;
+    } else { lanc.formaRecebimento=formaEditada; }
     await save();
 
 
@@ -1566,6 +1655,8 @@ window.salvarContaPagar = async function () {
     const tipoConta =
         document.getElementById('fin-tipo-conta').value;
 
+    const formaPagamento = document.getElementById('fin-forma')?.value || '';
+
     const recorrencia =
         document.getElementById('fin-recorrencia').value;
 
@@ -1593,6 +1684,7 @@ window.salvarContaPagar = async function () {
             descricao,
             vencimento,
             tipoConta,
+            formaPagamento,
             status: 'Pendente'
         });
     }
@@ -1619,6 +1711,7 @@ window.salvarContaPagar = async function () {
                 descricao,
                 vencimento: data.toISOString().split('T')[0],
                 tipoConta,
+            formaPagamento,
                 status: 'Pendente'
             });
         }
@@ -1639,6 +1732,7 @@ window.salvarContaPagar = async function () {
                 descricao,
                 vencimento: data.toISOString().split('T')[0],
                 tipoConta,
+            formaPagamento,
                 status: 'Pendente'
             });
         }
@@ -1659,6 +1753,7 @@ window.salvarContaPagar = async function () {
                 descricao,
                 vencimento: data.toISOString().split('T')[0],
                 tipoConta,
+            formaPagamento,
                 status: 'Pendente'
             });
         }
@@ -1723,7 +1818,7 @@ window.abrirContaReceber = function (
                     value="${c.nome}"
                     ${dados.nome === c.nome ? 'selected' : ''}>
 
-                    ${c.nome}
+                    ${nomeExibicaoClienteDominus(c)}
 
                 </option>
 
@@ -1753,6 +1848,7 @@ window.abrirContaReceber = function (
             value="${dados.vencimento || ''}">
 
     </div>
+    <div>${selectFormaFinanceiro('fin-forma',dados.formaRecebimento||'',false)}</div>
 
 </div>
 `;
@@ -1805,6 +1901,7 @@ window.salvarContaReceber = async function () {
 
         status: 'Pendente',
 
+        formaRecebimento: document.getElementById('fin-forma')?.value || '',
         dataPagamento: null
     };
     if(
@@ -1923,6 +2020,8 @@ window.abrirConsultaFinanceiro = function () {
         <input type="date" id="consulta-fim">
     </div>
 
+    <div id="consulta-tipo-conta-box"><label>Tipo de Conta</label>${selectTipoContaFinanceiro('consulta-tipo-conta','',true)}</div>
+
     <div id="consulta-pessoa-box">
         <label>Fornecedor</label>
         <select id="consulta-pessoa">
@@ -1962,6 +2061,8 @@ window.abrirConsultaFinanceiro = function () {
 window.toggleConsultaFinanceiro = function () {
     const tipo = document.getElementById('consulta-tipo').value;
     const box = document.getElementById('consulta-pessoa-box');
+    const caixaTipoConta=document.getElementById('consulta-tipo-conta-box');
+    if(caixaTipoConta) caixaTipoConta.style.display=tipo==='Pagar'?'':'none';
 
     if (tipo === 'Pagar') {
         box.innerHTML = `
@@ -1979,7 +2080,7 @@ window.toggleConsultaFinanceiro = function () {
     <option value="">Todos</option>
     ${ordenarClientesFinanceiro(
         db.clientes
-    ).map(c => `<option value="${c.nome}">${c.nome}</option>`).join('')}
+    ).map(c => `<option value="${c.nome}">${nomeExibicaoClienteDominus(c)}</option>`).join('')}
 </select>`;
     }
 };
@@ -1998,6 +2099,7 @@ window.consultarFinanceiro = function () {
     const inicio = document.getElementById('consulta-inicio').value;
     const fim = document.getElementById('consulta-fim').value;
     const pessoa = document.getElementById('consulta-pessoa').value;
+    const tipoContaBusca=tipo==='Pagar' ? (document.getElementById('consulta-tipo-conta')?.value||'') : '';
 
     /* Filtra os resultados conforme os campos da consulta. */
     window.dadosConsultaFinanceiro = db.financeiro.filter(l => {
@@ -2005,6 +2107,7 @@ window.consultarFinanceiro = function () {
         if (inicio && l.vencimento < inicio) return false;
         if (fim && l.vencimento > fim) return false;
         if (pessoa && l.nome !== pessoa) return false;
+        if (tipoContaBusca && l.tipoConta !== tipoContaBusca) return false;
         return true;
     });
 
@@ -2033,6 +2136,7 @@ window.renderTabelaConsultaFinanceiro = function() {
     <th>Descrição</th>
     <th>${tipo === 'Pagar' ? 'Fornecedor' : 'Cliente'}</th>
     <th>Valor</th>
+    <th>Forma</th>
     <th>Status</th>
     <th>Ações</th>
 </tr>
@@ -2041,7 +2145,7 @@ window.renderTabelaConsultaFinanceiro = function() {
 `;
 
     if (resultados.length === 0) {
-        html += `<tr><td colspan="6" style="padding:30px; text-align:center; color:#6b7280;">Nenhum lançamento encontrado</td></tr>`;
+        html += `<tr><td colspan="7" style="padding:30px; text-align:center; color:#6b7280;">Nenhum lançamento encontrado</td></tr>`;
     } else {
         resultados.forEach((l, idx) => {
             const status = l.status || 'Pendente';
@@ -2049,8 +2153,9 @@ window.renderTabelaConsultaFinanceiro = function() {
 <tr>
     <td>${formatarDataBR(l.vencimento)}</td>
     <td>${l.descricao || '-'}</td>
-    <td>${l.nome || '-'}</td>
+    <td>${(l.tipo === 'Receber' || l.tipoFluxo === 'Receber') ? (nomeExibicaoClienteDominus(l.nome) || '-') : (l.nome || '-')}</td>
     <td>${formatarMoeda(l.valor || 0)}</td>
+    <td title="${escaparFin(formaFinanceiro(l)||'Não informada')}">${abreviarFormaFinanceiro(l)}</td>
     <td>${status}</td>
     <td>
         <div style="display:flex; gap:6px; justify-content:center; flex-wrap:nowrap;">
@@ -2173,6 +2278,7 @@ lanc.tipo === 'Pagar'
 type="date"
 id="consulta-data-baixa"
 value="${hoje}">
+<div style="margin-top:14px">${selectFormaFinanceiro('consulta-forma-baixa',formaFinanceiro(lanc),true)}</div>
 
 
 `;
@@ -2202,6 +2308,10 @@ onConfirm: async function(){
 
 
 
+const forma=document.getElementById('consulta-forma-baixa')?.value;
+if(!forma){alert('Selecione a forma de pagamento ou recebimento.');return;}
+if(lanc.tipo==='Pagar') lanc.formaPagamento=forma;
+else lanc.formaRecebimento=forma;
 lanc.dataPagamento =
 document.getElementById(
 'consulta-data-baixa'
